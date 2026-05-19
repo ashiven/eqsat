@@ -64,7 +64,7 @@ fn let_unused() -> RW {
 }
 
 fn let_var_same() -> RW {
-    let pat = "(let $name (scope ?def (var $name))";
+    let pat = "(let $name (scope ?def (var $name)))";
     let outpat = "?def";
     Rewrite::new("let-var-same", pat, outpat)
 }
@@ -76,7 +76,7 @@ fn let_var_diff() -> RW {
 }
 
 fn let_app() -> RW {
-    let pat = "(let $name (scope ?def (app ?a ?b))";
+    let pat = "(let $name (scope ?def (app ?a ?b)))";
     let outpat = "(app (let $name (scope ?def ?a)) (let $name (scope ?def ?b)))";
     Rewrite::new_if("let-app", pat, outpat, |subst, _| {
         subst["a"].slots().contains(&Slot::named("name"))
@@ -98,7 +98,7 @@ fn let_lam_diff() -> RW {
 // ((map f) ((map g) arg)) => ((map λx.(f (g x))) arg)
 fn map_fusion() -> RW {
     let pat = "(app (app %rise.map ?f) (app (app %rise.map ?g) ?arg))";
-    let outpat = "(app (app %rise.map (lam $x (scope ?filter (app ?f (app ?g (var $x)))))) ?arg)";
+    let outpat = "(app (app %rise.map (lam $x (scope (lit ff Bool) (app ?f (app ?g (var $x)))))) ?arg)";
     Rewrite::new("map-fusion", pat, outpat)
 }
 
@@ -194,7 +194,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Some rewrite rules aren't correct yet"]
     fn fission() {
         let a = "(app %rise.map (lam $42 (scope (lit ff Bool) (app f5 (app f4 (app f3 (app f2 (app f1 (var $42)))))))))";
         let b = "(lam $1 (scope (lit ff Bool) (app (app %rise.map (lam $42 (scope (lit ff Bool) (app f5 (app f4 (app f3 (var $42))))))) (app (app %rise.map (lam $42 (scope (lit ff Bool) (app f2 (app f1 (var $42)))))) (var $1)))))";

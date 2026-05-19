@@ -1,12 +1,12 @@
 (root intern atoi
     (@ (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil)))) (cons (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons I32 nil)) nil)) (bot (type (lit 0 Univ))))) nil))) nil)) (bot (type (lit 0 Univ)))))
-    (lam
+    (fun
         $_23109
-        (scope nil nil))))
+        (scope <atoi-filter> <atoi-body>))))
 
 (root extern main
     (@ (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons I32 (cons (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil)))))) (cons (lit 0 Nat) nil)))) (cons (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons I32 nil)) nil)) (bot (type (lit 0 Univ))))) nil)))) nil)) (bot (type (lit 0 Univ)))))
-    (lam
+    (fun
         $_23046
         (scope
             (@ Bool
@@ -15,7 +15,7 @@
                 $atoi_cont_a_23076
                 (scope
                     (@ (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons I32 nil)) nil)) (bot (type (lit 0 Univ)))))
-                    (lam
+                    (con
                         $_23077
                         (scope
                             (@ Bool
@@ -24,7 +24,7 @@
                                 $atoi_cont_b_23086
                                 (scope
                                     (@ (pi $dummy (scope (sigma $dummy (scope (cons (app %mem.M (lit 0 Nat)) (cons I32 nil)) nil)) (bot (type (lit 0 Univ)))))
-                                    (lam
+                                    (con
                                         $_23087
                                         (scope
                                             (@ Bool
@@ -115,9 +115,10 @@
                                 (scope
                                     (@ (arr $dummy (scope (top Nat) (type (lit 0 Univ))))
                                     (pack
+                                        $dummy (scope
                                         (@ Nat
                                         (var $n_22251))
-                                        (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil))))))
+                                        (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil)))))))
                             (let
                                 $argv_23049
                                 (scope
@@ -251,9 +252,10 @@
                 (scope
                     (@ (arr $dummy (scope (top Nat) (type (lit 0 Univ))))
                     (pack
+                        $dummy (scope
                         (@ Nat
                         (var $n_22251))
-                        (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil))))))
+                        (app %mem.Ptr (tuple (cons (arr $dummy (scope (top Nat) I8)) (cons (lit 0 Nat) nil)))))))
             (let
                 $argv_23049
                 (scope
