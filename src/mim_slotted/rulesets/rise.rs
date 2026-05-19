@@ -3,7 +3,7 @@ use slotted_egraphs::{AbstractVecSet, Rewrite, Slot};
 
 type RW = Rewrite<MimSlotted, MimSlottedAnalysis>;
 
-// Ruleset based on: 
+// Ruleset derived from: 
 // https://github.com/memoryleak47/slotted-egraphs/blob/main/tests/rise/rewrite.rs
 
 pub fn rules() -> Vec<RW> {
@@ -61,9 +61,6 @@ fn eta() -> RW {
     let pat = "(lam $x (scope ?filter (app ?fn (var $x))))";
     let outpat = "?fn";
 
-    // On condition that $x is not bound in ?fn because this makes
-    // the definiton of the function ?fn dependent on the var of the con
-    // we are trying to eta-reduce away.
     Rewrite::new_if("eta", pat, outpat, |subst, _| {
         !subst["fn"].slots().contains(&Slot::named("x"))
     })
