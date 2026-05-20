@@ -7,7 +7,6 @@ fun extern test_mul(a b: Nat): Nat =
     return (%rise.mul a b);
 
 fun extern test_map {S: *, T: *} as types (mapped: S → T): {n: Nat} → «n; S» → «n; T» = 
-    // let id = λ (x: Nat) = x;
     let mapper = %rise.map mapped;
     return mapper;
 
@@ -15,12 +14,11 @@ fun extern test_transpose {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): 
     let transposed = %rise.transpose mat;
     return transposed;
 
-// TODO: input app has type mismatch
-// fun extern test_slide {n: Nat, T: *} as type 
-//                       (sz: Nat, sp: Nat, input: «%core.nat.add (%core.nat.mul (sp, n), sz); T») as args
-//                       : «%core.nat.add (1, n); «sz; T»» =
-//     let slide = %rise.slide sz sp input;
-//     return slide;
+fun extern test_slide (size: Nat, step: Nat) as args:
+                      {n: Nat, T: *} → «%core.nat.add (%core.nat.mul (step, n), size); T» 
+                      → «%core.nat.add (1, n); «size; T»» =
+    let slide = %rise.slide size step;
+    return slide;
 
 fun extern test_zip {n: Nat, S: *, T: *} as types (fst: «n; S», snd: «n; T») as packs: «n; [S, T]» = 
     let zipped = %rise.zip fst snd;
