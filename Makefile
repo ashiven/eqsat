@@ -3,6 +3,7 @@
 CMAKE_INSTALL_PREFIX ?= $(abspath ../../build/install)
 MIM_PLUGIN_PATH ?= $(abspath lit)
 MIM_BINARY_PATH ?= $(abspath ../../build/install/bin/mim.exe)
+MIM_DEBUG_BIN_PATH ?= $(abspath ../../build/bin/Debug/mim.exe)
 
 # use flag "-G Ninja" to generate compile_commands.json on Windows
 build:
@@ -27,3 +28,6 @@ test-all:
 
 sexpr:
 	mim ./lit/$(TEST) --sexpr-include-types --output-sexpr-slotted -
+
+gdb:
+	gdb $(MIM_BINARY_PATH)
