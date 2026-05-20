@@ -21,7 +21,7 @@ axm %rise.reduce:     {n: Nat, T: *} → [T → T → T] → T → «n; T» → 
 axm %rise.fst:        {S: *, T: *} → [S, T] → S;
 axm %rise.snd:        {S: *, T: *} → [S, T] → T;
 
-// TODO: Some kinds of constants(?) gotta figure out their definitions
-axm %rise.weights2d: *;
-axm %rise.weightsH: *;
-axm %rise.weightsV: *;
+// Some constants (TODO: real values)
+axm %rise.weights2d:  «3; «3; Nat»»;
+axm %rise.weightsH:   «3; Nat»;
+axm %rise.weightsV:   «3; Nat»;

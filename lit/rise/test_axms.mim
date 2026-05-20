@@ -37,6 +37,7 @@ fun extern test_zip {n: Nat, S: *, T: *} as types (fst: «n; S», snd: «n; T»)
 let a = (1, 2, 3);
 let b = (2, 3, 4);
 let zipped = %rise.zip (a, b);
+let _ = %rise.zip %rise.weightsH %rise.weightsV;
 
 fun extern test_join {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): «%core.nat.mul (n, m); T» = 
     let joined = %rise.join mat;
@@ -44,6 +45,7 @@ fun extern test_join {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): «%co
 
 let mat = ((1, 2, 3), (2, 3, 4));
 let joined = %rise.join mat;
+let _ = %rise.join %rise.weights2d;
 
 fun extern test_reduce {n: Nat, T: *} as type (reducer: T → T → T, acc: T, input: «n; T») as args: T = 
     let reduced = %rise.reduce reducer acc input;
