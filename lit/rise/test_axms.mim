@@ -22,8 +22,7 @@ fun extern test_transpose {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): 
 let mat = ((1, 2, 3), (2, 3, 4));
 let transposed = %rise.transpose mat;
 
-fun extern test_slide (size: Nat, step: Nat) as args:
-                      {n: Nat, T: *} → «n; T» → «%rise.slide_len (n, size, step); «size; T»» = 
+fun extern test_slide (size: Nat, step: Nat) as args: {n: Nat, T: *} → «n; T» → «%rise.slide_len (n, size, step); «size; T»» = 
     let slide = %rise.slide size step;
     return slide;
 
@@ -53,7 +52,7 @@ fun extern test_reduce {n: Nat, T: *} as type (reducer: T → T → T, acc: T, i
 let acc = 0;
 let input = (1, 2, 3, 4);
 let reducer = lm(a: Nat) (b: Nat): Nat = %core.nat.add (a, b);
-let joined = %rise.reduce reducer acc input;
+let reduced = %rise.reduce reducer acc input;
 
 fun extern test_fst {S: *, T: *} as types (pair: [S, T]): S =
     let fst = %rise.fst pair;
