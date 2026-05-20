@@ -1,4 +1,4 @@
-import axms_rise;
+import _rise;
 
 fun extern test_add(a b: Nat): Nat =
     return (%rise.add a b);

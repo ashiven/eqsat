@@ -1,0 +1,18 @@
+plugin eqsat;
+import _rise;
+
+fun extern _impl(): %eqsat.Impl = 
+  return %eqsat.slotted;
+
+fun extern _rulesets(): %eqsat.Ruleset =
+  return (%eqsat.rise, );
+
+lam f1(a: Nat) = a;
+lam f2(a: Nat) = a;
+lam f3(a: Nat) = a;
+lam f4(a: Nat) = a;
+lam f5(a: Nat) = a;
+
+fun extern fission(arg: «3; Nat»): «3; Nat» =
+  let mapper = %rise.map (lm(x: Nat): Nat = (f5 (f4 (f3 (f2 (f1 x))))));
+  return (mapper arg);
