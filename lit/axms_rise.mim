@@ -9,9 +9,8 @@ axm %rise.map:        {S: *, T: *} → [S → T] → [{n: Nat} → «n; S» → 
 
 // Arrays
 axm %rise.transpose:  {n: Nat, m: Nat, T: *} → «n; «m; T»» → «m; «n; T»»;
-axm %rise.slide:      [size: Nat] → [step: Nat] 
-                      → [{n: Nat, T: *} → «%core.nat.add (%core.nat.mul (step, n), size); T» → «%core.nat.add (1, n); «size; T»»];
-
+axm %rise.slide_len:  [n: Nat, size: Nat, step: Nat] → Nat;
+axm %rise.slide:      [size: Nat] → [step: Nat] → [{n: Nat, T: *} → «n; T» → «%rise.slide_len (n, size, step); «size; T»»];
 axm %rise.zip:        {n: Nat, S: *, T: *} → «n; S» → «n; T» → «n; [S, T]»;
 axm %rise.join:       {n: Nat, m: Nat, T: *} → «n; «m; T»» → «%core.nat.mul (n, m); T»;
 
