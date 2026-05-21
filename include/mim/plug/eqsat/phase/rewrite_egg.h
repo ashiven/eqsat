@@ -60,7 +60,6 @@ private:
     };
     void init(rust::Vec<RecExprFFI> rewrites, InitStage stage);
     const Def* init_lam(uint32_t id, NodeFFI node);
-    const Def* init_con(uint32_t id, NodeFFI node);
     const Def* init_let(uint32_t id, NodeFFI node);
     const Def* init_axm(uint32_t id, NodeFFI node);
 
@@ -68,7 +67,6 @@ private:
     const Def* convert(uint32_t id, bool recurse = false);
     const Def* convert_let(uint32_t id, NodeFFI node);
     const Def* convert_lam(uint32_t id, NodeFFI node);
-    const Def* convert_con(uint32_t id, NodeFFI node);
     const Def* convert_app(uint32_t id, NodeFFI node);
     const Def* convert_var(uint32_t id, NodeFFI node);
     const Def* convert_lit(uint32_t id, NodeFFI node);
@@ -122,11 +120,10 @@ private:
     void register_projs(uint32_t id) {
         auto node = get_node_unsafe(id);
         if (node.kind == MimKind::Var) {
-            auto var      = get_def(node.children[0]);
-            auto var_type = get_node_unsafe(node.children.back());
-            if (var && (var_type.kind == MimKind::Sigma || var_type.kind == MimKind::Arr)) {
+            auto var = get_def(node.children[0]);
+            if (var && (var->type()->isa<Sigma>() || var->type()->isa<Arr>())) {
                 size_t proj_idx = 0;
-                for (size_t i = 1; i < node.children.size() - 1; i++) {
+                for (size_t i = 1; i < node.children.size(); i++) {
                     auto proj_node       = get_node(MimKind::Var, node.children[i]);
                     auto proj_name       = get_symbol(proj_node.children[0]);
                     auto proj_name_nouid = remove_uid(proj_name);

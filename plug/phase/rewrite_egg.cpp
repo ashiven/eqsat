@@ -18,7 +18,7 @@ void RewriteEgg::start() {
     std::ostringstream sexpr;
     driver().backend("sexpr")(old_world(), sexpr);
 
-    if (DEBUG) std::cout << pretty_egg(sexpr.str(), 80).c_str() << "\n";
+    if (DEBUG) std::cout << sexpr.str() << "\n";
 
     auto rewrites = eqsat_egg(sexpr.str(), rulesets, cost_fn);
 
@@ -88,8 +88,9 @@ void RewriteEgg::init(rust::Vec<RecExprFFI> rewrites, InitStage stage) {
             const Def* res = nullptr;
             switch (node.kind) {
                 case MimKind::Axm: res = stage == InitStage::Declarations ? init_axm(id, node) : nullptr; break;
+                case MimKind::Fun:
+                case MimKind::Con:
                 case MimKind::Lam: res = stage == InitStage::Lambdas ? init_lam(id, node) : nullptr; break;
-                case MimKind::Con: res = stage == InitStage::Lambdas ? init_con(id, node) : nullptr; break;
                 case MimKind::Let: res = stage == InitStage::Bindings ? init_let(id, node) : nullptr; break;
                 default: break;
             }
@@ -98,35 +99,30 @@ void RewriteEgg::init(rust::Vec<RecExprFFI> rewrites, InitStage stage) {
     }
 }
 
-// TODO: implement
-// (lam <extern> <name> <domain> <codomain> [<filter> <body>])
-const Def* RewriteEgg::init_lam(uint32_t id, NodeFFI node) { return nullptr; }
-
-// (con <extern> <name> <domain> [<filter> <body>])
-const Def* RewriteEgg::init_con(uint32_t id, NodeFFI node) {
+// (con <extern> <name> <var> <domain> <codomain> [<filter> <body>])
+const Def* RewriteEgg::init_lam(uint32_t id, NodeFFI node) {
     if (DEBUG) std::cout << "init - current node(" << id << "): " << node_ffi_str(node).c_str() << " - ";
 
-    // TODO: Polymorphic domain types
-    auto domain_id      = node.children[2];
-    auto domain         = get_node(MimKind::Var, domain_id);
-    auto domain_type    = convert(domain.children.back(), true);
-    auto new_con        = new_world().mut_con(domain_type);
-    auto con_name       = get_symbol(node.children[1]);
-    auto con_name_nouid = remove_uid(con_name);
-    new_con->set(con_name_nouid);
-    register_lam(con_name, new_con);
+    auto domain         = convert(node.children[3], true);
+    auto codomain       = convert(node.children[4], true);
+    auto new_lam        = new_world().mut_lam(domain, codomain);
+    auto lam_name       = get_symbol(node.children[1]);
+    auto lam_name_nouid = remove_uid(lam_name);
+    new_lam->set(lam_name_nouid);
+    register_lam(lam_name, new_lam);
 
-    // 'domain' is a var node so index 0 contains its name and back() its type.
+    // 'var_node' is a var node so index 0 contains its name and back() its type.
     // For reference: (var <name> [<proj1> <proj2>...] <type>)
-    auto var_name       = get_symbol(domain.children[0]);
+    auto var_node       = get_node(MimKind::Var, node.children[2]);
+    auto var_name       = get_symbol(var_node.children[0]);
     auto var_name_nouid = remove_uid(var_name);
-    auto var            = new_con->var();
+    auto var            = new_lam->var();
     var->set(var_name_nouid);
     register_var(var_name, var);
-    register_projs(domain_id);
+    register_projs(node.children[2]);
 
-    if (DEBUG) std::cout << new_con << "\n";
-    return new_con;
+    if (DEBUG) std::cout << new_lam << "\n";
+    return new_lam;
 }
 
 // (let <name> <definition> <expression>)
@@ -184,8 +180,9 @@ const Def* RewriteEgg::convert(uint32_t id, bool recurse) {
     if (DEBUG) std::cout << "convert - current node(" << id << "): " << node_ffi_str(node).c_str() << " - ";
     switch (node.kind) {
         case MimKind::Let: res = convert_let(id, node); break;
+        case MimKind::Fun:
+        case MimKind::Con:
         case MimKind::Lam: res = convert_lam(id, node); break;
-        case MimKind::Con: res = convert_con(id, node); break;
         case MimKind::App: res = convert_app(id, node); break;
         case MimKind::Var: res = convert_var(id, node); break;
         case MimKind::Lit: res = convert_lit(id, node); break;
@@ -224,26 +221,22 @@ const Def* RewriteEgg::convert_let(uint32_t id, NodeFFI node) {
     return expr;
 }
 
-// TODO: implement
-// (lam <extern> <name> <domain> <codomain> [<filter> <body>])
-const Def* RewriteEgg::convert_lam(uint32_t id, NodeFFI node) { return nullptr; }
+// (lam <extern> <name> <var> <domain> <codomain> [<filter> <body>])
+const Def* RewriteEgg::convert_lam(uint32_t id, NodeFFI node) {
+    auto lam = get_def(node.children[1])->as_mut<Lam>();
 
-// (con <extern> <name> <domain> [<filter> <body>])
-const Def* RewriteEgg::convert_con(uint32_t id, NodeFFI node) {
-    auto con = get_def(node.children[1])->as_mut<Lam>();
-
-    if (node.children.size() == 5) {
-        auto filter = get_def(node.children[3]);
-        auto body   = get_def(node.children[4]);
-        con->set_filter(filter);
-        con->set_body(body);
+    if (node.children.size() == 7) {
+        auto filter = get_def(node.children[5]);
+        auto body   = get_def(node.children[6]);
+        lam->set_filter(filter);
+        lam->set_body(body);
     } else
-        con->set_filter(false);
+        lam->set_filter(false);
 
     auto is_extern = get_symbol(node.children[0]);
-    if (is_extern == "extern") con->externalize();
+    if (is_extern == "extern") lam->externalize();
 
-    return con;
+    return lam;
 }
 
 // (app <callee> <arg>)
