@@ -9,19 +9,17 @@ void EqsatPhase::start() {
     bool slotted = true;
 
     // Infers whether to use 'egg' or 'slotted-egraphs' based on a
-    // config function with the signature '[] -> %eqsat.Impl'
+    // config lambda with the signature '[] -> %eqsat.Impl'
     // Each rewrite phase will further infer config values from
     // config functions and internalize all of them, including this one.
     for (auto def : world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
-            if (Axm::isa<eqsat::Impl>(lam->ret_dom())) {
+            if (Axm::isa<eqsat::Impl>(lam->codom())) {
                 auto body = lam->as<Lam>()->body();
-                if (auto body_app = body->isa<App>()) {
-                    if (Axm::isa<eqsat::slotted>(body_app->arg()))
-                        slotted = true;
-                    else if (Axm::isa<eqsat::egg>(body_app->arg()))
-                        slotted = false;
-                }
+                if (Axm::isa<eqsat::slotted>(body))
+                    slotted = true;
+                else if (Axm::isa<eqsat::egg>(body))
+                    slotted = false;
             }
         }
     }

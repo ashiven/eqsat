@@ -1,0 +1,73 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
+import _rise;
+
+fun extern test_add(a b: Nat): Nat =
+    return (%rise.add a b);
+
+fun extern test_mul(a b: Nat): Nat =
+    return (%rise.mul a b);
+
+fun extern test_map {S: *, T: *} as types (mapped: S → T): {n: Nat} → «n; S» → «n; T» = 
+    let mapper = %rise.map mapped;
+    return mapper;
+
+let mapped = lm(a: Nat) = %core.nat.sub (a, 1);
+let mapper = %rise.map mapped;
+let a = (1, 2, 3);
+let res = mapper a;
+
+fun extern test_transpose {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): «m; «n; T»» =
+    let transposed = %rise.transpose mat;
+    return transposed;
+
+let mat = ((1, 2, 3), (2, 3, 4));
+let transposed = %rise.transpose mat;
+
+fun extern test_slide (size: Nat, step: Nat) as args: {n: Nat, T: *} → «n; T» → «%rise.slide_len (n, size, step); «size; T»» = 
+    let slide = %rise.slide size step;
+    return slide;
+
+let slide = %rise.slide 3 1;
+let input: «5; Nat» = (1, 2, 3, 4, 5);
+let output = slide input;
+
+fun extern test_zip {n: Nat, S: *, T: *} as types (fst: «n; S», snd: «n; T») as packs: «n; [S, T]» = 
+    let zipped = %rise.zip fst snd;
+    return zipped;
+
+let a = (1, 2, 3);
+let b = (2, 3, 4);
+let zipped = %rise.zip (a, b);
+let _ = %rise.zip %rise.weightsH %rise.weightsV;
+
+fun extern test_join {n: Nat, m: Nat, T: *} as dim (mat: «n; «m; T»»): «%core.nat.mul (n, m); T» = 
+    let joined = %rise.join mat;
+    return joined;
+
+let mat = ((1, 2, 3), (2, 3, 4));
+let joined = %rise.join mat;
+let _ = %rise.join %rise.weights2d;
+
+fun extern test_reduce {n: Nat, T: *} as type (reducer: T → T → T, acc: T, input: «n; T») as args: T = 
+    let reduced = %rise.reduce reducer acc input;
+    return reduced;
+
+let acc = 0;
+let input = (1, 2, 3, 4);
+let reducer = lm(a: Nat) (b: Nat): Nat = %core.nat.add (a, b);
+let reduced = %rise.reduce reducer acc input;
+
+fun extern test_fst {S: *, T: *} as types (pair: [S, T]): S =
+    let fst = %rise.fst pair;
+    return fst;
+
+let pair = (1, 1);
+let fst = %rise.fst pair;
+
+fun extern test_snd {S: *, T: *} as types (pair: [S, T]): T =
+    let snd = %rise.snd pair;
+    return snd;
+
+let pair = (1, 1);
+let snd = %rise.snd pair;

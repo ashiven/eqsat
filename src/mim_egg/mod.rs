@@ -16,11 +16,11 @@ define_language! {
 
         // (let <name> <definition> <expression>)
         "let" = Let([Id; 3]),
-        // (lam <extern> <name> <domain> <codomain> [<filter>] [<body>])
+        // (lam <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
         "lam" = Lam(Box<[Id]>),
-        // (con <extern> <name> <domain> [<filter>] [<body>])
+        // (con <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
         "con" = Con(Box<[Id]>),
-        // (fun <extern> <name> <domain> <codomain> [<filter>] [<body>])
+        // (fun <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
         "fun" = Fun(Box<[Id]>),
         // (app <callee> <arg>)
         "app" = App([Id; 2]),

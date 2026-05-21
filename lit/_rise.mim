@@ -1,0 +1,29 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
+plugin core;
+
+// Binary
+axm %rise.add:        {T: *} → T → T → T;
+axm %rise.mul:        {T: *} → T → T → T;
+
+// Map
+axm %rise.map:        {S: *, T: *} → [S → T] → [{n: Nat} → «n; S» → «n; T»];
+
+// Arrays
+axm %rise.transpose:  {n: Nat, m: Nat, T: *} → «n; «m; T»» → «m; «n; T»»;
+axm %rise.slide_len:  [n: Nat, size: Nat, step: Nat] → Nat;
+axm %rise.slide:      [size: Nat] → [step: Nat] → [{n: Nat, T: *} → «n; T» → «%rise.slide_len (n, size, step); «size; T»»];
+axm %rise.zip:        {n: Nat, S: *, T: *} → «n; S» → «n; T» → «n; [S, T]»;
+axm %rise.join:       {n: Nat, m: Nat, T: *} → «n; «m; T»» → «%core.nat.mul (n, m); T»;
+
+// Reduce
+axm %rise.reduce:     {n: Nat, T: *} → [T → T → T] → T → «n; T» → T;
+
+// Pairs
+axm %rise.fst:        {S: *, T: *} → [S, T] → S;
+axm %rise.snd:        {S: *, T: *} → [S, T] → T;
+
+// Some constants (TODO: real values)
+axm %rise.weights2d:  «3; «3; Nat»»;
+axm %rise.weightsH:   «3; Nat»;
+axm %rise.weightsV:   «3; Nat»;

@@ -282,16 +282,13 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
     let name_scope_id = eg.find_applied_id(&name_bind.elem);
     let enodes = eg.enodes_applied(&name_scope_id);
-    let name_scope = enodes.first().unwrap_or_else(|| {
-        eg.dump();
-        panic!(
-            "Failed to get name scope node at id: {}",
-            name_scope_id.id.0
-        )
-    });
+    let name_scope = enodes
+        .iter()
+        .find(|node| matches!(node, MimSlotted::Scope(..)))
+        .expect("Expected let name scope");
+    let var_scope_childs = name_scope.applied_id_occurrences();
 
-    let scope_child_ids = name_scope.applied_id_occurrences();
-    let expr_id = scope_child_ids.get(1).expect("Failed to get expr id");
+    let expr_id = var_scope_childs.get(1).expect("Expected let expr id");
     let expr_type = eg.analysis_data(expr_id.id).type_.clone();
 
     AnalysisData { type_: expr_type }
@@ -306,13 +303,13 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
     let var_scope_id = eg.find_applied_id(&var_bind.elem);
     let enodes = eg.enodes_applied(&var_scope_id);
-    let var_scope = enodes.first().unwrap_or_else(|| {
-        eg.dump();
-        panic!("Failed to get var scope node at id: {}", var_scope_id.id.0)
-    });
+    let var_scope = enodes
+        .iter()
+        .find(|node| matches!(node, MimSlotted::Scope(..)))
+        .expect("Expected lam var scope");
+    let var_scope_childs = var_scope.applied_id_occurrences();
 
-    let scope_child_ids = var_scope.applied_id_occurrences();
-    let body_id = scope_child_ids.get(1).expect("Failed to get body id");
+    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
     AnalysisData {
@@ -334,11 +331,8 @@ fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
         children: pi_childs,
     } = callee_type
     {
-        let pi_scope = pi_childs.first().expect("Failed to get pi scope");
-        let codom_type = pi_scope
-            .children
-            .get(1)
-            .expect("Failed to get callee codomain");
+        let pi_scope = pi_childs.first().expect("Expected pi var scope");
+        let codom_type = pi_scope.children.get(1).expect("Expected pi codom");
         AnalysisData {
             type_: codom_type.clone(),
         }
@@ -384,7 +378,10 @@ fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
 
     let var_scope_id = eg.find_applied_id(var_scope);
     let enodes = eg.enodes_applied(&var_scope_id);
-    let var_scope = enodes.first().expect("Expected pack var scope");
+    let var_scope = enodes
+        .iter()
+        .find(|node| matches!(node, MimSlotted::Scope(..)))
+        .expect("Expected pack var scope");
     let var_scope_childs = var_scope.applied_id_occurrences();
 
     let arity_id = var_scope_childs.first().expect("Expected pack arity");
@@ -409,7 +406,10 @@ fn make_tuple_type(
 
     let elem_cons_id = eg.find_applied_id(elem_cons);
     let enodes = eg.enodes_applied(&elem_cons_id);
-    let elem_cons = enodes.first().expect("Failed to get tuple elem cons");
+    let elem_cons = enodes
+        .iter()
+        .find(|node| matches!(node, MimSlotted::Cons(..)) || matches!(node, MimSlotted::Nil()))
+        .expect("Expected tuple elem cons");
 
     let mut elem_types: Vec<TypeExpr> = Vec::new();
 
@@ -421,10 +421,10 @@ fn make_tuple_type(
 
         let enodes = eg.enodes_applied(&next);
         let next_cons = enodes
-            .first()
-            .expect("Failed to get next elem cons")
-            .clone();
-        curr_cons = next_cons;
+            .iter()
+            .find(|node| matches!(node, MimSlotted::Cons(..)) || matches!(node, MimSlotted::Nil()))
+            .expect("Expected next tuple elem cons");
+        curr_cons = next_cons.clone();
     }
 
     let mut elem_type_cons = TypeExpr {

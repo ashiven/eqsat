@@ -3,10 +3,10 @@
 
 plugin core;
 plugin eqsat;
-import pipeline;
+import _pipeline;
 
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.__IMPL__;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.__IMPL__;
 
 lam PtrN(n: Nat, T: *): * = (PtrN (%core.nat.sub (n, 1), %mem.Ptr0 T), T)#(%core.ncmp.e (n, 0));
 

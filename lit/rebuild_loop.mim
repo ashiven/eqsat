@@ -3,10 +3,10 @@
 
 plugin core;
 plugin eqsat;
-import pipeline;
+import _pipeline;
 
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.__IMPL__;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.__IMPL__;
 
 fun extern main(mem: %mem.M 0, argc: I32, argv: %mem.Ptr0 (%mem.Ptr0 I8)): [%mem.M 0, I32] =
     loop (mem, 0I32, 0I32)

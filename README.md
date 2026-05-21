@@ -105,20 +105,20 @@ plugin eqsat;
 // Here you can specify whether the plugin should use its `egg` or `slotted-egraphs` backend.
 // The default implementation when nothing gets specified is `slotted`.
 // Note that the `egg` implementation is still incomplete and experimental.
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.slotted;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.slotted;
 
 // To define the cost function that should be used for term extraction,
-// simply provide the following config function.
-fun extern _cost_fun(): %eqsat.CostFun =
-    return %eqsat.AstSize;
+// simply provide the following config lambda.
+lam extern _cost_fun(): %eqsat.CostFun =
+    %eqsat.AstSize;
 
 // To use a set of rules directly implemented in `egg` or `slotted-egraphs`, define
-// the following config function.
+// the following config lambda.
 // To see the existing rulesets, have a look at `src\mim_[egg|slotted]\rulesets`.
 // To implement and use your own ruleset, follow the instructions under **Rulesets**.
-fun extern _rulesets(): %eqsat.Ruleset =
-    return %eqsat.rulesets ( %eqsat.standard );
+lam extern _rulesets(): %eqsat.Ruleset =
+    %eqsat.rulesets (%eqsat.standard,);
 
 // You can also define your own syntactic rewrite-rules in `MimIR`.
 // To differentiate between slots: "(var $x)" and patterns: "?x" you should
@@ -126,8 +126,8 @@ fun extern _rulesets(): %eqsat.Ruleset =
 rule foo (slot_x: Nat) = %core.nat.add (slot_x, 0) => slot_x;
 
 // And then tell the eqsat plugin to use them for term rewriting.
-fun extern _rules(): %eqsat.Rules =
-    return %eqsat.rules ( foo );
+lam extern _rules(): %eqsat.Rules =
+    %eqsat.rules (foo,);
 
 // Using your rewrite-rule 'foo', this will be rewritten to:
 //
