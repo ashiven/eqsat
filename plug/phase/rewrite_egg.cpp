@@ -37,8 +37,8 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
     DefVec lams;
     for (auto def : old_world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
-            if (Axm::isa<eqsat::Ruleset>(lam->ret_dom()) || Axm::isa<eqsat::CostFun>(lam->ret_dom())
-                || Axm::isa<eqsat::Impl>(lam->ret_dom())) {
+            if (Axm::isa<eqsat::Ruleset>(lam->codom()) || Axm::isa<eqsat::CostFun>(lam->codom())
+                || Axm::isa<eqsat::Impl>(lam->codom())) {
                 lams.push_back(lam);
                 def->internalize();
             }
@@ -50,25 +50,23 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
     CostFn cost_fn = CostFn::AstSize;
     for (auto lam : lams) {
         auto body = lam->as<Lam>()->body();
-        if (auto body_app = body->isa<App>()) {
-            if (auto ruleset_config = Axm::isa<eqsat::rulesets>(body_app->arg())) {
-                for (auto ruleset : ruleset_config->args())
-                    if (Axm::isa<eqsat::core>(ruleset))
-                        rulesets.push_back(RuleSet::Core);
-                    else if (Axm::isa<eqsat::math>(ruleset))
-                        rulesets.push_back(RuleSet::Math);
-                    else
-                        assert(false && "Provided ruleset does not exist for egg");
+        if (auto ruleset_config = Axm::isa<eqsat::rulesets>(body)) {
+            for (auto ruleset : ruleset_config->args())
+                if (Axm::isa<eqsat::core>(ruleset))
+                    rulesets.push_back(RuleSet::Core);
+                else if (Axm::isa<eqsat::math>(ruleset))
+                    rulesets.push_back(RuleSet::Math);
+                else
+                    assert(false && "Provided ruleset does not exist for egg");
 
-            } else if (Axm::isa<eqsat::AstSize>(body_app->arg())) {
-                cost_fn = CostFn::AstSize;
-            } else if (Axm::isa<eqsat::AstDepth>(body_app->arg())) {
-                cost_fn = CostFn::AstDepth;
-            } else if (Axm::isa<eqsat::slotted>(body_app->arg()) || Axm::isa<eqsat::egg>(body_app->arg())) {
-                continue;
-            } else {
-                assert(false && "Invalid config value provided for egg");
-            }
+        } else if (Axm::isa<eqsat::AstSize>(body)) {
+            cost_fn = CostFn::AstSize;
+        } else if (Axm::isa<eqsat::AstDepth>(body)) {
+            cost_fn = CostFn::AstDepth;
+        } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
+            continue;
+        } else {
+            assert(false && "Invalid config value provided for egg");
         }
     }
 

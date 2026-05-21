@@ -1,3 +1,5 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
 import _rise;
 
 fun extern test_add(a b: Nat): Nat =

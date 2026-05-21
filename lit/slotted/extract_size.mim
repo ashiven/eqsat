@@ -1,18 +1,18 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin core;
 plugin eqsat;
-import pipeline;
+import _pipeline;
 
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.slotted;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.slotted;
 
 rule foo (slot_a: Nat, slot_b: Nat, slot_c: Nat) : %core.nat.add (slot_a, (%core.nat.add (slot_b, %core.nat.add (slot_c, 1)))) => slot_a;
 
-fun extern _rules(): %eqsat.Rules =
-    return (%eqsat.rules (foo));
+lam extern _rules(): %eqsat.Rules =
+    (%eqsat.rules (foo));
 
-fun extern _cost_fn(): %eqsat.CostFun =
-    return %eqsat.AstSize;
+lam extern _cost_fn(): %eqsat.CostFun =
+    %eqsat.AstSize;
 
 con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =
     return (%core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, 1)))));

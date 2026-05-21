@@ -1,10 +1,10 @@
 // RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin eqsat;
-import pipeline;
+import _pipeline;
 
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.__IMPL__;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.__IMPL__;
 
 fun extern combine (t1 t2: *) : * =
     return t1 ∪ t2;

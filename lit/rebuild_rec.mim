@@ -3,10 +3,10 @@
 
 plugin core;
 plugin eqsat;
-import pipeline;
+import _pipeline;
 
-fun extern _impl(): %eqsat.Impl =
-    return %eqsat.__IMPL__;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.__IMPL__;
 
 lam is_even(i: Nat): Bool = (is_odd (%core.nat.sub (i, 1)), tt)#(%core.ncmp.e (i, 0))
 and
