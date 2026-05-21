@@ -6,59 +6,58 @@
 
 namespace mim {
 
-// fun extern _impl(): %eqsat.Impl =
-//     return <impl>;
+// lam extern _impl(): %eqsat.Impl =
+//     <impl>;
 inline void eqsat_impl(World& world, flags_t impl) {
     auto Impl     = world.annex<plug::eqsat::Impl>();
-    auto _impl    = world.mut_fun({}, Impl)->set("_impl");
-    auto ret      = _impl->var(2, 1);
     auto impl_axm = world.annex(impl);
-    _impl->app(false, ret, impl_axm);
+    auto _impl    = world.mut_lam({}, Impl)->set("_impl");
+    _impl->set_filter(false);
+    _impl->set_body(impl_axm);
     _impl->externalize();
 }
 
-// fun extern _cost_fun(): %eqsat.CostFun =
-//     return <cost_fun>;
+// lam extern _cost_fun(): %eqsat.CostFun =
+//     <cost_fun>;
 inline void eqsat_cost_fun(World& world, flags_t cost_fun) {
     auto CostFun      = world.annex<plug::eqsat::CostFun>();
-    auto _cost_fun    = world.mut_fun({}, CostFun)->set("_cost_fun");
-    auto ret          = _cost_fun->var(2, 1);
     auto cost_fun_axm = world.annex(cost_fun);
-    _cost_fun->app(false, ret, cost_fun_axm);
+    auto _cost_fun    = world.mut_lam({}, CostFun)->set("_cost_fun");
+    _cost_fun->set_filter(false);
+    _cost_fun->set_body(cost_fun_axm);
     _cost_fun->externalize();
 }
 
-// fun extern _rulesets(): %eqsat.Ruleset =
-//     return %eqsat.rulesets (<rulesets>);
+// lam extern _rulesets(): %eqsat.Ruleset =
+//     %eqsat.rulesets (<rulesets>,);
 inline void eqsat_rulesets(World& world, std::vector<flags_t> rulesets) {
-    auto Ruleset   = world.annex<plug::eqsat::Ruleset>();
-    auto _rulesets = world.mut_fun({}, Ruleset)->set("_rulesets");
-    auto ret       = _rulesets->var(2, 1);
+    auto Ruleset = world.annex<plug::eqsat::Ruleset>();
 
     DefVec ruleset_axms;
     for (auto ruleset : rulesets) {
         auto ruleset_axm = world.annex(ruleset);
         ruleset_axms.push_back(ruleset_axm);
     }
-
     auto ruleset_tuple = world.tuple(ruleset_axms);
     auto rulesets_app  = world.call(world.annex<plug::eqsat::rulesets>(), ruleset_tuple);
 
-    _rulesets->app(false, ret, rulesets_app);
+    auto _rulesets = world.mut_lam({}, Ruleset)->set("_rulesets");
+    _rulesets->set_filter(false);
+    _rulesets->set_body(rulesets_app);
     _rulesets->externalize();
 }
 
-// fun extern _rules(): %eqsat.Rules =
-//     return %eqsat.rules (<rules>);
+// lam extern _rules(): %eqsat.Rules =
+//     %eqsat.rules (<rules>,);
 inline void eqsat_rules(World& world, DefVec rules) {
-    auto Rules  = world.annex<plug::eqsat::Rules>();
-    auto _rules = world.mut_fun({}, Rules)->set("_rules");
-    auto ret    = _rules->var(2, 1);
+    auto Rules = world.annex<plug::eqsat::Rules>();
 
     auto rules_tuple = world.tuple(rules);
     auto rules_app   = world.call(world.annex<plug::eqsat::rules>(), rules_tuple);
 
-    _rules->app(false, ret, rules_app);
+    auto _rules = world.mut_lam({}, Rules)->set("_rules");
+    _rules->set_filter(false);
+    _rules->set_body(rules_app);
     _rules->externalize();
 }
 
