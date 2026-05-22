@@ -99,7 +99,7 @@ void RewriteEgg::init(rust::Vec<RecExprFFI> rewrites, InitStage stage) {
     }
 }
 
-// (con <extern> <name> <var> <domain> <codomain> [<filter> <body>])
+// (lam <extern> <name> <var> <domain> <codomain> [<filter> <body>])
 const Def* RewriteEgg::init_lam(uint32_t id, NodeFFI node) {
     if (DEBUG) std::cout << "init - current node(" << id << "): " << node_ffi_str(node).c_str() << " - ";
 
