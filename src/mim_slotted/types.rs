@@ -104,6 +104,7 @@ pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
 trait TypeConstructors {
     fn hole() -> Self;
     fn nil() -> Self;
+    fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
     fn arr(arity: TypeExpr, body: TypeExpr) -> Self;
     fn sigma(elem_cons: TypeExpr) -> Self;
     fn pi(dom: TypeExpr, codom: TypeExpr) -> Self;
@@ -145,6 +146,13 @@ impl TypeConstructors for TypeExpr {
         TypeExpr {
             node: MimSlotted::Nil(),
             children: vec![],
+        }
+    }
+
+    fn cons(elem: TypeExpr, next: TypeExpr) -> Self {
+        TypeExpr {
+            node: MimSlotted::Cons(AppliedId::null(), AppliedId::null()),
+            children: vec![elem, next],
         }
     }
 
@@ -273,20 +281,32 @@ pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     }
 }
 
-fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let name_bind = if let MimSlotted::Let(name_bind) = enode {
-        name_bind
-    } else {
-        panic!("Expected a let node")
+macro_rules! expect {
+    ($value:expr, $pat:pat => $result:expr) => {
+        match $value {
+            $pat => $result,
+            _ => panic!("Pattern mismatch"),
+        }
     };
+}
 
-    let name_scope_id = eg.find_applied_id(&name_bind.elem);
-    let enodes = eg.enodes_applied(&name_scope_id);
-    let name_scope = enodes
-        .iter()
-        .find(|node| matches!(node, MimSlotted::Scope(..)))
-        .expect("Expected let name scope");
-    let var_scope_childs = name_scope.applied_id_occurrences();
+macro_rules! find {
+    ($eg:expr, $id:expr, $pat:pat) => {{
+        let found_id = $eg.find_applied_id(&$id);
+        let enodes = $eg.enodes_applied(&found_id);
+        let node = enodes
+            .iter()
+            .find(|n| matches!(n, $pat))
+            .expect("Expected pattern in find")
+            .clone();
+        node
+    }};
+}
+
+fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+    let var_bind = expect!(enode, MimSlotted::Let(var_bind) => var_bind );
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
+    let var_scope_childs = var_scope.applied_id_occurrences();
 
     let expr_id = var_scope_childs.get(1).expect("Expected let expr id");
     let expr_type = eg.analysis_data(expr_id.id).type_.clone();
@@ -295,18 +315,8 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 }
 
 fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let var_bind = if let MimSlotted::Lam(var_bind) = enode {
-        var_bind
-    } else {
-        panic!("Expected a lam node")
-    };
-
-    let var_scope_id = eg.find_applied_id(&var_bind.elem);
-    let enodes = eg.enodes_applied(&var_scope_id);
-    let var_scope = enodes
-        .iter()
-        .find(|node| matches!(node, MimSlotted::Scope(..)))
-        .expect("Expected lam var scope");
+    let var_bind = expect!(enode, MimSlotted::Lam(var_bind) => var_bind );
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
     let var_scope_childs = var_scope.applied_id_occurrences();
 
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
@@ -318,12 +328,7 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 }
 
 fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let callee = if let MimSlotted::App(callee, _arg) = enode {
-        callee
-    } else {
-        panic!("Expected an app node")
-    };
-
+    let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
     let callee_type = eg.analysis_data(callee.id).type_.clone();
 
     if let TypeExpr {
@@ -358,11 +363,7 @@ fn make_var_type(
 }
 
 fn make_lit_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let type_ = if let MimSlotted::Lit(_val, type_) = enode {
-        type_
-    } else {
-        panic!("Expected a lit node")
-    };
+    let (_val, type_) = expect!(enode, MimSlotted::Lit(val, type_) => (val, type_));
 
     let type_id = eg.find_applied_id(type_);
     let type_ = eg.get_syn_expr(&type_id);
@@ -370,18 +371,8 @@ fn make_lit_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 }
 
 fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let var_scope = if let MimSlotted::Pack(bind) = enode {
-        &bind.elem
-    } else {
-        panic!("Expected a pack node")
-    };
-
-    let var_scope_id = eg.find_applied_id(var_scope);
-    let enodes = eg.enodes_applied(&var_scope_id);
-    let var_scope = enodes
-        .iter()
-        .find(|node| matches!(node, MimSlotted::Scope(..)))
-        .expect("Expected pack var scope");
+    let var_bind = expect!(enode, MimSlotted::Pack(var_bind) => var_bind);
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
     let var_scope_childs = var_scope.applied_id_occurrences();
 
     let arity_id = var_scope_childs.first().expect("Expected pack arity");
@@ -398,50 +389,26 @@ fn make_tuple_type(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     enode: &MimSlotted,
 ) -> AnalysisData {
-    let elem_cons = if let MimSlotted::Tuple(elem_cons) = enode {
-        elem_cons
-    } else {
-        panic!("Expected a tuple node")
-    };
-
-    let elem_cons_id = eg.find_applied_id(elem_cons);
-    let enodes = eg.enodes_applied(&elem_cons_id);
-    let elem_cons = enodes
-        .iter()
-        .find(|node| matches!(node, MimSlotted::Cons(..)) || matches!(node, MimSlotted::Nil()))
-        .expect("Expected tuple elem cons");
+    let elem_cons = expect!(enode, MimSlotted::Tuple(elem_cons)=> elem_cons);
+    let elem_cons = find!(eg, elem_cons, MimSlotted::Cons(..) | MimSlotted::Nil());
 
     let mut elem_types: Vec<TypeExpr> = Vec::new();
-
-    let mut curr_cons = elem_cons.clone();
+    let mut curr_cons = elem_cons;
     while let MimSlotted::Cons(elem, next) = curr_cons {
         let curr_elem_id = eg.find_applied_id(&elem);
         let curr_elem_type = eg.analysis_data(curr_elem_id.id).type_.clone();
         elem_types.push(curr_elem_type);
-
-        let enodes = eg.enodes_applied(&next);
-        let next_cons = enodes
-            .iter()
-            .find(|node| matches!(node, MimSlotted::Cons(..)) || matches!(node, MimSlotted::Nil()))
-            .expect("Expected next tuple elem cons");
-        curr_cons = next_cons.clone();
+        curr_cons = find!(eg, next, MimSlotted::Cons(..) | MimSlotted::Nil());
     }
-
-    let mut elem_type_cons = TypeExpr {
-        node: MimSlotted::Nil(),
-        children: vec![],
-    };
 
     if elem_types.is_empty() {
         AnalysisData {
-            type_: TypeExpr::sigma(elem_type_cons),
+            type_: TypeExpr::sigma(TypeExpr::nil()),
         }
     } else {
+        let mut elem_type_cons = TypeExpr::nil();
         while let Some(elem_type) = elem_types.pop() {
-            elem_type_cons = TypeExpr {
-                node: MimSlotted::Cons(AppliedId::null(), AppliedId::null()),
-                children: vec![elem_type, elem_type_cons],
-            }
+            elem_type_cons = TypeExpr::cons(elem_type, elem_type_cons);
         }
         AnalysisData {
             type_: TypeExpr::sigma(elem_type_cons),
