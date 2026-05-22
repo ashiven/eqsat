@@ -664,17 +664,38 @@ mod test {
         let fun_typed = extract_type_annotations(&fun_annotated);
         let fun_typed_id = add_expr_typed(&mut eg, fun_typed);
 
-        let eta_exp = "(lam $x (scope (lit ff Bool) (app func (var $x))))";
-        let eta_exp: RecExpr<MimSlotted> = RecExpr::parse(eta_exp).unwrap();
-        let eta_exp_id = eg.add_expr(eta_exp);
-
         assert_eq!(
             type_of(&eg, fun_typed_id),
             type_("(pi $var (scope Nat Bool))")
         );
+
+        let eta_exp_lam = "(lam $x (scope (lit ff Bool) (app func (var $x))))";
+        let eta_exp_lam: RecExpr<MimSlotted> = RecExpr::parse(eta_exp_lam).unwrap();
+        let eta_exp_lam_id = eg.add_expr(eta_exp_lam);
+
         assert_eq!(
-            type_of(&eg, eta_exp_id),
+            type_of(&eg, eta_exp_lam_id),
             type_("(pi $dummy (scope (hole (type (lit 0 Univ))) Bool))")
+        );
+
+        let eta_exp_con = "(con $x (scope (lit ff Bool) (app func (var $x))))";
+        let eta_exp_con: RecExpr<MimSlotted> = RecExpr::parse(eta_exp_con).unwrap();
+        let eta_exp_con_id = eg.add_expr(eta_exp_con);
+
+        assert_eq!(
+            type_of(&eg, eta_exp_con_id),
+            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) (bot (type (lit 0 Univ)))))")
+        );
+
+        let eta_exp_fun = "(fun $x (scope (lit ff Bool) (app func (var $x))))";
+        let eta_exp_fun: RecExpr<MimSlotted> = RecExpr::parse(eta_exp_fun).unwrap();
+        let eta_exp_fun_id = eg.add_expr(eta_exp_fun);
+
+        assert_eq!(
+            type_of(&eg, eta_exp_fun_id),
+            type_(
+                "(pi $dummy (scope (sigma $dummy (scope (cons (hole (type (lit 0 Univ))) (cons (pi $dummy (scope Bool (bot (type (lit 0 Univ))))) nil)) nil)) (bot (type (lit 0 Univ)))))"
+            )
         );
     }
 
