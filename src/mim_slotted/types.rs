@@ -418,7 +418,6 @@ fn make_tuple_type(
 
 fn get_literal(lit_expr: &RecExpr<MimSlotted>) -> u64 {
     let lit_val = lit_expr.children.first().expect("Expected literal value");
-
     if let MimSlotted::Symbol(s) = lit_val.node {
         match s.as_str() {
             "ff" => 0,
@@ -458,12 +457,8 @@ fn make_extract_type(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     enode: &MimSlotted,
 ) -> AnalysisData {
-    let (tuple, index) = if let MimSlotted::Extract(tuple, index) = enode {
-        (tuple, index)
-    } else {
-        panic!("Expected an extract node")
-    };
-    let tuple_type = eg.analysis_data(tuple.id).type_.clone();
+    let (tuple, index) = expect!(enode, MimSlotted::Extract(tuple, index) => (tuple, index));
+    let tuple_type = &eg.analysis_data(tuple.id).type_;
     let index_id = eg.find_applied_id(index);
     let index = eg.get_syn_expr(&index_id);
 
@@ -533,14 +528,11 @@ fn make_insert_type(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     enode: &MimSlotted,
 ) -> AnalysisData {
-    let (tuple, index, value) = if let MimSlotted::Insert(tuple, index, value) = enode {
-        (tuple, index, value)
-    } else {
-        panic!("Expected an insert node")
-    };
+    let (tuple, index, value) =
+        expect!(enode, MimSlotted::Insert(tuple, index, value) => (tuple, index, value));
 
-    let tuple_type = eg.analysis_data(tuple.id).type_.clone();
-    let value_type = eg.analysis_data(value.id).type_.clone();
+    let tuple_type = &eg.analysis_data(tuple.id).type_;
+    let value_type = &eg.analysis_data(value.id).type_;
     let index_id = eg.find_applied_id(index);
     let index = eg.get_syn_expr(&index_id);
 
@@ -552,7 +544,7 @@ fn make_insert_type(
         ..
     } = tuple_type
     {
-        insert_type = tuple_type
+        insert_type = tuple_type.clone();
     // Insert into tuple with literal index
     } else if let TypeExpr {
         node: MimSlotted::Sigma(..),
@@ -569,7 +561,7 @@ fn make_insert_type(
             .first()
             .expect("Expected sigma elem cons");
         let index_literal = get_literal(&index);
-        let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
+        let inserted_cons = cons_insert_at(sigma_elem_cons, value_type, index_literal);
         insert_type = TypeExpr::sigma(inserted_cons);
     }
 
