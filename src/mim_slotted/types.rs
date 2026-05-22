@@ -329,7 +329,7 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
 fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
-    let callee_type = eg.analysis_data(callee.id).type_.clone();
+    let callee_type = &eg.analysis_data(callee.id).type_;
 
     if let TypeExpr {
         node: MimSlotted::Pi(..),
