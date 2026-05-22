@@ -104,9 +104,12 @@ pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
 trait TypeConstructors {
     fn hole() -> Self;
     fn nil() -> Self;
+    fn type_(level: u64) -> Self;
+    fn bot(type_: TypeExpr) -> Self;
     fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
     fn arr(arity: TypeExpr, body: TypeExpr) -> Self;
-    fn sigma(elem_cons: TypeExpr) -> Self;
+    fn sigma(types: Vec<TypeExpr>) -> Self;
+    fn sigma_cons(type_cons: TypeExpr) -> Self;
     fn pi(dom: TypeExpr, codom: TypeExpr) -> Self;
 }
 
@@ -123,22 +126,7 @@ impl TypeConstructors for TypeExpr {
     fn hole() -> Self {
         TypeExpr {
             node: MimSlotted::Hole(AppliedId::null()),
-            children: vec![TypeExpr {
-                node: MimSlotted::Type(AppliedId::null()),
-                children: vec![TypeExpr {
-                    node: MimSlotted::Lit(AppliedId::null(), AppliedId::null()),
-                    children: vec![
-                        TypeExpr {
-                            node: MimSlotted::Num(0),
-                            children: vec![],
-                        },
-                        TypeExpr {
-                            node: MimSlotted::Symbol("Univ".into()),
-                            children: vec![],
-                        },
-                    ],
-                }],
-            }],
+            children: vec![TypeExpr::type_(0)],
         }
     }
 
@@ -146,6 +134,32 @@ impl TypeConstructors for TypeExpr {
         TypeExpr {
             node: MimSlotted::Nil(),
             children: vec![],
+        }
+    }
+
+    fn type_(level: u64) -> Self {
+        TypeExpr {
+            node: MimSlotted::Type(AppliedId::null()),
+            children: vec![TypeExpr {
+                node: MimSlotted::Lit(AppliedId::null(), AppliedId::null()),
+                children: vec![
+                    TypeExpr {
+                        node: MimSlotted::Num(level),
+                        children: vec![],
+                    },
+                    TypeExpr {
+                        node: MimSlotted::Symbol("Univ".into()),
+                        children: vec![],
+                    },
+                ],
+            }],
+        }
+    }
+
+    fn bot(type_: TypeExpr) -> Self {
+        TypeExpr {
+            node: MimSlotted::Bot(AppliedId::null()),
+            children: vec![type_],
         }
     }
 
@@ -169,7 +183,15 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn sigma(elem_cons: TypeExpr) -> Self {
+    fn sigma(mut types: Vec<TypeExpr>) -> Self {
+        let mut type_cons = TypeExpr::nil();
+        while let Some(type_) = types.pop() {
+            type_cons = TypeExpr::cons(type_, type_cons);
+        }
+        TypeExpr::sigma_cons(type_cons)
+    }
+
+    fn sigma_cons(type_cons: TypeExpr) -> Self {
         TypeExpr {
             node: MimSlotted::Sigma(Bind {
                 slot: Slot::named("dummy"),
@@ -177,7 +199,7 @@ impl TypeConstructors for TypeExpr {
             }),
             children: vec![TypeExpr {
                 node: MimSlotted::Scope(AppliedId::null(), AppliedId::null()),
-                children: vec![elem_cons, TypeExpr::nil()],
+                children: vec![type_cons, TypeExpr::nil()],
             }],
         }
     }
@@ -205,6 +227,10 @@ pub(crate) fn make_type(
         MimSlotted::Let(..) => make_let_type(eg, enode),
         // typeof[(lam $x (scope <filter> <body>))]         = Pi(Hole(*), typeof(<body>))
         MimSlotted::Lam(..) => make_lam_type(eg, enode),
+        // typeof[(con $x (scope <filter> <body>))]         = Pi(Hole(*), Bot(*))
+        MimSlotted::Con(..) => make_con_type(eg, enode),
+        // typeof[(fun $x (scope <filter> <body>))]         = Pi(Sigma(Hole(*), Pi(typeof<body>, Bot(*))), Bot(*))
+        MimSlotted::Fun(..) => make_fun_type(eg, enode),
         // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
         MimSlotted::App(..) => make_app_type(eg, enode),
         // typeof[(var $x)]                                 = Hole(*)
@@ -221,8 +247,6 @@ pub(crate) fn make_type(
         MimSlotted::Insert(..) => make_insert_type(eg, enode),
 
         // TODO:
-        // MimSlotted::Con(..) = make_con_type(eg, enode),
-        // MimSlotted::Fun(..) = make_fun_type(eg, enode),
         // MimSlotted::Inj(..) = make_inj_type(eg, enode),
         // MimSlotted::Merge(..) = make_merge_type(eg, enode),
 
@@ -327,6 +351,33 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     }
 }
 
+fn make_con_type(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+    let _var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
+
+    AnalysisData {
+        type_: TypeExpr::pi(TypeExpr::hole(), TypeExpr::bot(TypeExpr::type_(0))),
+    }
+}
+
+fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+    let var_bind = expect!(enode, MimSlotted::Fun(var_bind) => var_bind );
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
+    let var_scope_childs = var_scope.applied_id_occurrences();
+
+    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
+    let body_type = eg.analysis_data(body_id.id).type_.clone();
+
+    AnalysisData {
+        type_: TypeExpr::pi(
+            TypeExpr::sigma(vec![
+                TypeExpr::hole(),
+                TypeExpr::pi(body_type, TypeExpr::bot(TypeExpr::type_(0))),
+            ]),
+            TypeExpr::bot(TypeExpr::type_(0)),
+        ),
+    }
+}
+
 fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
     let callee_type = &eg.analysis_data(callee.id).type_;
@@ -348,11 +399,9 @@ fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     }
 }
 
-// I guess we should always give var a hole type because all vars
+// We should always give var a hole type because all vars
 // are represented with the same var eclass and therefore we can't
 // associate the different variables' types with this eclass.
-// So we should just hope that the mim compiler will be able to
-// resolve all of these var holes itself.
 fn make_var_type(
     _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     _enode: &MimSlotted,
@@ -401,18 +450,8 @@ fn make_tuple_type(
         curr_cons = find!(eg, next, MimSlotted::Cons(..) | MimSlotted::Nil());
     }
 
-    if elem_types.is_empty() {
-        AnalysisData {
-            type_: TypeExpr::sigma(TypeExpr::nil()),
-        }
-    } else {
-        let mut elem_type_cons = TypeExpr::nil();
-        while let Some(elem_type) = elem_types.pop() {
-            elem_type_cons = TypeExpr::cons(elem_type, elem_type_cons);
-        }
-        AnalysisData {
-            type_: TypeExpr::sigma(elem_type_cons),
-        }
+    AnalysisData {
+        type_: TypeExpr::sigma(elem_types),
     }
 }
 
@@ -562,7 +601,7 @@ fn make_insert_type(
             .expect("Expected sigma elem cons");
         let index_literal = get_literal(&index);
         let inserted_cons = cons_insert_at(sigma_elem_cons, value_type, index_literal);
-        insert_type = TypeExpr::sigma(inserted_cons);
+        insert_type = TypeExpr::sigma_cons(inserted_cons);
     }
 
     AnalysisData { type_: insert_type }
