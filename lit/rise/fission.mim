@@ -9,11 +9,11 @@ fun extern _impl(): %eqsat.Impl =
 fun extern _rulesets(): %eqsat.Ruleset =
   return (%eqsat.rise, );
 
-lam f1(a: Nat) = %core.nat.add (a, 1);
-lam f2(a: Nat) = %core.nat.sub (a, 1);
-lam f3(a: Nat) = %core.nat.mul (a, 1);
-lam f4(a: Nat) = %core.nat.add (a, 2);
-lam f5(a: Nat) = %core.nat.sub (a, 2);
+lam f1(a: Nat)@ff = %core.nat.add (a, 1);
+lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
+lam f3(a: Nat)@ff = %core.nat.mul (a, 1);
+lam f4(a: Nat)@ff = %core.nat.add (a, 2);
+lam f5(a: Nat)@ff = %core.nat.sub (a, 2);
 
 fun extern fission(arg: «3; Nat»): «3; Nat» =
   let mapper = %rise.map (lm(x: Nat): Nat = (f5 (f4 (f3 (f2 (f1 x))))));
