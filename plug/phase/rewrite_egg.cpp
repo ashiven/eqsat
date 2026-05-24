@@ -243,7 +243,7 @@ const Def* RewriteEgg::convert_lam(uint32_t id, NodeFFI node) {
 const Def* RewriteEgg::convert_app(uint32_t id, NodeFFI node) {
     auto callee  = get_def(node.children[0]);
     auto arg     = get_def(node.children[1]);
-    auto new_app = new_world().app(callee, arg);
+    auto new_app = new_world().implicit_app(callee, arg);
     return new_app;
 }
 
