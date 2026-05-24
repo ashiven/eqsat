@@ -50,8 +50,8 @@ define_language! {
         Inj(AppliedId, AppliedId) = "inj",
         // (merge <type> <type-cons>)
         Merge(AppliedId, AppliedId) = "merge",
-        // (axm <name> <type>)
-        Axm(AppliedId, AppliedId) = "axm",
+        // (axm <name>)
+        Axm(AppliedId) = "axm",
         // (match <op-cons>)
         Match(AppliedId) = "match",
         // (proxy <type> <pass> <tag> <op-cons>)

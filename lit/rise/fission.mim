@@ -31,7 +31,7 @@ fun extern _rulesets(): %eqsat.Ruleset =
 
 lam f1(a: Nat)@ff = %core.nat.add (a, 1);
 lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
-lam f3(a: Nat)@ff = %core.nat.mul (a, 1);
+lam f3(a: Nat)@ff = %core.nat.mul (a, 2);
 lam f4(a: Nat)@ff = %core.nat.add (a, 2);
 lam f5(a: Nat)@ff = %core.nat.sub (a, 2);
 

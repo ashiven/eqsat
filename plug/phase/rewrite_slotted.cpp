@@ -166,7 +166,7 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
     return cache_set(id, res);
 }
 
-// (axm <name> <type>)
+// (axm <name>)
 const Def* RewriteSlotted::init_axm(uint32_t id, NodeFFI node) {
     if (DEBUG) std::cout << "init - current node(" << id << "): " << node_ffi_str(node).c_str() << " - ";
     auto name = get_symbol(node.children[0]);
