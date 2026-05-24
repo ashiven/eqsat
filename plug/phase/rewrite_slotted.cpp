@@ -10,8 +10,8 @@
 
 namespace mim::plug::eqsat {
 
-const std::set MUTABLES   = {MimKind::Lam, MimKind::Con,   MimKind::Fun, MimKind::Pi,  MimKind::Cn,
-                             MimKind::Fn,  MimKind::Sigma, MimKind::Arr, MimKind::Pack};
+const std::set MUTABLES   = {MimKind::Lam, MimKind::Con, MimKind::Fun,   MimKind::ImplicitPi, MimKind::Pi,
+                             MimKind::Cn,  MimKind::Fn,  MimKind::Sigma, MimKind::Arr,        MimKind::Pack};
 const std::set NO_CONVERT = {MimKind::Axm};
 
 void RewriteSlotted::start() {
@@ -120,6 +120,7 @@ const Def* RewriteSlotted::init(uint32_t id) {
             case MimKind::Let: res = init_let(id, node); break;
             case MimKind::Fn:
             case MimKind::Cn:
+            case MimKind::ImplicitPi:
             case MimKind::Pi: res = init_pi(id, node); break;
             case MimKind::Sigma: res = init_sigma(id, node); break;
             case MimKind::Arr: res = init_arr(id, node); break;
@@ -146,6 +147,7 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
             case MimKind::Lam: res = init_lam(id, node); break;
             case MimKind::Fn:
             case MimKind::Cn:
+            case MimKind::ImplicitPi:
             case MimKind::Pi: res = init_pi(id, node); break;
             case MimKind::Sigma: res = init_sigma(id, node); break;
             case MimKind::Arr: res = init_arr(id, node); break;
@@ -236,7 +238,8 @@ const Def* RewriteSlotted::init_pi(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope);
 
-    auto mut_pi = new_world().mut_pi(new_world().type_infer_univ());
+    auto implicit = node.kind == MimKind::ImplicitPi;
+    auto mut_pi   = new_world().mut_pi(new_world().type_infer_univ(), implicit);
 
     auto var_name = get_slot(id);
     auto var      = mut_pi->var();
@@ -387,6 +390,7 @@ const Def* RewriteSlotted::convert(uint32_t id) {
         case MimKind::Sigma: res = convert_sigma(id, node); break;
         case MimKind::Fn:
         case MimKind::Cn:
+        case MimKind::ImplicitPi:
         case MimKind::Pi: res = convert_pi(id, node); break;
         case MimKind::Idx: res = convert_idx(id, node); break;
         case MimKind::Hole: res = convert_hole(id, node); break;

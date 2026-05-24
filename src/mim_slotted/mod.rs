@@ -72,6 +72,8 @@ define_language! {
         Arr(Bind<AppliedId>) = "arr",
         // (sigma $var (scope <type-cons> nil))
         Sigma(Bind<AppliedId>) = "sigma",
+        // (pi* $var (scope <domain> <codomain>))
+        ImplicitPi(Bind<AppliedId>) = "pi*",
         // (pi $var (scope <domain> <codomain>))
         Pi(Bind<AppliedId>) = "pi",
         // (cn $var (scope <domain> <codomain>))

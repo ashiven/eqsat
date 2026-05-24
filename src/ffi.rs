@@ -53,6 +53,7 @@ pub mod bridge {
         Top,
         Arr,
         Sigma,
+        ImplicitPi,
         Pi,
         Cn,
         Fn,
@@ -140,6 +141,7 @@ impl fmt::Display for NodeFFI {
             MimKind::Top => f.write_str("top"),
             MimKind::Arr => f.write_str("arr"),
             MimKind::Sigma => f.write_str("sigma"),
+            MimKind::ImplicitPi => f.write_str("pi*"),
             MimKind::Pi => f.write_str("pi"),
             MimKind::Cn => f.write_str("cn"),
             MimKind::Fn => f.write_str("fn"),
@@ -235,6 +237,7 @@ impl FFIInner for Mim {
             Mim::Fn_(children) => new_node_ffi(MimKind::Fn, children, None, None),
             Mim::Cn(children) => new_node_ffi(MimKind::Cn, children, None, None),
             Mim::Pi(children) => new_node_ffi(MimKind::Pi, children, None, None),
+            Mim::ImplicitPi(children) => new_node_ffi(MimKind::ImplicitPi, children, None, None),
             Mim::Idx(child) => new_node_ffi(MimKind::Idx, &[*child], None, None),
             Mim::Hole(child) => new_node_ffi(MimKind::Hole, &[*child], None, None),
             Mim::Type(child) => new_node_ffi(MimKind::Type, &[*child], None, None),
@@ -405,6 +408,14 @@ impl FFIInner for MimSlotted {
             ),
             MimSlotted::Sigma(bind) => new_node_ffi(
                 MimKind::Sigma,
+                children,
+                None,
+                None,
+                Some(format!("{}", bind.slot)),
+                type_,
+            ),
+            MimSlotted::ImplicitPi(bind) => new_node_ffi(
+                MimKind::ImplicitPi,
                 children,
                 None,
                 None,
@@ -583,6 +594,11 @@ impl RecExprFFI {
                     }
                 }
                 MimKind::Var => {
+                    if !node.slot.is_empty() {
+                        vec.insert(1, Sexpr::String(node.slot.clone()))
+                    }
+                }
+                MimKind::ImplicitPi => {
                     if !node.slot.is_empty() {
                         vec.insert(1, Sexpr::String(node.slot.clone()))
                     }

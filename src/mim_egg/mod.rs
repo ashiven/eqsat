@@ -70,6 +70,8 @@ define_language! {
         "cn" = Cn([Id; 3]),
         // (pi <var> <domain> <codomain>)
         "pi" = Pi([Id; 3]),
+        // (pi* <var> <domain> <codomain>)
+        "pi*" = ImplicitPi([Id; 3]),
         // (idx <size>)
         "idx" = Idx(Id),
         // (hole <type>) - does it even make sense to have this?

@@ -202,6 +202,7 @@ const Def* RewriteEgg::convert(uint32_t id, bool recurse) {
         case MimKind::Sigma: res = convert_sigma(id, node); break;
         case MimKind::Fn:
         case MimKind::Cn:
+        case MimKind::ImplicitPi:
         case MimKind::Pi: res = convert_pi(id, node); break;
         case MimKind::Idx: res = convert_idx(id, node); break;
         case MimKind::Hole: res = convert_hole(id, node); break;
@@ -419,6 +420,7 @@ const Def* RewriteEgg::convert_cn(uint32_t id, NodeFFI node) {
 const Def* RewriteEgg::convert_pi(uint32_t id, NodeFFI node) {
     auto domain   = get_def(node.children[1]);
     auto codomain = get_def(node.children[2]);
+    auto implicit = node.kind == MimKind::ImplicitPi;
     auto new_pi   = new_world().pi(domain, codomain);
     return new_pi;
 }
