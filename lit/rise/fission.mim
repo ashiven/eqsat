@@ -3,6 +3,26 @@
 plugin eqsat;
 import _rise;
 
+// Some of the beta/eta phases were substituting the bodies
+// of f1-f5 into the application (f5(f4(...))) so we skip them.
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %compile.pass2phase %compile.scalarize_pass,
+        %compile.pass2phase (%compile.eta_red_pass ff),
+        %compile.pass2phase %compile.tail_rec_elim_pass,
+        %compile.internal_cleanup_phase,
+        // %eqsat.eqsat_phase,
+        %compile.pass2phase %compile.lam_spec_pass,
+        %compile.branch_normalize_phase,
+        %compile.ret_wrap_phase,
+        %compile.repl2phase (
+            %compile.repls (
+                %mem.remem_repl,
+                %mem.alloc2malloc_repl,
+            )
+        ),
+    );
+
 fun extern _impl(): %eqsat.Impl = 
   return %eqsat.slotted;
 
