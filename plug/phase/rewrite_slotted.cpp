@@ -94,6 +94,21 @@ const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     return res;
 }
 
+void RewriteSlotted::create_roots(rust::Vec<RecExprFFI> rec_exprs) {
+    for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
+        if (DEBUG) std::cout << "\nCreating Root: " << rec_expr_id << "\n";
+        auto rec_expr = rec_exprs[rec_expr_id];
+        set_state(rec_expr_id, rec_expr);
+
+        auto root_id   = nodes().size() - 1;
+        auto root_node = get_node(MimKind::Root, root_id);
+        init_root(root_id, root_node);
+        // -> init_lookahead -> init_lam -> init_pi -> convert
+        // Should we maybe set the types of these root lams as type_infer_univ
+        // at first here to fully prevent all converts?
+    }
+}
+
 void RewriteSlotted::init(rust::Vec<RecExprFFI> rec_exprs) {
     for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
         if (DEBUG) std::cout << "\nInitializing RecExpr: " << rec_expr_id << "\n";

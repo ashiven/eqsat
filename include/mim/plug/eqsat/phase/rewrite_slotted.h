@@ -124,6 +124,11 @@ private:
     // traversal to create the remaining Def's
     const Def* create_type(RecExprFFI type_);
 
+    // Creates all root-level bindings in order to ensure
+    // no root-level binders are referenced before they have
+    // been created in the init phase.
+    void create_roots(rust::Vec<RecExprFFI> rec_exprs);
+
     // Performs a top-down traverse of each RecExprFFI
     // and creates and stores all bindings with their definitions.
     // Lambdas are created without their bodies in this phase.
