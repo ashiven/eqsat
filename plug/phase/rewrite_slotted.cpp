@@ -439,14 +439,18 @@ const Def* RewriteSlotted::convert_lam(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto lam    = get_def(id)->as_mut<Lam>();
-    auto filter = get_def(var_scope.children[0]);
-    auto body   = get_def(var_scope.children[1]);
-    if (filter && body) {
-        lam->set_filter(filter);
-        lam->set_body(body);
-    } else {
-        lam->set_filter(false);
+    auto lam = get_def(id)->as<Lam>();
+
+    if (auto mut_lam = lam->isa_mut<Lam>()) {
+        auto filter = get_def(var_scope.children[0]);
+        auto body   = get_def(var_scope.children[1]);
+
+        mut_lam->unset();
+
+        if (filter && body)
+            mut_lam->set(filter, body);
+        else
+            mut_lam->set_filter(false);
     }
 
     exit_scope(var_scope);

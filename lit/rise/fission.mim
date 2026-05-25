@@ -1,11 +1,12 @@
-// UNSUPPORTED: always
-// RUN: %mim %s -o -
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
 
 // We have to run the eqsat phase before any other phases since we want the 
 // lambdas to be emitted in the order in which they were created (sorted by gid).
 // This order may change with phases that modify lambdas (and their gids).
+// Another consideration is to modify for_each in src/mim/world.cpp such that
+// mutable lambdas are emitted according to a nest schedule to ensure correct order.
 lam extern _compile(): %compile.Phase =
     %compile.phases ff (
         %eqsat.eqsat_phase,
@@ -14,6 +15,7 @@ lam extern _compile(): %compile.Phase =
 lam extern _impl(): %eqsat.Impl = 
   %eqsat.slotted;
 
+// Works but takes a very long time, so we leave it commented out for now.
 // lam extern _rulesets(): %eqsat.Ruleset =
 //   %eqsat.rulesets (%eqsat.rise, );
 
