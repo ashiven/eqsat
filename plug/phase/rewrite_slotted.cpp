@@ -246,9 +246,10 @@ const Def* RewriteSlotted::init_pi(uint32_t id, NodeFFI node) {
     var->set(var_name);
     register_var(var_name, var);
 
-    auto dom   = init_lookahead(var_scope.children[0]);
+    auto dom = init_lookahead(var_scope.children[0]);
+    mut_pi->set_dom(dom);
     auto codom = init_lookahead(var_scope.children[1]);
-    mut_pi->set(dom, codom);
+    mut_pi->set_codom(codom);
 
     if (DEBUG) std::cout << mut_pi << "\n";
     exit_scope(var_scope);
