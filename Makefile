@@ -7,7 +7,7 @@ MIM_DEBUG_BIN_PATH ?= $(abspath ../../build/bin/Debug/mim.exe)
 
 # use flag "-G Ninja" to generate compile_commands.json on Windows
 build:
-	cmake -S . -B build \
+	cmake -S ../../ -B ../../build \
 		-DBUILD_TESTING=ON \
 		-DMIM_BUILD_EXAMPLES=ON \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
