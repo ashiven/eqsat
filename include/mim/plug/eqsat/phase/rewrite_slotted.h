@@ -14,7 +14,7 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-const bool DEBUG        = false;
+const bool DEBUG        = true;
 const bool DEBUG_SCOPES = false;
 
 /***************** TYPES **********************/

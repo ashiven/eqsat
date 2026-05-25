@@ -26,8 +26,8 @@ lam extern _compile(): %compile.Phase =
 lam extern _impl(): %eqsat.Impl = 
   %eqsat.slotted;
 
-lam extern _rulesets(): %eqsat.Ruleset =
-  (%eqsat.rise, );
+// lam extern _rulesets(): %eqsat.Ruleset =
+//   %eqsat.rulesets (%eqsat.rise, );
 
 lam f1(a: Nat)@ff = %core.nat.add (a, 1);
 lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
