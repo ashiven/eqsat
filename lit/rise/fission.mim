@@ -11,7 +11,7 @@ lam extern _compile(): %compile.Phase =
         %compile.pass2phase (%compile.eta_red_pass ff),
         %compile.pass2phase %compile.tail_rec_elim_pass,
         %compile.internal_cleanup_phase,
-        // %eqsat.eqsat_phase,
+        %eqsat.eqsat_phase,
         %compile.pass2phase %compile.lam_spec_pass,
         %compile.branch_normalize_phase,
         %compile.ret_wrap_phase,
@@ -23,11 +23,11 @@ lam extern _compile(): %compile.Phase =
         ),
     );
 
-fun extern _impl(): %eqsat.Impl = 
-  return %eqsat.slotted;
+lam extern _impl(): %eqsat.Impl = 
+  %eqsat.slotted;
 
-fun extern _rulesets(): %eqsat.Ruleset =
-  return (%eqsat.rise, );
+lam extern _rulesets(): %eqsat.Ruleset =
+  (%eqsat.rise, );
 
 lam f1(a: Nat)@ff = %core.nat.add (a, 1);
 lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
