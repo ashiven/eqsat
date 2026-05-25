@@ -204,6 +204,22 @@ const Def* RewriteSlotted::init_let(uint32_t id, NodeFFI node) {
 
     auto var_name = get_slot(id);
 
+    // TODO: If we have inline lambdas, they may appear as part of
+    // a term that gets init+converted via init_lookahead default case.
+    // This is a big problem because such lambdas can only be converted
+    // after the first init stage is complete and all root-level bindings
+    // have been created because the lam body can refer to any of them.
+    //
+    // This actually points to an even bigger issue. As a matter of fact,
+    // not only inline lambdas but any term that gets init+converted can
+    // potentially reference root-level bindings that haven't been created yet.
+    //
+    // Is it feasible somehow to create all root-level binders first so they can
+    // be referenced and then have a single mixed init+convert pass? So we still
+    // end up with only two passes as we have it now but the separate init/convert
+    // simply get combined into one pass. (Shouldn't require any big changes, just
+    // gotta also convert and set lam bodies via init_lam)
+
     auto def = init_lookahead(var_scope.children[0]);
     def->set(var_name);
     register_var(var_name, def);
