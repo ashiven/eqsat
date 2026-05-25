@@ -3,15 +3,16 @@
 plugin eqsat;
 import _rise;
 
-// Some of the beta/eta phases were substituting the bodies
-// of f1-f5 into the application (f5(f4(...))) so we skip them.
+// We have to run the eqsat phase before any other phases since we want the 
+// lambdas to be emitted in the order in which they were created (sorted by gid).
+// This order may change with phases that modify lambdas (and their gids).
 lam extern _compile(): %compile.Phase =
     %compile.phases ff (
+        // %eqsat.eqsat_phase,
         %compile.pass2phase %compile.scalarize_pass,
         %compile.pass2phase (%compile.eta_red_pass ff),
         %compile.pass2phase %compile.tail_rec_elim_pass,
         %compile.internal_cleanup_phase,
-        %eqsat.eqsat_phase,
         %compile.pass2phase %compile.lam_spec_pass,
         %compile.branch_normalize_phase,
         %compile.ret_wrap_phase,
