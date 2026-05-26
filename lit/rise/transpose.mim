@@ -1,0 +1,19 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
+
+// There are some phases that substitute lambda var uses with the
+// lambda bodies (beta reduction?) which we don't want in this example.
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
+
+lam extern _impl(): %eqsat.Impl = 
+  %eqsat.slotted;
+
+lam extern _rulesets(): %eqsat.Ruleset =
+   %eqsat.rulesets (%eqsat.rise, );
+
+fun extern transpose(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+  return (%rise.transpose (%rise.transpose arg));
