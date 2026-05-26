@@ -8,8 +8,10 @@ use slotted_egraphs::*;
 use stacker::grow;
 
 pub mod analysis;
+pub mod cost;
 pub mod rulesets;
 pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod test;

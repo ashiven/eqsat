@@ -1,3 +1,4 @@
+use crate::{typ, isa};
 use crate::mim_slotted::{MimSlotted, types::TypeExpr, analysis::{AnalysisData, MimSlottedAnalysis}};
 use slotted_egraphs::{AbstractVecSet, Rewrite, Slot};
 
@@ -31,26 +32,6 @@ pub fn rules() -> Vec<RW> {
     ];
 
     rules
-}
-
-macro_rules! typ {
-    ($subst: expr, $eg: expr, $name: expr, $type: pat) => {{
-        let id = $subst[$name].id;
-        let analysis_data: &AnalysisData = $eg.analysis_data(id);
-        let type_: &TypeExpr = &analysis_data.type_;
-
-        matches!(type_.node, $type)
-    }};
-}
-
-macro_rules! isa {
-    ($subst: expr, $eg: expr, $name: expr, $node: pat) => {{
-        let id = &$subst[$name];
-        let id = $eg.find_applied_id(id);
-        let enodes = $eg.enodes_applied(&id);
-        
-        enodes.iter().any(|n| matches!(n, $node))
-    }};
 }
 
 fn beta() -> RW {

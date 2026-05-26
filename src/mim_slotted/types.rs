@@ -1,5 +1,6 @@
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::{AnalysisData, MimSlottedAnalysis};
+use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, get_literal};
 use slotted_egraphs::*;
 
 /***********************************************************/
@@ -346,6 +347,8 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
+    // TODO: Technically the type of the lambdas' domain could be inferred by searching the body
+    // for applications to the var introduced by this lambda and then looking at the callees' domain.
     AnalysisData {
         type_: TypeExpr::pi(TypeExpr::hole(), body_type),
     }
@@ -455,43 +458,6 @@ fn make_tuple_type(
     }
 }
 
-fn get_literal(lit_expr: &RecExpr<MimSlotted>) -> u64 {
-    let lit_val = lit_expr.children.first().expect("Expected literal value");
-    if let MimSlotted::Symbol(s) = lit_val.node {
-        match s.as_str() {
-            "ff" => 0,
-            "tt" => 1,
-            "i1" => 2,
-            "i8" => 0x100,
-            "i16" => 0x10000,
-            "i32" => 0x100000000,
-            _ => panic!("Unknown literal alias"),
-        }
-    } else if let MimSlotted::Num(n) = lit_val.node {
-        n
-    } else {
-        panic!("Expected literal value to be a symbol or a number");
-    }
-}
-
-fn cons_elem_at(cons_expr: &RecExpr<MimSlotted>, index: u64) -> RecExpr<MimSlotted> {
-    let mut i = 0;
-    let mut curr_cons = cons_expr;
-    while let RecExpr {
-        node: MimSlotted::Cons(..),
-        children,
-    } = curr_cons
-    {
-        let curr_elem = children.first().expect("Expected cons elem");
-        if i == index {
-            return curr_elem.clone();
-        }
-        curr_cons = children.get(1).expect("Expected next cons");
-        i += 1;
-    }
-    panic!("Cons index out of bounds");
-}
-
 fn make_extract_type(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     enode: &MimSlotted,
@@ -537,30 +503,6 @@ fn make_extract_type(
     AnalysisData {
         type_: extract_type,
     }
-}
-
-fn cons_insert_at(
-    cons_expr: &RecExpr<MimSlotted>,
-    value: &RecExpr<MimSlotted>,
-    index: u64,
-) -> RecExpr<MimSlotted> {
-    let mut i = 0;
-    let mut curr_cons = cons_expr.clone();
-    let mut cursor = &mut curr_cons;
-
-    while let RecExpr {
-        node: MimSlotted::Cons(..),
-        children,
-    } = cursor
-    {
-        if i == index {
-            children[0] = value.clone();
-            return curr_cons;
-        }
-        cursor = &mut children[1];
-        i += 1;
-    }
-    panic!("Cons index out of bounds");
 }
 
 fn make_insert_type(
