@@ -116,24 +116,17 @@ fn let_lam_diff() -> RW {
 // TODO:
 // fun let_const() -> RW {...}
 
-// ((map f) ((map g) arg)) => ((map λx.(f (g x))) arg)
+// (map f) ((map g) arg) => (map λx.(f (g x))) arg
 fn map_fusion() -> RW {
     let pat = "(app (app %rise.map ?f) (app (app %rise.map ?g) ?arg))";
     let outpat = "(app (app %rise.map (lam $x (scope (lit ff Bool) (app ?f (app ?g (var $x)))))) ?arg)";
     Rewrite::new("map-fusion", pat, outpat)
 }
 
-// (map λx.(f (g x))) => λy.((map f) ((map λx.(g x)) y))
+// map λx.(f (g x)) => λy.(map f) ((map λx.(g x)) y)
 fn map_fission() -> RW {
     let pat = "(app %rise.map (lam $x (scope ?filter (app ?f ?gx))))";
-    let outpat = "
-    (lam $y (scope
-        (lit ff Bool)
-        (app
-            (app %rise.map ?f)
-            (app
-                (app %rise.map (lam $x (scope ?filter ?gx)))
-                (var $y)))))";
+    let outpat = " (lam $y (scope (lit ff Bool) (app (app %rise.map ?f) (app (app %rise.map (lam $x (scope ?filter ?gx))) (var $y)))))";
     Rewrite::new_if("map-fission", pat, outpat, |subst, _| {
         !subst["f"].slots().contains(&Slot::named("x"))
     })
