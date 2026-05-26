@@ -20,10 +20,12 @@ pub fn rules() -> Vec<RW> {
         // RISE
         map_fusion(),
         map_fission(),
-        double_transpose(),
-        slide_before_map(),
+        remove_transpose_pair(),
         map_slide_before_transpose(),
+        map_split_before_transpose(),
         slide_before_map_map_f(),
+        split_before_map_map_f(),
+        slide_before_map(),
         separate_dot_vh_simplified(),
         separate_dot_hv_simplified(),
     ];
@@ -137,17 +139,10 @@ fn map_fission() -> RW {
     })
 }
 
-fn double_transpose() -> RW {
+fn remove_transpose_pair() -> RW {
     let pat = "(app %rise.transpose (app %rise.transpose ?arg))";
     let outpat = "?arg";
-    Rewrite::new("double-transpose", pat, outpat)
-}
-
-fn slide_before_map() -> RW {
-    let pat = "(app (app (app %rise.slide ?sz) ?sp) (app (app %rise.map ?f) ?y))";
-    let outpat =
-        "(app (app %rise.map (app %rise.map ?f)) (app (app (app %rise.slide ?sz) ?sp) ?y))";
-    Rewrite::new("slide-before-map", pat, outpat)
+    Rewrite::new("remove-transpose-pair", pat, outpat)
 }
 
 fn map_slide_before_transpose() -> RW {
@@ -156,10 +151,29 @@ fn map_slide_before_transpose() -> RW {
     Rewrite::new("map-slide-before-transpose", pat, outpat)
 }
 
+fn map_split_before_transpose() -> RW {
+    let pat = "(app %rise.transpose (app (app %rise.map (app %rise.split ?n)) ?y))";
+    let outpat = "(app (app %rise.map %rise.transpose) (app (app %rise.split ?n) (app %rise.transpose ?y)))";
+    Rewrite::new("map-split-before-transpose", pat, outpat)
+}
+
 fn slide_before_map_map_f() -> RW {
     let pat = "(app (app %rise.map (app %rise.map ?f)) (app (app (app %rise.slide ?sz) ?sp) ?y))";
     let outpat = "(app (app (app %rise.slide ?sz) ?sp) (app (app %rise.map ?f) ?y))";
     Rewrite::new("slide-before-map-map-f", pat, outpat)
+}
+
+fn split_before_map_map_f() -> RW {
+    let pat = "(app (app %rise.map (app %rise.map ?f)) (app (app %rise.split ?n) ?y))";
+    let outpat = "(app (app %rise.split ?n) (app (app %rise.map ?f) ?y))";
+    Rewrite::new("slide-before-map-map-f", pat, outpat)
+}
+
+fn slide_before_map() -> RW {
+    let pat = "(app (app (app %rise.slide ?sz) ?sp) (app (app %rise.map ?f) ?y))";
+    let outpat =
+        "(app (app %rise.map (app %rise.map ?f)) (app (app (app %rise.slide ?sz) ?sp) ?y))";
+    Rewrite::new("slide-before-map", pat, outpat)
 }
 
 fn separate_dot_vh_simplified() -> RW {
