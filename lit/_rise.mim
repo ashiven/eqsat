@@ -7,7 +7,7 @@ axm %rise.add:        {T: *} → T → T → T;
 axm %rise.mul:        {T: *} → T → T → T;
 
 // Map
-axm %rise.map:        {S: *, T: *} → [S → T] → [{n: Nat} → «n; S» → «n; T»];
+axm %rise.map:        {n: Nat, S: *, T: *} → [S → T] → [«n; S» → «n; T»];
 
 // Arrays
 axm %rise.transpose:  {n: Nat, m: Nat, T: *} → «n; «m; T»» → «m; «n; T»»;
@@ -24,6 +24,9 @@ axm %rise.reduce:     {n: Nat, T: *} → [T → T → T] → T → «n; T» → 
 // Pairs
 axm %rise.fst:        {S: *, T: *} → [S, T] → S;
 axm %rise.snd:        {S: *, T: *} → [S, T] → T;
+
+// Compose (TODO: Type-checks but doesn't really work)
+axm %rise.o:          {a: Univ, b: Univ, c: Univ, A: Type a, B: Type b, C: Type c} → [B → C] → [A → B] → [A → C];
 
 // Some constants (TODO: real values)
 axm %rise.weights2d:  «3; «3; Nat»»;
