@@ -94,9 +94,6 @@ fn let_lam_diff() -> RW {
     })
 }
 
-// TODO:
-// fun let_const() -> RW {...}
-
 // (map f) ((map g) arg) => (map λx.(f (g x))) arg
 fn map_fusion() -> RW {
     let pat = "(app (app %rise.map ?f) (app (app %rise.map ?g) ?arg))";
