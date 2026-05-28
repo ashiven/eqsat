@@ -82,6 +82,16 @@ pub(crate) fn add_expr_typed(
 
 pub type TypeData = TypeExpr;
 
+pub struct TypeAnalysis;
+impl TypeAnalysis {
+    pub fn make(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+        make_type(eg, enode)
+    }
+    pub fn merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
+        merge_type(l, r)
+    }
+}
+
 trait TypeConstructors {
     fn hole() -> Self;
     fn nil() -> Self;

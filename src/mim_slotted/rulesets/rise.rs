@@ -172,7 +172,7 @@ fn separate_dot_hv_simplified() -> RW {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mim_slotted::rulesets::assert_reaches;
+    use crate::mim_slotted::util::assert_reaches;
 
     #[test]
     #[ignore]

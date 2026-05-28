@@ -22,10 +22,13 @@ fn core_nat_add0() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mim_slotted::rulesets::assert_reaches;
+    use crate::ffi::bridge::RuleSet;
+    use crate::mim_slotted::set_rulesets;
+    use crate::mim_slotted::util::assert_reaches;
 
     #[test]
     fn let_var_same() {
+        set_rulesets(vec![RuleSet::Standard]);
         let a = "(let $foo (scope (lit 1 Nat) (var $foo)))";
         let b = "(lit 1 Nat)";
         assert_reaches::<MimSlotted, MimSlottedAnalysis>(a, b, &rules(), 1);
@@ -33,6 +36,7 @@ mod test {
 
     #[test]
     fn lam_var_add0() {
+        set_rulesets(vec![RuleSet::Standard]);
         let a = "(root extern foo (lam $x (scope (lit ff Bool) (app %core.nat.add (tuple (cons (var $x) (cons (lit 0 Nat) nil)))))))";
         let b = "(root extern foo (lam $x (scope (lit ff Bool) (var $x))))";
         assert_reaches::<MimSlotted, MimSlottedAnalysis>(a, b, &rules(), 1);

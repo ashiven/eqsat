@@ -6,6 +6,7 @@ use crate::mim_slotted::types::{TypedRecExpr, add_expr_typed, extract_type_annot
 use regex::Regex;
 use slotted_egraphs::*;
 use stacker::grow;
+use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
@@ -19,6 +20,13 @@ mod test;
 // Parsing rec exprs with type annotations can become very stack intensive
 // so we preemptively increase the stack size to avoid stack overflows.
 const PARSE_STACK_SIZE: usize = 8 * 1024 * 1024;
+
+// We keep track of the selected rulesets in a global variable because they
+// need to be accessed repeatedly in the analysis and it was too tedious to
+// pass them on by parameters or otherwise.
+thread_local! {
+    pub static RULESETS: RefCell<Vec<RuleSet>> = const { RefCell::new(vec![]) };
+}
 
 define_language! {
     pub enum MimSlotted {
@@ -141,7 +149,9 @@ pub(crate) fn equality_saturate(
 ) -> Vec<RecExprFFI> {
     let mut sexprs = split_sexprs(sexpr);
 
-    let mut rules = get_rules(rulesets);
+    set_rulesets(rulesets);
+
+    let mut rules = get_rules();
     convert_rules(&mut sexprs, &mut rules);
 
     match cost_fn {
@@ -165,6 +175,13 @@ pub(crate) fn pretty(sexpr: &str, _line_len: usize) -> String {
     }
 
     res
+}
+
+fn set_rulesets(rulesets: Vec<RuleSet>) {
+    RULESETS.with(|rulesets_global| {
+        let mut rulesets_global = rulesets_global.borrow_mut();
+        *rulesets_global = rulesets;
+    });
 }
 
 fn split_sexprs(sexpr: &str) -> Vec<String> {

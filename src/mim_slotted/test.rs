@@ -2,9 +2,9 @@ use regex::Regex;
 use std::fs;
 
 use crate::ffi::bridge::{CostFn, RuleSet};
-use crate::mim_slotted::convert_rules;
 use crate::mim_slotted::get_rules;
 use crate::mim_slotted::{MimSlotted, split_sexprs};
+use crate::mim_slotted::{convert_rules, set_rulesets};
 use crate::{eqsat_slotted, pretty_ffi};
 use slotted_egraphs::*;
 
@@ -38,7 +38,8 @@ const LINE_LEN: usize = 80;
 
 #[test]
 fn get_ruleset_standard() {
-    let standard = get_rules(vec![RuleSet::Standard]);
+    set_rulesets(vec![RuleSet::Standard]);
+    let standard = get_rules();
     assert_ne!(standard.len(), 0);
 }
 
