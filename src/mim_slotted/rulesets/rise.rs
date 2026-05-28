@@ -1,5 +1,5 @@
 use crate::{typ, isa};
-use crate::mim_slotted::{MimSlotted, types::TypeExpr, analysis::{AnalysisData, MimSlottedAnalysis}};
+use crate::mim_slotted::{MimSlotted, analysis::{AnalysisData, MimSlottedAnalysis}};
 use slotted_egraphs::{AbstractVecSet, Rewrite, Slot};
 
 type RW = Rewrite<MimSlotted, MimSlottedAnalysis>;

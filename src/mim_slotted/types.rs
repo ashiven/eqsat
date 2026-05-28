@@ -13,7 +13,7 @@ pub type TypeExpr = RecExpr<MimSlotted>;
 pub struct TypedRecExpr {
     node: MimSlotted,
     children: Vec<TypedRecExpr>,
-    type_: TypeExpr,
+    type_: Option<TypeExpr>,
 }
 
 pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> TypedRecExpr {
@@ -21,14 +21,14 @@ pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> TypedR
         let type_expr = rec_expr.children[0].clone();
         let expr = &rec_expr.children[1];
         let mut stripped = extract_type_annotations(expr);
-        stripped.type_ = type_expr;
+        stripped.type_ = Some(type_expr);
 
         // Instead of the actual type, we give var nodes a hole type
         // to be inferred later on by the mim compiler. This is because
         // all vars are represented with the same singleton var eclass
         // and we can't store different vars' types on this single eclass.
         if let MimSlotted::Var(_slot) = expr.node {
-            stripped.type_ = TypeExpr::hole();
+            stripped.type_ = Some(TypeExpr::hole());
         }
 
         return stripped;
@@ -41,7 +41,7 @@ pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> TypedR
             .iter()
             .map(extract_type_annotations)
             .collect(),
-        type_: TypeExpr::nil(),
+        type_: None,
     };
 
     // Since it was too difficult to correctly type-annotate let
@@ -81,26 +81,6 @@ pub(crate) fn add_expr_typed(
 /***********************************************************/
 
 pub type TypeData = TypeExpr;
-
-// Returns the ast size of a term, useful for comparing type expr sizes in merge
-pub(crate) fn term_size(type_expr: &TypeExpr) -> usize {
-    fn size(type_expr: &TypeExpr) -> usize {
-        1 + type_expr.children.iter().map(size).sum::<usize>()
-    }
-    size(type_expr)
-}
-
-// Returns the number of holes in a type expr, also useful for comparison in merge
-pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
-    fn holes(type_expr: &TypeExpr) -> usize {
-        if let MimSlotted::Hole(..) = type_expr.node {
-            1 + type_expr.children.iter().map(holes).sum::<usize>()
-        } else {
-            type_expr.children.iter().map(holes).sum::<usize>()
-        }
-    }
-    holes(type_expr)
-}
 
 trait TypeConstructors {
     fn hole() -> Self;
@@ -252,32 +232,38 @@ pub(crate) fn make_type(
         // MimSlotted::Merge(..) = make_merge_type(eg, enode),
 
         // Num terminals and structural nodes should not get a type at all
-        MimSlotted::Num(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::MetaVar(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::Scope(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::Root(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::Cons(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::Nil(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
-        MimSlotted::TypeWrap(..) => AnalysisData {
-            type_: TypeExpr::nil(),
-        },
+        MimSlotted::Num(..) => AnalysisData { type_: None },
+        MimSlotted::MetaVar(..) => AnalysisData { type_: None },
+        MimSlotted::Scope(..) => AnalysisData { type_: None },
+        MimSlotted::Root(..) => AnalysisData { type_: None },
+        MimSlotted::Cons(..) => AnalysisData { type_: None },
+        MimSlotted::Nil(..) => AnalysisData { type_: None },
+        MimSlotted::TypeWrap(..) => AnalysisData { type_: None },
 
         _ => AnalysisData {
-            type_: TypeExpr::hole(),
+            type_: Some(TypeExpr::hole()),
         },
     }
+}
+
+// Returns the ast size of a term, useful for comparing type expr sizes in merge
+pub(crate) fn term_size(type_expr: &TypeExpr) -> usize {
+    fn size(type_expr: &TypeExpr) -> usize {
+        1 + type_expr.children.iter().map(size).sum::<usize>()
+    }
+    size(type_expr)
+}
+
+// Returns the number of holes in a type expr, also useful for comparison in merge
+pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
+    fn holes(type_expr: &TypeExpr) -> usize {
+        if let MimSlotted::Hole(..) = type_expr.node {
+            1 + type_expr.children.iter().map(holes).sum::<usize>()
+        } else {
+            type_expr.children.iter().map(holes).sum::<usize>()
+        }
+    }
+    holes(type_expr)
 }
 
 // We are making the assumption here that terms are already
@@ -287,22 +273,42 @@ pub(crate) fn make_type(
 // we assume they are equivalent representations of the same type and just
 // merge the type with fewer holes and smaller term-size into the eclass.
 pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
-    let l_holes = hole_amount(&l.type_);
-    let l_size = term_size(&l.type_);
+    match (l.type_, r.type_) {
+        (Some(l_type), None) => AnalysisData {
+            type_: Some(l_type),
+        },
+        (None, Some(r_type)) => AnalysisData {
+            type_: Some(r_type),
+        },
+        (Some(l_type), Some(r_type)) => {
+            let l_holes = hole_amount(&l_type);
+            let r_holes = hole_amount(&r_type);
+            let l_size = term_size(&l_type);
+            let r_size = term_size(&r_type);
 
-    let r_holes = hole_amount(&r.type_);
-    let r_size = term_size(&r.type_);
-
-    if l_holes < r_holes {
-        AnalysisData { type_: l.type_ }
-    } else if l_holes > r_holes {
-        AnalysisData { type_: r.type_ }
-    } else if l_size < r_size {
-        AnalysisData { type_: l.type_ }
-    } else if l_size > r_size {
-        AnalysisData { type_: r.type_ }
-    } else {
-        AnalysisData { type_: l.type_ }
+            if l_holes < r_holes {
+                AnalysisData {
+                    type_: Some(l_type),
+                }
+            } else if l_holes > r_holes {
+                AnalysisData {
+                    type_: Some(r_type),
+                }
+            } else if l_size < r_size {
+                AnalysisData {
+                    type_: Some(l_type),
+                }
+            } else if l_size > r_size {
+                AnalysisData {
+                    type_: Some(r_type),
+                }
+            } else {
+                AnalysisData {
+                    type_: Some(l_type),
+                }
+            }
+        }
+        _ => AnalysisData { type_: None },
     }
 }
 
@@ -350,7 +356,10 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     // TODO: Technically the type of the lambdas' domain could be inferred by searching the body
     // for applications to the var introduced by this lambda and then looking at the callees' domain.
     AnalysisData {
-        type_: TypeExpr::pi(TypeExpr::hole(), body_type),
+        type_: Some(TypeExpr::pi(
+            TypeExpr::hole(),
+            body_type.unwrap_or(TypeExpr::hole()),
+        )),
     }
 }
 
@@ -358,7 +367,10 @@ fn make_con_type(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
     let _var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
 
     AnalysisData {
-        type_: TypeExpr::pi(TypeExpr::hole(), TypeExpr::bot(TypeExpr::type_(0))),
+        type_: Some(TypeExpr::pi(
+            TypeExpr::hole(),
+            TypeExpr::bot(TypeExpr::type_(0)),
+        )),
     }
 }
 
@@ -371,13 +383,16 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
     AnalysisData {
-        type_: TypeExpr::pi(
+        type_: Some(TypeExpr::pi(
             TypeExpr::sigma(vec![
                 TypeExpr::hole(),
-                TypeExpr::pi(body_type, TypeExpr::bot(TypeExpr::type_(0))),
+                TypeExpr::pi(
+                    body_type.unwrap_or(TypeExpr::hole()),
+                    TypeExpr::bot(TypeExpr::type_(0)),
+                ),
             ]),
             TypeExpr::bot(TypeExpr::type_(0)),
-        ),
+        )),
     }
 }
 
@@ -385,19 +400,20 @@ fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
     let callee_type = &eg.analysis_data(callee.id).type_;
 
-    if let TypeExpr {
+    // TODO: Handle implicit pi's
+    if let Some(TypeExpr {
         node: MimSlotted::Pi(..),
         children: pi_childs,
-    } = callee_type
+    }) = callee_type
     {
         let pi_scope = pi_childs.first().expect("Expected pi var scope");
         let codom_type = pi_scope.children.get(1).expect("Expected pi codom");
         AnalysisData {
-            type_: codom_type.clone(),
+            type_: Some(codom_type.clone()),
         }
     } else {
         AnalysisData {
-            type_: TypeExpr::hole(),
+            type_: Some(TypeExpr::hole()),
         }
     }
 }
@@ -410,7 +426,7 @@ fn make_var_type(
     _enode: &MimSlotted,
 ) -> AnalysisData {
     AnalysisData {
-        type_: TypeExpr::hole(),
+        type_: Some(TypeExpr::hole()),
     }
 }
 
@@ -419,7 +435,7 @@ fn make_lit_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
     let type_id = eg.find_applied_id(type_);
     let type_ = eg.get_syn_expr(&type_id);
-    AnalysisData { type_ }
+    AnalysisData { type_: Some(type_) }
 }
 
 fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
@@ -433,7 +449,7 @@ fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
     AnalysisData {
-        type_: TypeExpr::arr(arity, body_type),
+        type_: Some(TypeExpr::arr(arity, body_type.unwrap_or(TypeExpr::hole()))),
     }
 }
 
@@ -449,12 +465,12 @@ fn make_tuple_type(
     while let MimSlotted::Cons(elem, next) = curr_cons {
         let curr_elem_id = eg.find_applied_id(&elem);
         let curr_elem_type = eg.analysis_data(curr_elem_id.id).type_.clone();
-        elem_types.push(curr_elem_type);
+        elem_types.push(curr_elem_type.unwrap_or(TypeExpr::hole()));
         curr_cons = find!(eg, next, MimSlotted::Cons(..) | MimSlotted::Nil());
     }
 
     AnalysisData {
-        type_: TypeExpr::sigma(elem_types),
+        type_: Some(TypeExpr::sigma(elem_types)),
     }
 }
 
@@ -470,10 +486,10 @@ fn make_extract_type(
     let mut extract_type = TypeExpr::hole();
 
     // Extract from pack
-    if let TypeExpr {
+    if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
         children: arr_childs,
-    } = tuple_type
+    }) = tuple_type
     {
         let arr_var_scope = arr_childs.first().expect("Expected arr var scope");
         extract_type = arr_var_scope
@@ -482,10 +498,10 @@ fn make_extract_type(
             .expect("Expected array body")
             .clone();
     // Extract from tuple with literal index
-    } else if let TypeExpr {
+    } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
         children: sigma_childs,
-    } = tuple_type
+    }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
@@ -501,7 +517,7 @@ fn make_extract_type(
     }
 
     AnalysisData {
-        type_: extract_type,
+        type_: Some(extract_type),
     }
 }
 
@@ -520,17 +536,17 @@ fn make_insert_type(
     let mut insert_type = TypeExpr::hole();
 
     // Insert into pack
-    if let TypeExpr {
+    if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
         ..
-    } = tuple_type
+    }) = tuple_type
     {
-        insert_type = tuple_type.clone();
+        insert_type = tuple_type.clone().unwrap_or(TypeExpr::hole());
     // Insert into tuple with literal index
-    } else if let TypeExpr {
+    } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
         children: sigma_childs,
-    } = tuple_type
+    }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
@@ -542,11 +558,14 @@ fn make_insert_type(
             .first()
             .expect("Expected sigma elem cons");
         let index_literal = get_literal(&index);
-        let inserted_cons = cons_insert_at(sigma_elem_cons, value_type, index_literal);
+        let value_type = value_type.clone().unwrap_or(TypeExpr::hole());
+        let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
         insert_type = TypeExpr::sigma_cons(inserted_cons);
     }
 
-    AnalysisData { type_: insert_type }
+    AnalysisData {
+        type_: Some(insert_type),
+    }
 }
 
 #[cfg(test)]
@@ -588,7 +607,7 @@ mod test {
 
         assert_eq!(
             lam_type,
-            RecExpr::parse("(cn $dummy (scope (cn $dummy (scope I8 nil)) nil))").unwrap()
+            Some(RecExpr::parse("(cn $dummy (scope (cn $dummy (scope I8 nil)) nil))").unwrap())
         );
     }
 
@@ -597,7 +616,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
@@ -646,7 +665,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
@@ -680,7 +699,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
@@ -717,7 +736,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
@@ -769,7 +788,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
@@ -799,7 +818,7 @@ mod test {
         let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
             eg.analysis_data(id.id).type_.clone()
         };
-        let type_ = |s: &str| RecExpr::<MimSlotted>::parse(s).unwrap();
+        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
 
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 

@@ -7,8 +7,11 @@ pub struct MimSlottedAnalysis;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct AnalysisData {
-    pub type_: TypeData,
+    pub type_: Option<TypeData>,
 }
+
+// TODO: Merge results of different analyses
+// and only compute for provided rulesets.
 
 impl Analysis<MimSlotted> for MimSlottedAnalysis {
     type Data = AnalysisData;

@@ -6,9 +6,11 @@ macro_rules! typ {
     ($subst: expr, $eg: expr, $name: expr, $type: pat) => {{
         let id = $subst[$name].id;
         let analysis_data: &AnalysisData = $eg.analysis_data(id);
-        let type_: &TypeExpr = &analysis_data.type_;
-
-        matches!(type_.node, $type)
+        if let Some(type_) = &analysis_data.type_ {
+            matches!(type_.node, $type)
+        } else {
+            false
+        }
     }};
 }
 

@@ -2,7 +2,6 @@ use crate::mim_egg::Mim;
 use crate::mim_egg::analysis::MimAnalysis;
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
-use crate::mim_slotted::types::TypeExpr;
 use crate::{eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, type_str};
 use bridge::{MimKind, NodeFFI, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
@@ -309,15 +308,7 @@ impl FFIInner for MimSlotted {
         let eclass_id = egraph.lookup(self);
         let type_ = if let Some(eclass_id) = eclass_id {
             let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
-            if let TypeExpr {
-                node: MimSlotted::Nil(),
-                ..
-            } = type_
-            {
-                None
-            } else {
-                Some(type_.to_ffi(egraph))
-            }
+            type_.map(|type_| type_.to_ffi(egraph))
         } else {
             None
         };
