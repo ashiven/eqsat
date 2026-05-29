@@ -15,7 +15,7 @@ const std::set MUTABLES   = {MimKind::Lam, MimKind::Con, MimKind::Fun,   MimKind
 const std::set NO_CONVERT = {MimKind::Axm};
 
 void RewriteSlotted::start() {
-    auto [rulesets, cost_fn] = import_config();
+    auto [rulesets, cost_fn, reaches_args] = import_config();
 
     // We are assuming that the core plugin and its backends have been loaded at this point
     // because the 'eqsat' plugin declared it as a dependency via 'plugin core;'
@@ -23,6 +23,9 @@ void RewriteSlotted::start() {
     driver().backend("sexpr-slotted-typed")(old_world(), sexpr);
 
     if (DEBUG) std::cout << sexpr.str() << "\n";
+
+    // TODO: implement
+    // assert_reaches(sexpr, reaches_args);
 
     auto rec_exprs = eqsat_slotted(sexpr.str(), rulesets, cost_fn);
 
@@ -34,25 +37,30 @@ void RewriteSlotted::start() {
     swap(old_world(), new_world());
 }
 
-std::pair<rust::Vec<RuleSet>, CostFn> RewriteSlotted::import_config() {
-    // Internalize config lambdas (with signature [] -> %eqsat.Ruleset | %eqsat.CostFun | %eqsat.Impl)
+ConfigValues RewriteSlotted::import_config() {
+    // Internalize config lambdas (with signature [] -> %eqsat.Ruleset | %eqsat.CostFun | %eqsat.Impl | %eqsat.Reaches)
     DefVec lams;
     for (auto def : old_world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
-            if (Axm::isa<eqsat::Ruleset>(lam->codom()) || Axm::isa<eqsat::CostFun>(lam->codom())
-                || Axm::isa<eqsat::Impl>(lam->codom())) {
+            auto codom = lam->codom();
+            if (Axm::isa<eqsat::Ruleset>(codom) || Axm::isa<eqsat::CostFun>(codom) || Axm::isa<eqsat::Impl>(codom)
+                || Axm::isa<eqsat::Reaches>(codom)) {
                 lams.push_back(lam);
                 def->internalize();
             }
         }
     }
 
-    // Import rulesets and cost function from config lambdas
+    // Import config values from the internalized config lambdas
     rust::Vec<RuleSet> rulesets;
     CostFn cost_fn = CostFn::AstSize;
+    std::vector<std::tuple<std::string, std::string, size_t>> reaches_args;
+
     for (auto lam : lams) {
         auto body = lam->as<Lam>()->body();
+
         if (auto ruleset_config = Axm::isa<eqsat::rulesets>(body)) {
+            // Rulesets
             for (auto ruleset : ruleset_config->args())
                 if (Axm::isa<eqsat::standard>(ruleset))
                     rulesets.push_back(RuleSet::Standard);
@@ -61,16 +69,24 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteSlotted::import_config() {
                 else
                     assert(false && "Provided ruleset does not exist for slotted");
 
+        } else if (auto reaches = Axm::isa<eqsat::reaches>(body)) {
+            // Reaches assertions
+            auto [start_term, end_term, max_steps] = reaches->args<3>();
+            reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
+
         } else if (Axm::isa<eqsat::AstSize>(body)) {
+            // Cost functions
             cost_fn = CostFn::AstSize;
+
         } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
+            // Implementations
             continue;
         } else {
             assert(false && "Invalid config value provided for slotted");
         }
     }
 
-    return {rulesets, cost_fn};
+    return {rulesets, cost_fn, reaches_args};
 }
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {

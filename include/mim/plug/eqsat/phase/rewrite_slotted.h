@@ -18,6 +18,10 @@ const bool DEBUG        = false;
 const bool DEBUG_SCOPES = false;
 
 /***************** TYPES **********************/
+typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;
+typedef rust::Vec<RuleSet> RuleSets;
+typedef std::tuple<RuleSets, CostFn, ReachesArgs> ConfigValues;
+
 typedef struct Loc {
     int32_t depth;
     size_t offset;
@@ -116,7 +120,7 @@ private:
         aliases_["i32"]  = new_world().lit_nat(0x100000000);
     }
 
-    std::pair<rust::Vec<RuleSet>, CostFn> import_config();
+    ConfigValues import_config();
 
     // NodeFFI can carry a type that is also in the form
     // of a RecExprFFI. We convert this type with a top-down

@@ -58,6 +58,12 @@ axm %eqsat.Ruleset: *;
 ///
 axm %eqsat.CostFun: *;
 ///
+/// ### %%eqsat.Reaches
+///
+/// Represents the result of an assertion whether one term can reach another term
+///
+axm %eqsat.Reaches: *;
+///
 ///
 /// ## Implementations
 ///
@@ -104,9 +110,9 @@ axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Rules;
 ///
 /// ### %%eqsat.reaches
 ///
-/// Asserts at runtime whether a start term is able to reach an end term.
+/// Asserts at runtime whether a start term is able to reach an end term in under n steps.
 ///
-axm %eqsat.reaches: {T: *} → [T, T] → T;
+axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %eqsat.Reaches;
 ///
 ///
 /// ## Passes and Phases

@@ -1,0 +1,22 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin core;
+plugin eqsat;
+import _pipeline;
+
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.slotted;
+
+rule foo (pat_a: Nat) : (%core.nat.mul ((%core.nat.mul (pat_a, 4)), 4)) => (%core.nat.mul (pat_a, 16));
+rule bar (pat_a: Nat) : (%core.nat.add ((%core.nat.add (pat_a, 2)), 2)) => (%core.nat.add (pat_a, 4));
+
+lam extern _rules(): %eqsat.Rules =
+    %eqsat.rules (foo, bar);
+
+fun extern start_term (a: Nat): Nat =
+    return (%core.nat.mul ((%core.nat.mul (a, 4)), 4));
+
+fun extern end_term (a: Nat): Nat =
+    return (%core.nat.mul (a, 16));
+
+lam extern _reaches(): %eqsat.Reaches =
+    %eqsat.reaches (start_term, end_term, 5);
