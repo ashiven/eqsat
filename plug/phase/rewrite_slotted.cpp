@@ -24,8 +24,7 @@ void RewriteSlotted::start() {
 
     if (DEBUG) std::cout << sexpr.str() << "\n";
 
-    // TODO: implement
-    // assert_reaches(sexpr, reaches_args);
+    assert_reaches(sexpr.str(), rulesets, reaches_args);
 
     auto rec_exprs = eqsat_slotted(sexpr.str(), rulesets, cost_fn);
 
@@ -87,6 +86,12 @@ ConfigValues RewriteSlotted::import_config() {
     }
 
     return {rulesets, cost_fn, reaches_args};
+}
+
+void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args) {
+    for (auto [start_term, end_term, max_steps] : reaches_args)
+        if (!reaches_slotted(sexpr, rulesets, start_term, end_term, max_steps))
+            error("%eqsat.reaches: {} could not reach {} in under {} steps.", start_term, end_term, max_steps);
 }
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {

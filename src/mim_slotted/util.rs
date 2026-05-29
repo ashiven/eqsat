@@ -95,7 +95,6 @@ enum ReachError {
     Failed,
 }
 
-#[allow(dead_code)]
 #[allow(clippy::type_complexity)]
 fn reach_hook<'a, L, N, IterData>(
     start: &'a RecExpr<L>,
@@ -114,12 +113,6 @@ where
             let i1 = lookup_rec_expr(&start, &runner.egraph).unwrap();
 
             if runner.egraph.eq(&i1, &i2) {
-                println!(
-                    "{}",
-                    &(runner.egraph)
-                        .explain_equivalence(start.clone(), goal.clone())
-                        .to_string(&runner.egraph)
-                );
                 return Err(ReachError::Reached);
             }
         }
@@ -130,7 +123,6 @@ where
     })
 }
 
-#[allow(dead_code)]
 pub(crate) fn assert_reaches<L, N>(
     start: &str,
     goal: &str,
@@ -151,12 +143,5 @@ where
         .with_hook(reach_hook(&start, &goal, steps));
     let report = runner.run(rewrites);
 
-    dbg!(&report.stop_reason);
-    if let StopReason::Other(ReachError::Reached) = report.stop_reason {
-        runner.egraph.explain_equivalence(start, goal);
-        return true;
-    }
-
-    runner.egraph.dump();
-    false
+    matches!(report.stop_reason, StopReason::Other(ReachError::Reached))
 }

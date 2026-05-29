@@ -122,6 +122,11 @@ private:
 
     ConfigValues import_config();
 
+    // Asserts whether a start term can reach an
+    // end term in a given number of steps using the
+    // provided sets of rules.
+    void assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args);
+
     // NodeFFI can carry a type that is also in the form
     // of a RecExprFFI. We convert this type with a top-down
     // traversal for creating binders followed by a bottom-up

@@ -16,6 +16,23 @@ pub struct TypedRecExpr {
     type_: Option<TypeExpr>,
 }
 
+pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> RecExpr<MimSlotted> {
+    if let MimSlotted::TypeWrap(..) = rec_expr.node {
+        let expr = &rec_expr.children[1];
+        let stripped = remove_type_annotations(expr);
+        return stripped;
+    }
+
+    RecExpr::<MimSlotted> {
+        node: rec_expr.node.clone(),
+        children: rec_expr
+            .children
+            .iter()
+            .map(remove_type_annotations)
+            .collect(),
+    }
+}
+
 pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> TypedRecExpr {
     if let MimSlotted::TypeWrap(..) = rec_expr.node {
         let type_expr = rec_expr.children[0].clone();

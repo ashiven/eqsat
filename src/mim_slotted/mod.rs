@@ -2,7 +2,9 @@ use crate::ffi::FFI;
 use crate::ffi::bridge::{CostFn, RecExprFFI, RuleSet};
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use crate::mim_slotted::rulesets::get_rules;
-use crate::mim_slotted::types::{TypedRecExpr, add_expr_typed, extract_type_annotations};
+use crate::mim_slotted::types::{
+    TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
+};
 use crate::mim_slotted::util::assert_reaches;
 use regex::Regex;
 use slotted_egraphs::*;
@@ -192,23 +194,47 @@ pub(crate) fn reaches(
 
     convert_rules(&mut sexprs, &mut rules);
 
+    // TODO: More robust checks would be good because this string comparison
+    // can break way too easily (just takes an extra space or tab somewhere)
     let start_term = sexprs
         .iter()
         .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {} (", start_name).as_str())
-                || sexpr.starts_with(format!("(root intern {} (", start_name).as_str())
+            sexpr.starts_with(format!("(root extern {}", start_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}", start_name).as_str())
         })
         .expect("Reaches failed to find start term");
 
     let end_term = sexprs
         .iter()
         .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {} (", end_name).as_str())
-                || sexpr.starts_with(format!("(root intern {} (", end_name).as_str())
+            sexpr.starts_with(format!("(root extern {}", end_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}", end_name).as_str())
         })
         .expect("Reaches failed to find end term");
 
-    assert_reaches(start_term, end_term, &rules, max_steps)
+    // We want to assert only for the terms inside of the root nodes
+    let start_term = start_term
+        .strip_prefix(&format!("(root extern {}", start_name))
+        .expect("Reaches failed to strip prefix")
+        .strip_suffix(")")
+        .expect("Reaches failed to strip suffix");
+
+    let end_term = end_term
+        .strip_prefix(&format!("(root extern {}", end_name))
+        .expect("Reaches failed to strip prefix")
+        .strip_suffix(")")
+        .expect("Reaches failed to strip suffix");
+
+    // We also don't care about type annotations, so we just remove them.
+    let start_term_expr: RecExpr<MimSlotted> = RecExpr::parse(start_term).unwrap();
+    let start_term_expr_unannotated = remove_type_annotations(&start_term_expr);
+    let start_term = format!("{}", start_term_expr_unannotated);
+
+    let end_term_expr: RecExpr<MimSlotted> = RecExpr::parse(end_term).unwrap();
+    let end_term_expr_unannotated = remove_type_annotations(&end_term_expr);
+    let end_term = format!("{}", end_term_expr_unannotated);
+
+    assert_reaches(&start_term, &end_term, &rules, max_steps)
 }
 
 fn set_rulesets(rulesets: Vec<RuleSet>) {
