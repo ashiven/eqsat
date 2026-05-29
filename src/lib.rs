@@ -16,6 +16,16 @@ pub fn eqsat_slotted(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Ve
     mim_slotted::equality_saturate(sexpr, rulesets, cost_fn)
 }
 
+pub fn reaches_slotted(
+    sexpr: &str,
+    rulesets: Vec<RuleSet>,
+    start_name: &str,
+    end_name: &str,
+    max_steps: usize,
+) -> bool {
+    mim_slotted::reaches(sexpr, rulesets, start_name, end_name, max_steps)
+}
+
 pub fn pretty_slotted(sexpr: &str, line_len: usize) -> String {
     mim_slotted::pretty(sexpr, line_len)
 }

@@ -2,7 +2,9 @@ use crate::mim_egg::Mim;
 use crate::mim_egg::analysis::MimAnalysis;
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
-use crate::{eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, type_str};
+use crate::{
+    eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, reaches_slotted, type_str,
+};
 use bridge::{MimKind, NodeFFI, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
 use slotted_egraphs::{EGraph as EGraphSlotted, RecExpr as RecExprSlotted};
@@ -91,6 +93,13 @@ pub mod bridge {
         fn pretty_egg(sexpr: &str, line_len: usize) -> String;
 
         fn eqsat_slotted(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI>;
+        fn reaches_slotted(
+            sexpr: &str,
+            rulesets: Vec<RuleSet>,
+            start_name: &str,
+            end_name: &str,
+            max_steps: usize,
+        ) -> bool;
         fn pretty_slotted(sexpr: &str, line_len: usize) -> String;
 
         fn pretty_ffi(sexpr: Vec<RecExprFFI>, line_len: usize) -> String;

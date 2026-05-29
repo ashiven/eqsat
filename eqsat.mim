@@ -17,10 +17,10 @@
 ///
 ///
 /// MimIR-defined rewrite rules, sets of rewrite rules defined in 'egg' or 'slotted-egraphs',
-/// and a cost function may be specified via configuration functions in MimIR.
+/// and a cost function may be specified via configuration lambdas in MimIR.
 /// If no config functions are provided, the default values will be used:
 ///
-/// Implementation:   %eqsat.egg
+/// Implementation:   %eqsat.slotted
 /// Cost function:    %eqsat.AstSize
 /// Rulesets:         {}
 /// Rules:            {}
@@ -36,7 +36,7 @@ plugin core;
 ///
 /// ### %%eqsat.Impl
 ///
-/// Represents the equality saturation implementation that should be used in the backend
+/// Represents the equality saturation implementation that should be used
 ///
 axm %eqsat.Impl: *;
 ///
@@ -101,6 +101,12 @@ axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Ruleset;
 ///       quite work yet depending on the types of the meta variables of the rewrite rule.
 ///
 axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Rules;
+///
+/// ### %%eqsat.reaches
+///
+/// Asserts at runtime whether a start term is able to reach an end term.
+///
+axm %eqsat.reaches: {T: *} → [T, T] → T;
 ///
 ///
 /// ## Passes and Phases

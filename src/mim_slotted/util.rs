@@ -136,7 +136,8 @@ pub(crate) fn assert_reaches<L, N>(
     goal: &str,
     rewrites: &[Rewrite<L, N>],
     steps: usize,
-) where
+) -> bool
+where
     L: Language + 'static,
     N: Analysis<L> + Default + 'static,
 {
@@ -153,9 +154,9 @@ pub(crate) fn assert_reaches<L, N>(
     dbg!(&report.stop_reason);
     if let StopReason::Other(ReachError::Reached) = report.stop_reason {
         runner.egraph.explain_equivalence(start, goal);
-        return;
+        return true;
     }
 
     runner.egraph.dump();
-    panic!("Couldn't reach goal in provided number of steps.");
+    false
 }

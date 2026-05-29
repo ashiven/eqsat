@@ -31,7 +31,8 @@ mod test {
         set_rulesets(vec![RuleSet::Standard]);
         let a = "(let $foo (scope (lit 1 Nat) (var $foo)))";
         let b = "(lit 1 Nat)";
-        assert_reaches::<MimSlotted, MimSlottedAnalysis>(a, b, &rules(), 1);
+        let reached = assert_reaches(a, b, &rules(), 1);
+        assert!(reached);
     }
 
     #[test]
@@ -39,6 +40,7 @@ mod test {
         set_rulesets(vec![RuleSet::Standard]);
         let a = "(root extern foo (lam $x (scope (lit ff Bool) (app %core.nat.add (tuple (cons (var $x) (cons (lit 0 Nat) nil)))))))";
         let b = "(root extern foo (lam $x (scope (lit ff Bool) (var $x))))";
-        assert_reaches::<MimSlotted, MimSlottedAnalysis>(a, b, &rules(), 1);
+        let reached = assert_reaches(a, b, &rules(), 1);
+        assert!(reached);
     }
 }

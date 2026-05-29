@@ -194,7 +194,8 @@ mod test {
         (lam $0 (scope (lit ff Bool)
             (app (app %rise.add (app (app %rise.add (app (app %rise.add (app (app %rise.add (app (app %rise.add (app (app %rise.add (app (app %rise.add (var $0)) 1)) 1)) 1)) 1)) 1)) 1)) 1)))";
 
-        assert_reaches(a, b, &rules(), 40);
+        let reached = assert_reaches(a, b, &rules(), 40);
+        assert!(reached);
     }
 
     #[test]
@@ -203,6 +204,7 @@ mod test {
         let a = "(app %rise.map (lam $42 (scope (lit ff Bool) (app f5 (app f4 (app f3 (app f2 (app f1 (var $42)))))))))";
         let b = "(lam $1 (scope (lit ff Bool) (app (app %rise.map (lam $42 (scope (lit ff Bool) (app f5 (app f4 (app f3 (var $42))))))) (app (app %rise.map (lam $42 (scope (lit ff Bool) (app f2 (app f1 (var $42)))))) (var $1)))))";
 
-        assert_reaches(a, b, &rules(), 40);
+        let reached = assert_reaches(a, b, &rules(), 40);
+        assert!(reached);
     }
 }

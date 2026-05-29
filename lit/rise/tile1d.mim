@@ -1,0 +1,8 @@
+// Another example from the Guided Equality Saturation paper
+//
+// Uses additional rewrite rules (other rules defined in guided.mim):
+// 4) map @n1 (map @n2 f) => transpose o (map @n2 (map @n1 f)) o transpose
+// 5) map @(n1 * n2) f    => join o (map @n1 (map @n2 f)) o (split @n2)
+//
+//
+// map @(n1 * 32) f => join o (map @n1 (map @32 f)) o split @32

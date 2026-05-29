@@ -3,6 +3,7 @@ use crate::ffi::bridge::{CostFn, RecExprFFI, RuleSet};
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use crate::mim_slotted::rulesets::get_rules;
 use crate::mim_slotted::types::{TypedRecExpr, add_expr_typed, extract_type_annotations};
+use crate::mim_slotted::util::assert_reaches;
 use regex::Regex;
 use slotted_egraphs::*;
 use stacker::grow;
@@ -147,11 +148,11 @@ pub(crate) fn equality_saturate(
     rulesets: Vec<RuleSet>,
     cost_fn: CostFn,
 ) -> Vec<RecExprFFI> {
-    let mut sexprs = split_sexprs(sexpr);
-
     set_rulesets(rulesets);
 
+    let mut sexprs = split_sexprs(sexpr);
     let mut rules = get_rules();
+
     convert_rules(&mut sexprs, &mut rules);
 
     match cost_fn {
@@ -175,6 +176,39 @@ pub(crate) fn pretty(sexpr: &str, _line_len: usize) -> String {
     }
 
     res
+}
+
+pub(crate) fn reaches(
+    sexpr: &str,
+    rulesets: Vec<RuleSet>,
+    start_name: &str,
+    end_name: &str,
+    max_steps: usize,
+) -> bool {
+    set_rulesets(rulesets);
+
+    let mut sexprs = split_sexprs(sexpr);
+    let mut rules = get_rules();
+
+    convert_rules(&mut sexprs, &mut rules);
+
+    let start_term = sexprs
+        .iter()
+        .find(|sexpr| {
+            sexpr.starts_with(format!("(root extern {} (", start_name).as_str())
+                || sexpr.starts_with(format!("(root intern {} (", start_name).as_str())
+        })
+        .expect("Reaches failed to find start term");
+
+    let end_term = sexprs
+        .iter()
+        .find(|sexpr| {
+            sexpr.starts_with(format!("(root extern {} (", end_name).as_str())
+                || sexpr.starts_with(format!("(root intern {} (", end_name).as_str())
+        })
+        .expect("Reaches failed to find end term");
+
+    assert_reaches(start_term, end_term, &rules, max_steps)
 }
 
 fn set_rulesets(rulesets: Vec<RuleSet>) {
