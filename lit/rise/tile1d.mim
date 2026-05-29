@@ -1,3 +1,5 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+
 // Another example from the Guided Equality Saturation paper
 //
 // Uses additional rewrite rules (other rules defined in guided.mim):

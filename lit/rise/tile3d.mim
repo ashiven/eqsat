@@ -1,0 +1,1 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
