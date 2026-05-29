@@ -276,6 +276,9 @@ pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
     holes(type_expr)
 }
 
+// TODO: Consider type-union instead of the less-holes approach.
+// This would be even more effective at ending up with the fewest holes.
+
 // We are making the assumption here that terms are already
 // well-typed. (terms emitted from the mim compiler are already well-typed
 // and we do our best to correctly type terms that are newly introduced by

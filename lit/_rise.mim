@@ -25,8 +25,8 @@ axm %rise.reduce:     {n: Nat, T: *} → [T → T → T] → T → «n; T» → 
 axm %rise.fst:        {S: *, T: *} → [S, T] → S;
 axm %rise.snd:        {S: *, T: *} → [S, T] → T;
 
-// Compose (TODO: Type-checks but doesn't really work)
-// axm %rise.o:          {a: Univ, b: Univ, c: Univ, A: Type a, B: Type b, C: Type c} → [B → C] → [A → B] → [A → C];
+// Compose
+axm %rise.o:          {A: *, B: *, C: *} → [B → C] → [A → B] → [A → C];
 
 // Some constants (TODO: real values)
 axm %rise.weights2d:  «3; «3; Nat»»;
