@@ -27,8 +27,8 @@ rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat): 
 // TODO: This rule somehow can't be emitted by the sexpr emitter - Fix this
 rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat): %rise.o (%rise.map pat_a) (%rise.map pat_b) => %rise.map (%rise.o pat_a pat_b);
 
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, compose_assoc);
+// lam extern _rules(): %eqsat.Rules =
+//     %eqsat.rules (transpose_mm, compose_assoc, map_fuse);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
