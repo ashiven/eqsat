@@ -215,12 +215,14 @@ pub(crate) fn reaches(
     // We want to assert only for the terms inside of the root nodes
     let start_term = start_term
         .strip_prefix(&format!("(root extern {}", start_name))
+        .or(start_term.strip_prefix(&format!("(root intern {}", start_name)))
         .expect("Reaches failed to strip prefix")
         .strip_suffix(")")
         .expect("Reaches failed to strip suffix");
 
     let end_term = end_term
         .strip_prefix(&format!("(root extern {}", end_name))
+        .or(end_term.strip_prefix(&format!("(root intern {}", end_name)))
         .expect("Reaches failed to strip prefix")
         .strip_suffix(")")
         .expect("Reaches failed to strip suffix");
