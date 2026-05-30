@@ -5,7 +5,7 @@ use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use crate::{
     eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, reaches_slotted, type_str,
 };
-use bridge::{MimKind, NodeFFI, RecExprFFI};
+use bridge::{MimKind, NodeFFI, OptionSelected, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
 use slotted_egraphs::{EGraph as EGraphSlotted, RecExpr as RecExprSlotted};
 use std::collections::HashMap;
@@ -88,11 +88,20 @@ pub mod bridge {
         nodes: Vec<NodeFFI>,
     }
 
+    struct OptionSelected {
+        maybe_selected: *mut Vec<String>,
+    }
+
     extern "Rust" {
         fn eqsat_egg(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI>;
         fn pretty_egg(sexpr: &str, line_len: usize) -> String;
 
-        fn eqsat_slotted(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI>;
+        fn eqsat_slotted(
+            sexpr: &str,
+            selected: OptionSelected,
+            rulesets: Vec<RuleSet>,
+            cost_fn: CostFn,
+        ) -> Vec<RecExprFFI>;
         fn reaches_slotted(
             sexpr: &str,
             rulesets: Vec<RuleSet>,
@@ -105,6 +114,14 @@ pub mod bridge {
         fn pretty_ffi(sexpr: Vec<RecExprFFI>, line_len: usize) -> String;
         fn node_ffi_str(node: NodeFFI) -> String;
         fn type_str(type_: RecExprFFI, line_len: usize) -> String;
+    }
+}
+
+impl OptionSelected {
+    pub fn none() -> Self {
+        OptionSelected {
+            maybe_selected: std::ptr::null_mut(),
+        }
     }
 }
 

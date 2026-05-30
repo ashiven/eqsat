@@ -1,5 +1,5 @@
 use crate::ffi::FFI;
-use crate::ffi::bridge::{CostFn, RecExprFFI, RuleSet};
+use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use crate::mim_slotted::rulesets::get_rules;
 use crate::mim_slotted::types::{
@@ -147,12 +147,16 @@ define_language! {
 
 pub(crate) fn equality_saturate(
     sexpr: &str,
+    selected: OptionSelected,
     rulesets: Vec<RuleSet>,
     cost_fn: CostFn,
 ) -> Vec<RecExprFFI> {
     set_rulesets(rulesets);
 
     let mut sexprs = split_sexprs(sexpr);
+
+    filter_selected(&mut sexprs, selected);
+
     let mut rules = get_rules();
 
     convert_rules(&mut sexprs, &mut rules);
@@ -237,6 +241,25 @@ pub(crate) fn reaches(
     let end_term = format!("{}", end_term_expr_unannotated);
 
     assert_reaches(&start_term, &end_term, &rules, max_steps)
+}
+
+fn filter_selected(sexprs: &mut Vec<String>, selected: OptionSelected) {
+    let selected = unsafe { selected.maybe_selected.as_mut() };
+
+    // If no selection has been made, we simply assume that all terms should
+    // be saturated, otherwise we filter out only the selection.
+    if let Some(names) = selected {
+        sexprs.retain(|sexpr| {
+            for name in names.iter() {
+                if sexpr.starts_with(&format!("(root extern {}", name))
+                    || sexpr.starts_with(&format!("(root intern {}", name))
+                {
+                    return true;
+                }
+            }
+            false
+        });
+    }
 }
 
 fn set_rulesets(rulesets: Vec<RuleSet>) {

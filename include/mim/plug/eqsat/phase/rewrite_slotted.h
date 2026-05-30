@@ -20,7 +20,7 @@ const bool DEBUG_SCOPES = false;
 /***************** TYPES **********************/
 typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;
 typedef rust::Vec<RuleSet> RuleSets;
-typedef std::tuple<RuleSets, CostFn, ReachesArgs> ConfigValues;
+typedef std::tuple<RuleSets, CostFn, ReachesArgs, OptionSelected> ConfigValues;
 
 typedef struct Loc {
     int32_t depth;

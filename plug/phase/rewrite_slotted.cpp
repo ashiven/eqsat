@@ -15,7 +15,7 @@ const std::set MUTABLES   = {MimKind::Lam, MimKind::Con, MimKind::Fun,   MimKind
 const std::set NO_CONVERT = {MimKind::Axm};
 
 void RewriteSlotted::start() {
-    auto [rulesets, cost_fn, reaches_args] = import_config();
+    auto [rulesets, cost_fn, reaches_args, selected] = import_config();
 
     // We are assuming that the core plugin and its backends have been loaded at this point
     // because the 'eqsat' plugin declared it as a dependency via 'plugin core;'
@@ -26,7 +26,12 @@ void RewriteSlotted::start() {
 
     assert_reaches(sexpr.str(), rulesets, reaches_args);
 
-    auto rec_exprs = eqsat_slotted(sexpr.str(), rulesets, cost_fn);
+    auto rec_exprs = eqsat_slotted(sexpr.str(), selected, rulesets, cost_fn);
+
+    // Heap-allocated pointer needs manual dealloc and the reason we even use pointers
+    // here is that Cxx doesn't yet have an Option type implemented for its FFI, so the
+    // workaround to that is to use a raw pointer where nullptr represents the None variant.
+    if (selected.maybe_selected) delete selected.maybe_selected;
 
     if (DEBUG) std::cout << pretty_ffi(rec_exprs, 80).c_str() << "\n";
 
@@ -37,13 +42,14 @@ void RewriteSlotted::start() {
 }
 
 ConfigValues RewriteSlotted::import_config() {
-    // Internalize config lambdas (with signature [] -> %eqsat.Ruleset | %eqsat.CostFun | %eqsat.Impl | %eqsat.Reaches)
+    // Internalize config lambdas (with signature [] -> %eqsat.Ruleset | %eqsat.CostFun | %eqsat.Impl | %eqsat.Reaches |
+    // %eqsat.Select)
     DefVec lams;
     for (auto def : old_world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
             auto codom = lam->codom();
             if (Axm::isa<eqsat::Ruleset>(codom) || Axm::isa<eqsat::CostFun>(codom) || Axm::isa<eqsat::Impl>(codom)
-                || Axm::isa<eqsat::Reaches>(codom)) {
+                || Axm::isa<eqsat::Reaches>(codom) || Axm::isa<eqsat::Select>(codom)) {
                 lams.push_back(lam);
                 def->internalize();
             }
@@ -51,9 +57,10 @@ ConfigValues RewriteSlotted::import_config() {
     }
 
     // Import config values from the internalized config lambdas
-    rust::Vec<RuleSet> rulesets;
+    RuleSets rulesets;
     CostFn cost_fn = CostFn::AstSize;
-    std::vector<std::tuple<std::string, std::string, size_t>> reaches_args;
+    ReachesArgs reaches_args;
+    OptionSelected selected = {nullptr};
 
     for (auto lam : lams) {
         auto body = lam->as<Lam>()->body();
@@ -77,6 +84,13 @@ ConfigValues RewriteSlotted::import_config() {
             // Cost functions
             cost_fn = CostFn::AstSize;
 
+        } else if (auto select = Axm::isa<eqsat::select>(body)) {
+            // Selections
+            auto maybe_selected = new rust::Vec<rust::String>();
+            for (auto name : select->args())
+                maybe_selected->push_back(name->sym().str());
+            selected.maybe_selected = maybe_selected;
+
         } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
             // Implementations
             continue;
@@ -85,7 +99,7 @@ ConfigValues RewriteSlotted::import_config() {
         }
     }
 
-    return {rulesets, cost_fn, reaches_args};
+    return {rulesets, cost_fn, reaches_args, selected};
 }
 
 void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args) {

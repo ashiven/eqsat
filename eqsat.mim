@@ -63,6 +63,12 @@ axm %eqsat.CostFun: *;
 /// Represents the result of an assertion whether one term can reach another term
 ///
 axm %eqsat.Reaches: *;
+/// 
+/// ### %%eqsat.Select
+///
+/// Represents the result of specifying a set of terms for equality saturation
+///
+axm %eqsat.Select: *;
 ///
 ///
 /// ## Implementations
@@ -113,6 +119,13 @@ axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Rules;
 /// Asserts at runtime whether a start term is able to reach an end term in under n steps.
 ///
 axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %eqsat.Reaches;
+///
+/// ### %%eqsat.select
+///
+/// Select a set of root-level terms for equality saturation. If this is not specified, all terms
+/// will be saturated. If you want no terms to be saturated, apply this axiom to an empty tuple.
+///
+axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 ///
 ///
 /// ## Passes and Phases

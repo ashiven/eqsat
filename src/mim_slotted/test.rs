@@ -1,7 +1,7 @@
 use regex::Regex;
 use std::fs;
 
-use crate::ffi::bridge::{CostFn, RuleSet};
+use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::mim_slotted::get_rules;
 use crate::mim_slotted::{MimSlotted, split_sexprs};
 use crate::mim_slotted::{convert_rules, set_rulesets};
@@ -20,7 +20,9 @@ fn parse_sexprs(sexpr: &str) -> Vec<RecExpr<MimSlotted>> {
 
 fn eqsat_equals(file: &str, file_rw: &str) {
     let slotted = fs::read_to_string(file).expect("Failed to read file.slotted");
-    let nodes = eqsat_slotted(&slotted, vec![], CostFn::AstSize);
+
+    let selected = OptionSelected::none();
+    let nodes = eqsat_slotted(&slotted, selected, vec![], CostFn::AstSize);
 
     let slotted = pretty_ffi(nodes, LINE_LEN);
     let slotted_rw = fs::read_to_string(file_rw)

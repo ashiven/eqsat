@@ -1,5 +1,7 @@
 use ffi::bridge::{CostFn, NodeFFI, RecExprFFI, RuleSet};
 
+use crate::ffi::bridge::OptionSelected;
+
 pub mod ffi;
 mod mim_egg;
 mod mim_slotted;
@@ -12,8 +14,13 @@ pub fn pretty_egg(sexpr: &str, line_len: usize) -> String {
     mim_egg::pretty(sexpr, line_len)
 }
 
-pub fn eqsat_slotted(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI> {
-    mim_slotted::equality_saturate(sexpr, rulesets, cost_fn)
+pub fn eqsat_slotted(
+    sexpr: &str,
+    selected: OptionSelected,
+    rulesets: Vec<RuleSet>,
+    cost_fn: CostFn,
+) -> Vec<RecExprFFI> {
+    mim_slotted::equality_saturate(sexpr, selected, rulesets, cost_fn)
 }
 
 pub fn reaches_slotted(
