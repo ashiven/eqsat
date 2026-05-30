@@ -246,12 +246,12 @@ pub(crate) fn reaches(
 
 fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
     let selected = unsafe { selected.option.as_mut() };
-    let mut selected_mask: Vec<bool> = vec![];
+    let mut selected_mask: Vec<bool> = vec![true; sexprs.len()];
 
     // If no selection has been made, we simply assume that all terms should
     // be saturated, otherwise we filter out only the selection.
     if let Some(names) = selected {
-        sexprs.iter().for_each(|sexpr| {
+        for (i, sexpr) in sexprs.iter().enumerate() {
             let mut is_selected = false;
 
             // Axioms are always added to the egraph, no matter the selection
@@ -268,8 +268,8 @@ fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
                 }
             }
 
-            selected_mask.push(is_selected);
-        });
+            selected_mask[i] = is_selected;
+        }
     }
 
     selected_mask
