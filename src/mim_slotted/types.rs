@@ -11,9 +11,9 @@ pub type TypeExpr = RecExpr<MimSlotted>;
 
 #[derive(Debug, Clone)]
 pub struct TypedRecExpr {
-    node: MimSlotted,
-    children: Vec<TypedRecExpr>,
-    type_: Option<TypeExpr>,
+    pub node: MimSlotted,
+    pub children: Vec<TypedRecExpr>,
+    pub type_: Option<TypeExpr>,
 }
 
 pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<MimSlotted>) -> RecExpr<MimSlotted> {

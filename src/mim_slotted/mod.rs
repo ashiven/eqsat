@@ -154,20 +154,16 @@ pub(crate) fn equality_saturate(
     set_rulesets(rulesets);
 
     let mut sexprs = split_sexprs(sexpr);
-
-    // TODO:
-    // - Instead of modifying sexprs in-place we should return a mask here that sets true for
-    //   the sexprs that should be rewritten and false for those that shouln't be
-    // - This ensures that sexprs remain in the same order (important for dependencies)
-    // - This mask will then be passed on to rewrite_sexprs as another argument
-    filter_selected(&mut sexprs, selected);
-
     let mut rules = get_rules();
 
     convert_rules(&mut sexprs, &mut rules);
 
+    // This gives us a bool-mask over our sexprs, marking sexprs that should be
+    // rewritten with 'true' and those that shouldn't with 'false'.
+    let selected = filter_selected(&sexprs, selected);
+
     match cost_fn {
-        CostFn::AstSize => rewrite_sexprs(sexprs, rules, || AstSize),
+        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
         _ => panic!("Unknown cost function provided."),
     }
 }
@@ -248,23 +244,35 @@ pub(crate) fn reaches(
     assert_reaches(&start_term, &end_term, &rules, max_steps)
 }
 
-fn filter_selected(sexprs: &mut Vec<String>, selected: OptionSelected) {
+fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
     let selected = unsafe { selected.option.as_mut() };
+    let mut selected_mask: Vec<bool> = vec![];
 
     // If no selection has been made, we simply assume that all terms should
     // be saturated, otherwise we filter out only the selection.
     if let Some(names) = selected {
-        sexprs.retain(|sexpr| {
+        sexprs.iter().for_each(|sexpr| {
+            let mut is_selected = false;
+
+            // Axioms are always added to the egraph, no matter the selection
+            if sexpr.starts_with("(axm") {
+                is_selected = true;
+            }
+
             for name in names.iter() {
                 if sexpr.starts_with(&format!("(root extern {}", name))
                     || sexpr.starts_with(&format!("(root intern {}", name))
                 {
-                    return true;
+                    is_selected = true;
+                    break;
                 }
             }
-            false
+
+            selected_mask.push(is_selected);
         });
     }
+
+    selected_mask
 }
 
 fn set_rulesets(rulesets: Vec<RuleSet>) {
@@ -286,7 +294,8 @@ fn split_sexprs(sexpr: &str) -> Vec<String> {
 }
 
 fn rewrite_sexprs<C, F>(
-    sexprs: Vec<String>,
+    sexprs: &[String],
+    selected: &[bool],
     rules: Vec<Rewrite<MimSlotted, MimSlottedAnalysis>>,
     cost_fn: F,
 ) -> Vec<RecExprFFI>
@@ -298,13 +307,16 @@ where
 
     let mut roots: Vec<AppliedId> = vec![];
     let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
-    for sexpr in &sexprs {
-        let annotated_rec_expr: RecExpr<MimSlotted> =
-            grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+    for (i, is_selected) in selected.iter().enumerate() {
+        if *is_selected {
+            let sexpr = &sexprs[i];
+            let annotated_rec_expr: RecExpr<MimSlotted> =
+                grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
 
-        let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
-        let root_id = add_expr_typed(&mut eg, typed_rec_expr);
-        roots.push(root_id);
+            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
+            let root_id = add_expr_typed(&mut eg, typed_rec_expr);
+            roots.push(root_id);
+        }
     }
 
     let mut runner = Runner::<MimSlotted, MimSlottedAnalysis>::default();
@@ -313,10 +325,41 @@ where
     let _report = runner.run(&rules);
 
     let extractor = Extractor::new(&runner.egraph, cost_fn());
-    for i in 0..sexprs.len() {
-        let best_expr = extractor.extract(&runner.roots[i], &runner.egraph);
-        let best_expr_ffi = best_expr.to_ffi(&runner.egraph);
-        rewritten_sexprs.push(best_expr_ffi);
+    let mut root_idx = 0;
+    for (i, is_selected) in selected.iter().enumerate() {
+        if *is_selected {
+            let best_expr = extractor.extract(&runner.roots[root_idx], &runner.egraph);
+            let best_expr_ffi = best_expr.to_ffi(&runner.egraph);
+            rewritten_sexprs.push(best_expr_ffi);
+            root_idx += 1;
+        } else {
+            let sexpr = &sexprs[i];
+            let annotated_rec_expr: RecExpr<MimSlotted> =
+                grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+
+            // We first extract the types from the annotated rec expr to then be able
+            // to extract the pi-type of the root-level lambda and manually set this
+            // as the type of the unannotated_rec_expr_ffi. The reason we do this instead
+            // of just adding the typed expr to the egraph and then hoping that rec_expr.to_ffi(eg)
+            // will lookup and set the type of the rec expr for us, is that the lookup somehow fails.
+            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
+            let lam_type = {
+                let lam = typed_rec_expr
+                    .children
+                    .get(2)
+                    .expect("Expected root-level lambda");
+                lam.type_.clone()
+            };
+
+            let unannotated_rec_expr = remove_type_annotations(&annotated_rec_expr);
+            let mut unannotated_rec_expr_ffi = unannotated_rec_expr.to_ffi(&runner.egraph);
+
+            let lam_idx = unannotated_rec_expr_ffi.nodes.len() - 2;
+            unannotated_rec_expr_ffi.nodes[lam_idx].type_ =
+                lam_type.unwrap().to_ffi(&runner.egraph);
+
+            rewritten_sexprs.push(unannotated_rec_expr_ffi);
+        }
     }
 
     rewritten_sexprs
