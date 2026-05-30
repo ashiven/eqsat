@@ -155,6 +155,11 @@ pub(crate) fn equality_saturate(
 
     let mut sexprs = split_sexprs(sexpr);
 
+    // TODO:
+    // - Instead of modifying sexprs in-place we should return a mask here that sets true for
+    //   the sexprs that should be rewritten and false for those that shouln't be
+    // - This ensures that sexprs remain in the same order (important for dependencies)
+    // - This mask will then be passed on to rewrite_sexprs as another argument
     filter_selected(&mut sexprs, selected);
 
     let mut rules = get_rules();
@@ -244,7 +249,7 @@ pub(crate) fn reaches(
 }
 
 fn filter_selected(sexprs: &mut Vec<String>, selected: OptionSelected) {
-    let selected = unsafe { selected.maybe_selected.as_mut() };
+    let selected = unsafe { selected.option.as_mut() };
 
     // If no selection has been made, we simply assume that all terms should
     // be saturated, otherwise we filter out only the selection.

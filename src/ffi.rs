@@ -89,7 +89,7 @@ pub mod bridge {
     }
 
     struct OptionSelected {
-        maybe_selected: *mut Vec<String>,
+        option: *mut Vec<String>,
     }
 
     extern "Rust" {
@@ -120,7 +120,7 @@ pub mod bridge {
 impl OptionSelected {
     pub fn none() -> Self {
         OptionSelected {
-            maybe_selected: std::ptr::null_mut(),
+            option: std::ptr::null_mut(),
         }
     }
 }

@@ -31,7 +31,7 @@ void RewriteSlotted::start() {
     // Heap-allocated pointer needs manual dealloc and the reason we even use pointers
     // here is that Cxx doesn't yet have an Option type implemented for its FFI, so the
     // workaround to that is to use a raw pointer where nullptr represents the None variant.
-    if (selected.maybe_selected) delete selected.maybe_selected;
+    if (selected.option) delete selected.option;
 
     if (DEBUG) std::cout << pretty_ffi(rec_exprs, 80).c_str() << "\n";
 
@@ -78,6 +78,11 @@ ConfigValues RewriteSlotted::import_config() {
         } else if (auto reaches = Axm::isa<eqsat::reaches>(body)) {
             // Reaches assertions
             auto [start_term, end_term, max_steps] = reaches->args<3>();
+            if (auto start_lam = start_term->isa<Lam>(); !(start_lam && start_lam->is_closed()))
+                assert(false && "%eqsat.reaches currently only supports variables to root-level lambdas");
+            if (auto end_lam = end_term->isa<Lam>(); !(end_lam && end_lam->is_closed()))
+                assert(false && "%eqsat.reaches currently only supports variables to root-level lambdas");
+
             reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
         } else if (Axm::isa<eqsat::AstSize>(body)) {
@@ -86,10 +91,13 @@ ConfigValues RewriteSlotted::import_config() {
 
         } else if (auto select = Axm::isa<eqsat::select>(body)) {
             // Selections
-            auto maybe_selected = new rust::Vec<rust::String>();
-            for (auto name : select->args())
-                maybe_selected->push_back(name->sym().str());
-            selected.maybe_selected = maybe_selected;
+            auto option = new rust::Vec<rust::String>();
+            for (auto term : select->args()) {
+                if (auto lam = term->isa<Lam>(); !(lam && lam->is_closed()))
+                    assert(false && "%eqsat.select currently only supports variables to root-level lambdas");
+                option->push_back(term->sym().str());
+            }
+            selected.option = option;
 
         } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
             // Implementations

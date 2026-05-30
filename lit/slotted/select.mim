@@ -21,4 +21,4 @@ lam extern _reaches(): %eqsat.Reaches =
     %eqsat.reaches (start_term, end_term, 5);
 
 lam extern _select(): %eqsat.Select =
-    %eqsat.select (start_term);
+    %eqsat.select (start_term, );
