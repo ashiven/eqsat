@@ -217,16 +217,35 @@ mod test {
         let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc"; "(app (app %rise.o ?a) (app (app %rise.o ?b) ?c))" => "(app (app %rise.o (app (app %rise.o a) ?b)) ?c)");
         let map_fuse: Rewrite<MimSlotted> = rw!("map-fuse"; "(app (app %rise.o (app %rise.map ?a)) (app %rise.map ?b))" => "(app %rise.map (app (app %rise.o ?a) ?b))");
 
-        let a = "(fun $_11870 (scope (lit ff Bool) 
-                            (let $return_11877 (scope (extract (var $_11870) (lit tt Bool)) 
-                            (let $mapper_12055 (scope (app (app %rise.o (app %rise.map (app %rise.map f_11814))) (app (app %rise.o %rise.transpose) (app %rise.map (app %rise.map g_11838)))) 
-                            (let $arg_11871 (scope (extract (var $_11870) (lit ff Bool)) 
-                                (app (var $return_11877) (app (var $mapper_12055) (var $arg_11871)))))))))))";
-        let b =  "(fun $_12079 (scope (lit ff Bool) 
-                            (let $return_12086 (scope (extract (var $_12079) (lit tt Bool)) 
-                            (let $mapper_12183 (scope (app (app %rise.o (app %rise.map (app %rise.map (app (app %rise.o f_11814) g_11838)))) %rise.transpose) 
-                            (let $arg_12080 (scope (extract (var $_12079) (lit ff Bool)) 
-                                (app (var $return_12086) (app (var $mapper_12183) (var $arg_12080)))))))))))";
+        // (map (map f)) o (transpose o (map (map g)))
+        // 1) -> (map (map f)) o ((map (map g)) o transpose)
+        // 2) -> ((map (map f)) o (map (map g))) o transpose
+        // 3) -> (map (map f o map g)) o transpose
+        // 3) -> (map (map (f o g))) o transpose
+
+        // Original output from the sexpr emitter:
+        //
+        // let a = "(fun $_11870 (scope (lit ff Bool)
+        //                     (let $return_11877 (scope (extract (var $_11870) (lit tt Bool))
+        //                     (let $mapper_12055 (scope (app (app %rise.o (app %rise.map (app %rise.map f_11814))) (app (app %rise.o %rise.transpose) (app %rise.map (app %rise.map g_11838))))
+        //                     (let $arg_11871 (scope (extract (var $_11870) (lit ff Bool))
+        //                         (app (var $return_11877) (app (var $mapper_12055) (var $arg_11871)))))))))))";
+        // let b = "(fun $_12079 (scope (lit ff Bool)
+        //                     (let $return_12086 (scope (extract (var $_12079) (lit tt Bool))
+        //                     (let $mapper_12183 (scope (app (app %rise.o (app %rise.map (app %rise.map (app (app %rise.o f_11814) g_11838)))) %rise.transpose)
+        //                     (let $arg_12080 (scope (extract (var $_12079) (lit ff Bool))
+        //                         (app (var $return_12086) (app (var $mapper_12183) (var $arg_12080)))))))))))";
+
+        let a = "(fun $1 (scope (lit ff Bool)
+                            (let $return (scope (extract (var $1) (lit tt Bool))
+                            (let $mapper (scope (app (app %rise.o (app %rise.map (app %rise.map f))) (app (app %rise.o %rise.transpose) (app %rise.map (app %rise.map g))))
+                            (let $arg (scope (extract (var $1) (lit ff Bool))
+                                (app (var $return) (app (var $mapper) (var $arg)))))))))))";
+        let b = "(fun $1 (scope (lit ff Bool)
+                            (let $return (scope (extract (var $1) (lit tt Bool))
+                            (let $mapper (scope (app (app %rise.o (app %rise.map (app %rise.map (app (app %rise.o f) g)))) %rise.transpose)
+                            (let $arg (scope (extract (var $1) (lit ff Bool))
+                                (app (var $return) (app (var $mapper) (var $arg)))))))))))";
 
         let reached = assert_reaches(a, b, &[transpose_mm, compose_assoc, map_fuse], 100);
         assert!(reached);
