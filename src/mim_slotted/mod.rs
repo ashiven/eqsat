@@ -233,11 +233,13 @@ pub(crate) fn reaches(
         .expect("Reaches failed to strip suffix");
 
     // We also don't care about type annotations, so we just remove them.
-    let start_term_expr: RecExpr<MimSlotted> = RecExpr::parse(start_term).unwrap();
+    let start_term_expr: RecExpr<MimSlotted> =
+        grow(PARSE_STACK_SIZE, || RecExpr::parse(start_term).unwrap());
     let start_term_expr_unannotated = remove_type_annotations(&start_term_expr);
     let start_term = format!("{}", start_term_expr_unannotated);
 
-    let end_term_expr: RecExpr<MimSlotted> = RecExpr::parse(end_term).unwrap();
+    let end_term_expr: RecExpr<MimSlotted> =
+        grow(PARSE_STACK_SIZE, || RecExpr::parse(end_term).unwrap());
     let end_term_expr_unannotated = remove_type_annotations(&end_term_expr);
     let end_term = format!("{}", end_term_expr_unannotated);
 
