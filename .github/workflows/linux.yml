@@ -55,6 +55,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{matrix.build-type}}                                                                                                  \
             -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined,leak,bounds -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fno-sanitize=vptr" \
             -DBUILD_TESTING=ON                                                                                                                         \
+            -DMIM_BUILD_PYTHON=OFF                                                                                                                     \
             -DMIM_BUILD_EXAMPLES=ON                                                                                                                    \
             -DMIM_FILECHECK=/usr/bin/FileCheck-20                                                                                                      \
             -DMIM_LIT_TIMEOUT=300
@@ -75,14 +76,15 @@ jobs:
         working-directory: mimir
         run: cmake --build build -v
 
-      - name: Run lit test suite
+      - name: Test
+        if: matrix.build-type == 'Debug'
         working-directory: mimir
-        run: cmake --build build -v --target lit
+        run: cmake --build build -v --target test-all
 
       - name: Test w/o Valgrind
-        if: matrix.build-type == 'Debug'
-        working-directory: mimir/build
-        run: ctest --verbose -C ${{matrix.build-type}} --output-on-failure
+        if: matrix.build-type == 'Release'
+        working-directory: mimir
+        run: cmake --build build -v --target lit
 
       - name: Test w/ Valgrind
         if: matrix.build-type == 'Release'
