@@ -40,7 +40,7 @@ fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
     return (mapper arg);
 
 lam extern _reaches(): %eqsat.Reaches =
-    %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 100);
+    %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5);
 
 lam extern _select(): %eqsat.Select =
-    %eqsat.select ();
+    %eqsat.select (fuse_transpose, );
