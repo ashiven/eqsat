@@ -82,7 +82,7 @@ fn eqsat_fun_slotted() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "rec check in sexpr emitter currently bugged"]
 fn parse_pow_slotted() {
     let pow_slotted =
         fs::read_to_string("examples/pow.slotted").expect("Failed to read pow.slotted");
@@ -90,7 +90,7 @@ fn parse_pow_slotted() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "rec check in sexpr emitter currently bugged"]
 fn eqsat_pow_slotted() {
     eqsat_equals("examples/pow.slotted", "examples/pow_rw.slotted");
 }
@@ -136,9 +136,9 @@ fn convert_custom_rule() {
 
 #[test]
 fn select_axiom() {
-    let axm = "(@ (pi* $_38960 (scope (sigma $dummy (scope (cons Nat (cons Nat (cons (type (lit 0 Univ)) nil))) nil)) (pi $dummy (scope (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (extr
-act (var $_38960) (lit 2 (idx (lit 3 Nat)))))))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (extract (var $_38960) (lit 2 (idx (lit 3 Nat))))))))))))
-(axm %rise.transpose))";
+    let axm = "(@ (pi* $_38960 (scope (sigma $dummy (scope (cons Nat (cons Nat (cons (type (lit 0 Univ)) nil))) nil)) (pi $dummy (scope (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) 
+    (lit 1 (idx (lit 3 Nat)))) (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) 
+    (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))))))) (axm %rise.transpose))";
 
     let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
     assert!(axm_regex.is_match(axm));
