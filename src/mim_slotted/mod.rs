@@ -22,7 +22,7 @@ mod test;
 
 // Parsing rec exprs with type annotations can become very stack intensive
 // so we preemptively increase the stack size to avoid stack overflows.
-const PARSE_STACK_SIZE: usize = 8 * 1024 * 1024;
+const PARSE_STACK_SIZE: usize = 16 * 1024 * 1024;
 
 // We keep track of the selected rulesets in a global variable because they
 // need to be accessed repeatedly in the analysis and it was too tedious to
@@ -204,30 +204,30 @@ pub(crate) fn reaches(
     let start_term = sexprs
         .iter()
         .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {}", start_name).as_str())
-                || sexpr.starts_with(format!("(root intern {}", start_name).as_str())
+            sexpr.starts_with(format!("(root extern {}\n", start_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}\n", start_name).as_str())
         })
         .expect("Reaches failed to find start term");
 
     let end_term = sexprs
         .iter()
         .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {}", end_name).as_str())
-                || sexpr.starts_with(format!("(root intern {}", end_name).as_str())
+            sexpr.starts_with(format!("(root extern {}\n", end_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}\n", end_name).as_str())
         })
         .expect("Reaches failed to find end term");
 
     // We want to assert only for the terms inside of the root nodes
     let start_term = start_term
-        .strip_prefix(&format!("(root extern {}", start_name))
-        .or(start_term.strip_prefix(&format!("(root intern {}", start_name)))
+        .strip_prefix(&format!("(root extern {}\n", start_name))
+        .or(start_term.strip_prefix(&format!("(root intern {}\n", start_name)))
         .expect("Reaches failed to strip prefix")
         .strip_suffix(")")
         .expect("Reaches failed to strip suffix");
 
     let end_term = end_term
-        .strip_prefix(&format!("(root extern {}", end_name))
-        .or(end_term.strip_prefix(&format!("(root intern {}", end_name)))
+        .strip_prefix(&format!("(root extern {}\n", end_name))
+        .or(end_term.strip_prefix(&format!("(root intern {}\n", end_name)))
         .expect("Reaches failed to strip prefix")
         .strip_suffix(")")
         .expect("Reaches failed to strip suffix");
@@ -250,6 +250,8 @@ fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
     let selected = unsafe { selected.option.as_mut() };
     let mut selected_mask: Vec<bool> = vec![true; sexprs.len()];
 
+    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
+
     // If no selection has been made, we simply assume that all terms should
     // be saturated, otherwise we filter out only the selection.
     if let Some(names) = selected {
@@ -257,7 +259,7 @@ fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
             let mut is_selected = false;
 
             // Axioms are always added to the egraph, no matter the selection
-            if sexpr.starts_with("(axm") {
+            if axm_regex.is_match(sexpr) {
                 is_selected = true;
             }
 
@@ -338,6 +340,8 @@ where
             let sexpr = &sexprs[i];
             let annotated_rec_expr: RecExpr<MimSlotted> =
                 grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+
+            // TODO: The below is also not very robust - maybe find some better way to do this
 
             // We first extract the types from the annotated rec expr to then be able
             // to extract the pi-type of the root-level lambda and manually set this

@@ -133,3 +133,13 @@ fn convert_custom_rule() {
 
     assert_eq!(rules.len(), 1);
 }
+
+#[test]
+fn select_axiom() {
+    let axm = "(@ (pi* $_38960 (scope (sigma $dummy (scope (cons Nat (cons Nat (cons (type (lit 0 Univ)) nil))) nil)) (pi $dummy (scope (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (extr
+act (var $_38960) (lit 2 (idx (lit 3 Nat)))))))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (extract (var $_38960) (lit 2 (idx (lit 3 Nat))))))))))))
+(axm %rise.transpose))";
+
+    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
+    assert!(axm_regex.is_match(axm));
+}
