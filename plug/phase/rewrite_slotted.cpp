@@ -85,15 +85,15 @@ ConfigValues RewriteSlotted::import_config() {
                 else if (Axm::isa<eqsat::rise>(ruleset))
                     rulesets.push_back(RuleSet::Rise);
                 else
-                    assert(false && "Provided ruleset does not exist for slotted");
+                    error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
 
         } else if (auto reaches = Axm::isa<eqsat::reaches>(body)) {
             // Reaches assertions
             auto [start_term, end_term, max_steps] = reaches->args<3>();
             if (auto start_lam = start_term->isa<Lam>(); !(start_lam && start_lam->is_closed()))
-                assert(false && "%eqsat.reaches currently only supports variables to root-level lambdas");
+                error("%eqsat.reaches currently only supports variables to root-level lambdas");
             if (auto end_lam = end_term->isa<Lam>(); !(end_lam && end_lam->is_closed()))
-                assert(false && "%eqsat.reaches currently only supports variables to root-level lambdas");
+                error("%eqsat.reaches currently only supports variables to root-level lambdas");
 
             reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
@@ -106,7 +106,7 @@ ConfigValues RewriteSlotted::import_config() {
             auto option = new rust::Vec<rust::String>();
             for (auto term : select->args()) {
                 if (auto lam = term->isa<Lam>(); !(lam && lam->is_closed()))
-                    assert(false && "%eqsat.select currently only supports variables to root-level lambdas");
+                    error("%eqsat.select currently only supports variables to root-level lambdas");
                 option->push_back(term->sym().str());
             }
             selected.option = option;
@@ -114,8 +114,9 @@ ConfigValues RewriteSlotted::import_config() {
         } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
             // Implementations
             continue;
+
         } else {
-            assert(false && "Invalid config value provided for slotted");
+            error("Slotted: Invalid config value: {}", body);
         }
     }
 
@@ -129,7 +130,7 @@ void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, Reache
 }
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {
-    if (type_.nodes.empty()) assert(false && "Tried to create an empty type.");
+    if (type_.nodes.empty()) error("Tried to create an empty type.");
     auto outer_state = save_state();
 
     auto type_cache      = Cache{};

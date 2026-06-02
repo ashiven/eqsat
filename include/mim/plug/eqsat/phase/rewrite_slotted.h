@@ -206,7 +206,7 @@ private:
     uint32_t get_id(const Def* def) {
         auto it = std::find_if(cache()->begin(), cache()->end(), [&](const auto& pair) { return pair.second == def; });
         if (it != cache()->end()) return it->first;
-        assert(false && "Could not find the given Def in the cache.");
+        error("Could not find the given Def in the cache.");
         return -1;
     }
 
@@ -260,12 +260,7 @@ private:
     }
 
     void register_axm(std::string name, const Axm* converted) {
-        if (axms_.contains(name)) {
-            std::cerr << "register_axm: can't define the same axiom: " << name << " twice\n"
-                      << "existing def: " << axms_[name] << "\n";
-            assert(false);
-        }
-        axms_[name] = converted;
+        if (!axms_.contains(name)) axms_[name] = converted;
     }
     const Def* get_axm(std::string name) { return axms_.contains(name) ? axms_[name] : nullptr; }
 
