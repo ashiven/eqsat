@@ -29,6 +29,7 @@ void RewriteSlotted::start() {
     // If no terms are selected for saturation, we simply use the Rewriter to transfer the old world to
     // the new world unchanged, which is faster and less involved than init + convert.
     if (selected.option && selected.option->empty()) {
+        delete selected.option;
         for (auto mut : old_world().externals().muts()) {
             auto new_mut = rewrite(mut)->as_mut();
             if (mut->is_external()) new_mut->externalize();
