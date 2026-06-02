@@ -31,6 +31,12 @@ lam extern _rules(): %eqsat.Rules =
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
 
+// We had to provide implicit arguments with '@' in order to give the compiler the information it needed to make the program type-check.
+// The problem is that in the sexpr emitter, we decided to fully omit all implicit arguments and have them always be inferred on reconstruction.
+// This will fail for this example here where the implicits can't be inferred.
+//
+// The workaround currently is to `%eqsat.select ()` so no terms will be rewritten, which internally gets processed
+// by simply transferring the old world to a new world using `Rewriter::rewrite_external` as in `RWPhase::start`.
 fun extern fuse_transpose(arg: «3; «4; Nat»»): «4; «3; Nat»» =
     let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4, Nat)) (%rise.map (%rise.map g)));
     return (mapper arg);
@@ -43,4 +49,4 @@ lam extern _reaches(): %eqsat.Reaches =
     %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5);
 
 lam extern _select(): %eqsat.Select =
-    %eqsat.select (fuse_transpose, );
+    %eqsat.select ();

@@ -26,6 +26,17 @@ void RewriteSlotted::start() {
 
     assert_reaches(sexpr.str(), rulesets, reaches_args);
 
+    // If no terms are selected for saturation, we simply use the Rewriter to transfer the old world to
+    // the new world unchanged, which is faster and less involved than init + convert.
+    if (selected.option && selected.option->empty()) {
+        for (auto mut : old_world().externals().muts()) {
+            auto new_mut = rewrite(mut)->as_mut();
+            if (mut->is_external()) new_mut->externalize();
+        }
+        swap(old_world(), new_world());
+        return;
+    }
+
     auto rec_exprs = eqsat_slotted(sexpr.str(), selected, rulesets, cost_fn);
 
     // Heap-allocated pointer needs manual dealloc and the reason we even use pointers

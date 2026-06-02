@@ -22,7 +22,7 @@ mod test;
 
 // Parsing rec exprs with type annotations can become very stack intensive
 // so we preemptively increase the stack size to avoid stack overflows.
-const PARSE_STACK_SIZE: usize = 16 * 1024 * 1024;
+const PARSE_STACK_SIZE: usize = 8 * 1024 * 1024;
 
 // We keep track of the selected rulesets in a global variable because they
 // need to be accessed repeatedly in the analysis and it was too tedious to

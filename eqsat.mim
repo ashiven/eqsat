@@ -20,11 +20,22 @@
 /// and a cost function may be specified via configuration lambdas in MimIR.
 /// If no config functions are provided, the default values will be used:
 ///
-/// Implementation:   %eqsat.slotted
-/// Cost function:    %eqsat.AstSize
-/// Rulesets:         {}
-/// Rules:            {}
+/// Implementation:   slotted-egraphs
+/// Cost function:    AstSize
+/// Rulesets:         None
+/// Rules:            None
+/// Reaches:          None
+/// Selected:         All
 ///
+///
+/// Known limitations:
+/// - In order to parse large/deeply-nested symbolic expressions, the implementation temporarily increases
+///   the stack size to 8MB while parsing symbolic expressions, however it may happen that an expression
+///   is large and nested enough to exceed even the 8MB of stack space.
+/// - Explicitly provided implicit arguments (via the '@' syntax) are not carried over because the sexpr
+///   emitter omits all implicit arguments (for the sake of simpler rewrite-rules that don't have to provide
+///   pattern vars for implicit arguments), so programs that wouldn't type-check without these explicitly
+///   provided implicit args can not be reconstructed.
 ///
 /// ## Dependencies
 ///
