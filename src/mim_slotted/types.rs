@@ -428,18 +428,27 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
 fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
-    let callee_type = &eg.analysis_data(callee.id).type_;
+    let mut callee_type = eg.analysis_data(callee.id).type_.clone();
 
-    // TODO: Handle implicit pi's
-    if let Some(TypeExpr {
-        node: MimSlotted::Pi(..),
-        children: pi_childs,
+    while let Some(TypeExpr {
+        node: MimSlotted::ImplicitPi(..),
+        children,
     }) = callee_type
     {
-        let pi_scope = pi_childs.first().expect("Expected pi var scope");
-        let codom_type = pi_scope.children.get(1).expect("Expected pi codom");
+        let scope = children.first().expect("Expected implicit pi scope");
+        let codomain = scope.children.get(1);
+        callee_type = codomain.cloned();
+    }
+
+    if let Some(TypeExpr {
+        node: MimSlotted::Pi(..),
+        children,
+    }) = callee_type
+    {
+        let scope = children.first().expect("Expected pi var scope");
+        let codomain = scope.children.get(1).expect("Expected pi codom");
         AnalysisData {
-            type_: Some(codom_type.clone()),
+            type_: Some(codomain.clone()),
         }
     } else {
         AnalysisData {
@@ -602,6 +611,14 @@ fn make_insert_type(
 mod test {
     use super::*;
 
+    fn type_of(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId) -> Option<TypeData> {
+        eg.analysis_data(id.id).type_.clone()
+    }
+
+    fn type_(s: &str) -> Option<TypeData> {
+        Some(RecExpr::<MimSlotted>::parse(s).unwrap())
+    }
+
     #[test]
     fn extract_type_info() {
         let annotated = "
@@ -629,25 +646,16 @@ mod test {
         let typed = enodes
             .first()
             .expect("Failed to find typed rec expr in egraph");
-
-        let lam_type = eg
-            .analysis_data(typed.applied_id_occurrences()[2].id)
-            .type_
-            .clone();
+        let lam_id = typed.applied_id_occurrences()[2].clone();
 
         assert_eq!(
-            lam_type,
-            Some(RecExpr::parse("(cn $dummy (scope (cn $dummy (scope I8 nil)) nil))").unwrap())
+            type_of(&eg, lam_id),
+            type_("(cn $dummy (scope (cn $dummy (scope I8 nil)) nil))")
         );
     }
 
     #[test]
     fn make_eta_expansion_hole() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let fun_annotated = "(@ (pi $var (scope Nat Bool)) func)";
@@ -692,11 +700,6 @@ mod test {
 
     #[test]
     fn make_types_var_lit() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let lit = "(lit 10 (idx 3))";
@@ -726,11 +729,6 @@ mod test {
 
     #[test]
     fn make_types_tuple_pack() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let tuple = "(tuple (cons (lit 1 Nat) (cons (lit 2 Nat) (cons (lit 3 Nat) nil))))";
@@ -763,11 +761,6 @@ mod test {
 
     #[test]
     fn make_types_extract_insert() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let insert_tuple = "(insert (tuple (cons (lit 1 Nat) (cons (lit 2 Nat) nil))) (lit tt Bool) (lit ff Bool))";
@@ -815,11 +808,6 @@ mod test {
 
     #[test]
     fn make_var_type_hole() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let var_annotated = "(@ Bool (var $foo))";
@@ -845,11 +833,6 @@ mod test {
 
     #[test]
     fn infer_let_type() {
-        let type_of = |eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId| {
-            eg.analysis_data(id.id).type_.clone()
-        };
-        let type_ = |s: &str| Some(RecExpr::<MimSlotted>::parse(s).unwrap());
-
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let let_annotated = "(let $foo (scope (@ Bool (lit ff Bool)) (@ Nat (lit 1 Nat))))";
@@ -868,5 +851,25 @@ mod test {
             type_of(&eg, let_var_typed_id),
             type_("(hole (type (lit 0 Univ)))")
         );
+    }
+
+    #[test]
+    fn implicit_pi_callee() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let f_annotated = "(@ (pi* $dummy (scope Nat (pi $dummy (scope Nat Nat)))) f)";
+        let f_annotated: RecExpr<MimSlotted> = RecExpr::parse(f_annotated).unwrap();
+        let f_typed = extract_type_annotations(&f_annotated);
+        let f_typed_id = add_expr_typed(&mut eg, f_typed);
+
+        assert_eq!(
+            type_of(&eg, f_typed_id),
+            type_("(pi* $dummy (scope Nat (pi $dummy (scope Nat Nat))))")
+        );
+
+        let implicit_app = "(app f (lit 1 Nat))";
+        let implicit_app: RecExpr<MimSlotted> = RecExpr::parse(implicit_app).unwrap();
+        let implicit_app_id = eg.add_expr(implicit_app);
+        assert_eq!(type_of(&eg, implicit_app_id), type_("Nat"));
     }
 }
