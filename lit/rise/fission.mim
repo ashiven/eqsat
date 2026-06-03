@@ -10,7 +10,7 @@ lam extern _compile(): %compile.Phase =
     );
 
 lam extern _impl(): %eqsat.Impl = 
-  %eqsat.slotted;
+    %eqsat.slotted;
 
 // Works but takes a very long time (30s), so we leave it commented out for now.
 // lam extern _rulesets(): %eqsat.Ruleset =
@@ -23,5 +23,5 @@ lam f4(a: Nat)@ff = %core.nat.add (a, 2);
 lam f5(a: Nat)@ff = %core.nat.sub (a, 2);
 
 fun extern fission(arg: «3; Nat»): «3; Nat» =
-  let mapper = %rise.map (lm(x: Nat): Nat = (f5 (f4 (f3 (f2 (f1 x))))));
-  return (mapper arg);
+    let mapper = %rise.map (lm(x: Nat): Nat = (f5 (f4 (f3 (f2 (f1 x))))));
+    return (mapper arg);

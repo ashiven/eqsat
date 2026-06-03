@@ -54,9 +54,9 @@ int main(int, char**) {
         driver.log().set(&std::cerr).set(Log::Level::Debug);
         ast::load_plugins(w, View<std::string>{"compile", "core", "opt", "eqsat"});
 
-        // rule foo (x: Nat) = %core.nat.add (x, 0) => x;
+        // rule foo (x: Nat): %core.nat.add (x, 0) => x;
         auto foo = w.mut_rule(w.type_nat())->set("foo");
-        auto x = foo->var()->set("x");
+        auto x = foo->var()->set("pat_x");
         auto lhs = w.call(core::nat::add, w.tuple(x, lit_nat(0)))
         auto rhs = x;
         foo->set_lhs(lhs);
@@ -123,7 +123,7 @@ lam extern _rulesets(): %eqsat.Ruleset =
 // You can also define your own syntactic rewrite-rules in `MimIR`.
 // To differentiate between slots: "(var $x)" and patterns: "?x" you should
 // prefix variables with "slot_" or "pat_" when using the `slotted` implementation.
-rule foo (slot_x: Nat) = %core.nat.add (slot_x, 0) => slot_x;
+rule foo (slot_x: Nat): %core.nat.add (slot_x, 0) => slot_x;
 
 // And then tell the eqsat plugin to use them for term rewriting.
 lam extern _rules(): %eqsat.Rules =
