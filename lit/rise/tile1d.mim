@@ -1,10 +1,49 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
 
-// Another example from the Guided Equality Saturation paper
-//
-// Uses additional rewrite rules (other rules defined in guided.mim):
-// 4) map @n1 (map @n2 f) => transpose o (map @n2 (map @n1 f)) o transpose
-// 5) map @(n1 * n2) f    => join o (map @n1 (map @n2 f)) o (split @n2)
-//
-//
-// map @(n1 * 32) f => join o (map @n1 (map @32 f)) o split @32
+// There are some phases that substitute lambda var uses with the
+// lambda bodies (beta reduction?) which we don't want in this example.
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
+
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.slotted;
+
+// From the Guided Equality Saturation paper.
+
+// Uses the following rewrite rules:
+// 1) transpose o map (map a) => map (map a) o transpose
+// 2) a o (b o c)             => (a o b) o c
+// 3) map a o map b           => map (a o b)
+// 4) map @n1 (map @n2 f)     => transpose o (map @n2 (map @n1 f)) o transpose
+// 5) map @(n1 * n2) f        => join o (map @n1 (map @n2 f)) o (split @n2)
+
+rule transpose_mm(pat_a: Nat → Nat): %rise.o (%rise.transpose @(1, 1, Nat)) (%rise.map (%rise.map pat_a)) => %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(1, 1, Nat));
+rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat): %rise.o pat_a (%rise.o pat_b pat_c) => %rise.o (%rise.o pat_a pat_b) pat_c;
+rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat): %rise.o (%rise.map pat_a) (%rise.map pat_b) => %rise.map (%rise.o pat_a pat_b);
+// TODO: The implicit args n1 and n2 actually need to be considered in these rules - maybe we do need to actually emit implicit args.
+// And we also need to take the inferred n of %rise.map out of the implicit sigma so we can provide it on its own.
+rule wrap_transpose(pat_f: Nat → Nat): %rise.map (%rise.map pat_f) => %rise.o (%rise.transpose @(1, 1, Nat)) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.transpose @(1, 1, Nat)));
+rule join_mm_split(pat_f: Nat → Nat): %rise.map pat_f => %rise.o (%rise.join @(32, 1, Nat)) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.split 32 @(1, Nat)));
+
+lam extern _rules(): %eqsat.Rules =
+    %eqsat.rules (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
+
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+
+fun extern tile1d(arg: «64; Nat»): «64; Nat» =
+    let mapper = %rise.map f;
+    return (mapper arg);
+
+fun extern tile1d_expected(arg: «64; Nat»): «64; Nat» =
+    let mapper = %rise.o (%rise.join @(32, 2, Nat)) (%rise.o (%rise.map (%rise.map f)) (%rise.split 32 @(2, Nat)));
+    return (mapper arg);
+
+lam extern _reaches(): %eqsat.Reaches =
+    %eqsat.reaches (tile1d, tile1d_expected, 5);
+
+lam extern _select(): %eqsat.Select =
+    %eqsat.select ();
