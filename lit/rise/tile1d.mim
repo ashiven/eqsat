@@ -6,11 +6,11 @@ import _rise;
 // lambda bodies (beta reduction?) which we don't want in this example.
 lam extern _compile(): %compile.Phase =
     %compile.phases ff (
-        //%eqsat.eqsat_phase,
+        %eqsat.eqsat_phase,
     );
 
-// lam extern _impl(): %eqsat.Impl =
-//     %eqsat.slotted;
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.slotted;
 
 // From the Guided Equality Saturation paper.
 
@@ -46,7 +46,8 @@ lam extern _rules(): %eqsat.Rules =
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
-fun extern tile1d(arg: «64; Nat»): «64; Nat» =
+fun extern tile1d(n1: Nat): «%core.nat.mul (n1, 32); Nat» =
+    let arg = ‹%core.nat.mul (n1, 32); 2›;
     let mapper = %rise.map f;
     return (mapper arg);
 
@@ -55,8 +56,8 @@ fun extern tile1d_expected(n1: Nat): «%core.nat.mul (n1, 32); Nat» =
     let mapper = %rise.o (%rise.join @(n1, 32) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat 32));
     return (mapper arg);
 
-// lam extern _reaches(): %eqsat.Reaches =
-//     %eqsat.reaches (tile1d, tile1d_expected, 5);
-//
-// lam extern _select(): %eqsat.Select =
-//     %eqsat.select ();
+lam extern _reaches(): %eqsat.Reaches =
+    %eqsat.reaches (tile1d, tile1d_expected, 5);
+
+lam extern _select(): %eqsat.Select =
+    %eqsat.select ();
