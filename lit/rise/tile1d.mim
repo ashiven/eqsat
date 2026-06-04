@@ -46,14 +46,17 @@ lam extern _rules(): %eqsat.Rules =
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
-fun extern tile1d(n1: Nat): «%core.nat.mul (n1, 32); Nat» =
-    let arg = ‹%core.nat.mul (n1, 32); 2›;
+// mul (n1, n2) gets emitted incorrectly if we don't add some dummy _x
+// because then (n1, n2) is equivalent to the var of the lam and we would
+// just end up emitting the var of the lam instead of the term (n1, n2)
+fun extern tile1d(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
     let mapper = %rise.map f;
     return (mapper arg);
 
-fun extern tile1d_expected(n1: Nat): «%core.nat.mul (n1, 32); Nat» =
-    let arg = ‹%core.nat.mul (n1, 32); 2›;
-    let mapper = %rise.o (%rise.join @(n1, 32) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat 32));
+fun extern tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
+    let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
     return (mapper arg);
 
 lam extern _reaches(): %eqsat.Reaches =

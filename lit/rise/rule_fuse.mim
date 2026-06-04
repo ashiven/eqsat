@@ -7,14 +7,16 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat): %rise.o (%rise.map pat_a) (%rise.map pat_b) => %rise.map (%rise.o pat_a pat_b);
+rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_n: Nat):
+    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
+=>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
 lam extern _rules(): %eqsat.Rules =
     %eqsat.rules (map_fuse, );
 
 fun extern test_binding(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    let res = (%rise.o (%rise.map @(3, Nat, Nat) a) (%rise.map @(3, Nat, Nat) b));
+    let res = (%rise.o (%rise.map @3 a) (%rise.map @3 b));
     return res;
 
 fun extern test_inline(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    return (%rise.o (%rise.map @(3, Nat, Nat) a) (%rise.map @(3, Nat, Nat) b));
+    return (%rise.o (%rise.map @3 a) (%rise.map @3 b));
