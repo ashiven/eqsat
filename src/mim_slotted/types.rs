@@ -428,32 +428,22 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
 fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let (callee, _arg) = expect!(enode, MimSlotted::App(callee, arg) => (callee, arg));
-    let mut callee_type = eg.analysis_data(callee.id).type_.clone();
+    let callee_type = &eg.analysis_data(callee.id).type_;
 
-    while let Some(TypeExpr {
-        node: MimSlotted::ImplicitPi(..),
-        children,
-    }) = callee_type
-    {
-        let scope = children.first().expect("Expected implicit pi scope");
-        let codomain = scope.children.get(1);
-        callee_type = codomain.cloned();
-    }
-
-    if let Some(TypeExpr {
-        node: MimSlotted::Pi(..),
-        children,
-    }) = callee_type
-    {
-        let scope = children.first().expect("Expected pi var scope");
-        let codomain = scope.children.get(1).expect("Expected pi codom");
-        AnalysisData {
-            type_: Some(codomain.clone()),
+    match callee_type {
+        Some(TypeExpr {
+            node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
+            children,
+        }) => {
+            let scope = children.first().expect("Expected pi var scope");
+            let codomain = scope.children.get(1).expect("Expected pi codom");
+            AnalysisData {
+                type_: Some(codomain.clone()),
+            }
         }
-    } else {
-        AnalysisData {
+        _ => AnalysisData {
             type_: Some(TypeExpr::hole()),
-        }
+        },
     }
 }
 
@@ -870,6 +860,9 @@ mod test {
         let implicit_app = "(app f (lit 1 Nat))";
         let implicit_app: RecExpr<MimSlotted> = RecExpr::parse(implicit_app).unwrap();
         let implicit_app_id = eg.add_expr(implicit_app);
-        assert_eq!(type_of(&eg, implicit_app_id), type_("Nat"));
+        assert_eq!(
+            type_of(&eg, implicit_app_id),
+            type_("(pi $dummy (scope Nat Nat))")
+        );
     }
 }
