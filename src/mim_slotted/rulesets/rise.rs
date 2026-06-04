@@ -236,4 +236,43 @@ mod test {
         let reached = assert_reaches(a, b, &[transpose_mm, compose_assoc, map_fuse], 100);
         assert!(reached);
     }
+
+    #[test]
+    fn rule_fuse() {
+        // let fuse: Rewrite<MimSlotted> = rw!("fuse";
+        // "(app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope ?n_39447 Nat)))))
+        //  (app (app (app %rise.map ?n_39447) (pack $dummy (scope (lit 2 Nat) Nat))) ?a_39445))
+        //  (app (app (app %rise.map ?n_39447) (pack $dummy (scope (lit 2 Nat) Nat))) ?b_39446))"
+        // => "(app (app (app %rise.map ?n_39447) (pack $dummy (scope (lit 2 Nat) Nat)))
+        //     (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) ?a_39445) ?b_39446))");
+
+        let fuse: Rewrite<MimSlotted> = rw!("fuse";
+        "(app (app (app %rise.o (pack $2 (scope (lit 3 Nat) (arr $3 (scope ?n Nat)))))
+         (app (app (app %rise.map ?n) (pack $4 (scope (lit 2 Nat) Nat))) ?a))
+         (app (app (app %rise.map ?n) (pack $5 (scope (lit 2 Nat) Nat))) ?b))"
+        => "(app (app (app %rise.map ?n) (pack $6 (scope (lit 2 Nat) Nat)))
+            (app (app (app %rise.o (pack $7 (scope (lit 3 Nat) Nat))) ?a) ?b))");
+
+        let a = "(fun $_39835 (scope (lit ff Bool)
+                            (let $return_39845 (scope (extract (var $_39835) (lit tt Bool))
+                            (let $a_39843 (scope (extract (extract (var $_39835) (lit ff Bool)) (lit ff Bool))
+                            (let $b_39844 (scope (extract (extract (var $_39835) (lit ff Bool)) (lit tt Bool))
+                            (let $res_39895 (scope
+                                (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) (var $a_39843)))
+                                (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) (var $b_39844)))
+                                    (app (var $return_39845) (var $res_39895))))))))))))";
+
+        let b = "(fun $_39921 (scope (lit ff Bool)
+                            (let $return_39931 (scope (extract (var $_39921) (lit tt Bool)) 
+                            (let $a_39929 (scope (extract (extract (var $_39921) (lit ff Bool)) (lit ff Bool))
+                            (let $b_39930 (scope (extract (extract (var $_39921) (lit ff Bool)) (lit tt Bool))
+                            (let $res_39969 (scope
+                                (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat)))
+                                (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) (var $a_39929)) (var $b_39930)))
+                                    (app (var $return_39931) (var $res_39969))))))))))))";
+
+        let reached = assert_reaches(a, b, &[fuse], 5);
+        assert!(reached);
+    }
 }

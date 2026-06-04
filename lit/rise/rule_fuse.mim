@@ -14,9 +14,22 @@ rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_n: Nat):
 lam extern _rules(): %eqsat.Rules =
     %eqsat.rules (map_fuse, );
 
-fun extern test_binding(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
+fun extern inline(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
+    return (%rise.o (%rise.map @3 a) (%rise.map @3 b));
+
+fun extern inline_expected(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
+    return (%rise.map @3 (%rise.o a b));
+
+// lam extern _reaches1(): %eqsat.Reaches =
+//     %eqsat.reaches (inline, inline_expected, 5);
+
+fun extern binding(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
     let res = (%rise.o (%rise.map @3 a) (%rise.map @3 b));
     return res;
 
-fun extern test_inline(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    return (%rise.o (%rise.map @3 a) (%rise.map @3 b));
+fun extern binding_expected(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
+    let res = (%rise.map @3 (%rise.o a b));
+    return res;
+
+// lam extern _reaches2(): %eqsat.Reaches =
+//     %eqsat.reaches (binding, binding_expected, 5);
