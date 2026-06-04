@@ -247,11 +247,11 @@ mod test {
         //     (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) ?a_39445) ?b_39446))");
 
         let fuse: Rewrite<MimSlotted> = rw!("fuse";
-        "(app (app (app %rise.o (pack $2 (scope (lit 3 Nat) (arr $3 (scope ?n Nat)))))
-         (app (app (app %rise.map ?n) (pack $4 (scope (lit 2 Nat) Nat))) ?a))
-         (app (app (app %rise.map ?n) (pack $5 (scope (lit 2 Nat) Nat))) ?b))"
-        => "(app (app (app %rise.map ?n) (pack $6 (scope (lit 2 Nat) Nat)))
-            (app (app (app %rise.o (pack $7 (scope (lit 3 Nat) Nat))) ?a) ?b))");
+        "(app (app (app %rise.o (pack $1 (scope (lit 3 Nat) (arr $2 (scope ?n Nat)))))
+         (app (app (app %rise.map ?n) (pack $3 (scope (lit 2 Nat) Nat))) ?a))
+         (app (app (app %rise.map ?n) (pack $4 (scope (lit 2 Nat) Nat))) ?b))"
+        => "(app (app (app %rise.map ?n) (pack $5 (scope (lit 2 Nat) Nat)))
+            (app (app (app %rise.o (pack $6 (scope (lit 3 Nat) Nat))) ?a) ?b))");
 
         let a = "(fun $_39835 (scope (lit ff Bool)
                             (let $return_39845 (scope (extract (var $_39835) (lit tt Bool))

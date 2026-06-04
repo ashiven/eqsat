@@ -2,9 +2,10 @@ use regex::Regex;
 use std::fs;
 
 use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
-use crate::mim_slotted::get_rules;
-use crate::mim_slotted::{MimSlotted, split_sexprs};
-use crate::mim_slotted::{convert_rules, set_rulesets};
+use crate::mim_slotted::{
+    MimSlotted, convert_rules, get_rules, inject_meta_vars, replace_dummy_slots, set_rulesets,
+    split_sexprs,
+};
 use crate::{eqsat_slotted, pretty_ffi};
 use slotted_egraphs::*;
 
@@ -142,4 +143,34 @@ fn select_axiom() {
 
     let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
     assert!(axm_regex.is_match(axm));
+}
+
+#[test]
+fn rule_replace_dummy_slots() {
+    let mut before =
+        "(app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope ?n Nat)))))
+         (app (app (app %rise.map ?n) (pack $dummy (scope (lit 2 Nat) Nat))) ?a))
+         (app (app (app %rise.map ?n) (pack $dummy (scope (lit 2 Nat) Nat))) ?b))"
+            .to_string();
+
+    let after = "(app (app (app %rise.o (pack $1 (scope (lit 3 Nat) (arr $2 (scope ?n Nat)))))
+         (app (app (app %rise.map ?n) (pack $3 (scope (lit 2 Nat) Nat))) ?a))
+         (app (app (app %rise.map ?n) (pack $4 (scope (lit 2 Nat) Nat))) ?b))"
+        .to_string();
+
+    let mut counter = 1;
+    replace_dummy_slots(&mut counter, &mut before);
+
+    assert_eq!(before, after);
+}
+
+#[test]
+fn rule_inject_meta_vars() {
+    let meta_vars = vec!["pat_a".to_string(), "slot_b".to_string(), "c".to_string()];
+    let mut before = "(app pat_d (app pat_a (app c slot_b)))".to_string();
+    let after = "(app pat_d (app ?a (app c (var $b))))".to_string();
+
+    inject_meta_vars(&meta_vars, &mut before);
+
+    assert_eq!(before, after);
 }

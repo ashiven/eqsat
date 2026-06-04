@@ -53,6 +53,7 @@ fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
     let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4) @Nat);
     return (mapper arg);
 
+// TODO: Doesn't work yet, figure out why - maybe some more test cases like rule_fuse.mim to break things down
 // lam extern _reaches(): %eqsat.Reaches =
 //     %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5);
 
