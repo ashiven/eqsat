@@ -43,7 +43,10 @@ rule join_mm_split(pat_f: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
 =>  %rise.o (%rise.join @(pat_n1, pat_n2) @Nat) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.split @pat_n1 @Nat pat_n2));
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
+    %eqsat.rules (wrap_transpose, join_mm_split);
+
+lam extern _rules_kind(): %eqsat.Rules =
+    %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
