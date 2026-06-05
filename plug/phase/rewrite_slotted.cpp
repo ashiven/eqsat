@@ -84,6 +84,8 @@ ConfigValues RewriteSlotted::import_config() {
                     rulesets.push_back(RuleSet::Standard);
                 else if (Axm::isa<eqsat::rise>(ruleset))
                     rulesets.push_back(RuleSet::Rise);
+                else if (Axm::isa<eqsat::normalize>(ruleset))
+                    rulesets.push_back(RuleSet::Normalize);
                 else
                     error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
 

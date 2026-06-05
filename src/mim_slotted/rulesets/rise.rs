@@ -271,73 +271,47 @@ mod test {
 
     #[test]
     fn rule_assoc() {
-        // TODO: The implicit args need to be equipped with pattern vars as below (commented part
-        // was original output from the sexpr emitter)
-        // let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc";
-        // "(app (app (app %rise.o (pack $1 (scope (lit 3 Nat) Nat))) ?a_39445)
-        //  (app (app (app %rise.o (pack $2 (scope (lit 3 Nat) Nat))) ?b_39446) ?c_39447))"
-        // => "(app (app (app %rise.o (pack $3 (scope (lit 3 Nat) Nat)))
-        //     (app (app (app %rise.o (pack $4 (scope (lit 3 Nat) Nat))) ?a_39445) ?b_39446)) ?c_39447)");
-
         let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc";
         "(app (app (app %rise.o (tuple (cons ?A (cons ?C (cons ?D nil))))) ?a)
          (app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil))))) ?b) ?c))"
         => "(app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?D nil)))))
             (app (app (app %rise.o (tuple (cons ?B (cons ?C (cons ?D nil))))) ?a) ?b)) ?c)");
-            
+
+        // We need to consider the normalization where a tuple of three equivalent terms
+        // gets reduced to a pack in the expected term.
+        let normalize_three_tuple: Rewrite<MimSlotted> = rw!("normalize-three-tuple";
+        "(tuple (cons ?a (cons ?a (cons ?a nil))))"
+        => "(pack $dummy (scope (lit 3 Nat) ?a))");
 
         let a = "(fun $_39665 (scope (lit ff Bool)
                             (let $return_39672 (scope (extract (var $_39665) (lit tt Bool))
                             (let $mapper_39891 (scope
-
                                 (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
                                     (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
                                     (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_39609)))
-
-                                    (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
-                                        (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633)))
-                                        (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat)))
-
+                                        (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                            (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                            (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633)))
+                                            (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat)))
                             (let $arg_39666 (scope (extract (var $_39665) (lit ff Bool)) 
                                 (app (var $return_39672) (app (var $mapper_39891) (var $arg_39666)))))))))))";
 
 
-        // TODO: We need to somehow "undo" the normalization where a tuple of three equivalent terms
-        // was reduced to a pack. Can we even do this with a rewrite-rule or will we need an analysis?
-        // Maybe we can also construct a more dynamic rewrite-rule which considers that.
-        // let b = "(fun $_39915 (scope (lit ff Bool)
-        //                     (let $return_39922 (scope (extract (var $_39915) (lit tt Bool))
-        //                     (let $mapper_40106 (scope
-        //                         (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
-        //                             (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))))
-        //                                 (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-        //                                 (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_39609)))
-        //                                 (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-        //                                 (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633))))
-        //                             (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
-        //                     (let $arg_39916 (scope (extract (var $_39915) (lit ff Bool))
-        //                         (app (var $return_39922) (app (var $mapper_40106) (var $arg_39916)))))))))))";
-
         let b = "(fun $_39915 (scope (lit ff Bool)
                             (let $return_39922 (scope (extract (var $_39915) (lit tt Bool))
                             (let $mapper_40106 (scope
-
                                 (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
-
-                                    (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                    (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))))
                                         (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
                                         (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_39609)))
                                         (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
                                         (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633))))
-
                                     (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
-
                             (let $arg_39916 (scope (extract (var $_39915) (lit ff Bool))
                                 (app (var $return_39922) (app (var $mapper_40106) (var $arg_39916)))))))))))";
 
 
-        let reached = assert_reaches(a, b, &[compose_assoc], 5);
+        let reached = assert_reaches(a, b, &[compose_assoc, normalize_three_tuple], 5);
         assert!(reached);
     }
 }

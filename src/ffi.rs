@@ -21,6 +21,7 @@ pub mod bridge {
         // Slotted
         Standard,
         Rise,
+        Normalize,
     }
 
     #[derive(Debug)]

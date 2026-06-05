@@ -95,6 +95,7 @@ axm %eqsat.math: %eqsat.Ruleset;
 ///
 axm %eqsat.standard: %eqsat.Ruleset;
 axm %eqsat.rise: %eqsat.Ruleset;
+axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 ///
 /// ## Cost functions
