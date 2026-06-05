@@ -305,6 +305,7 @@ mod test {
 
         // TODO: We need to somehow "undo" the normalization where a tuple of three equivalent terms
         // was reduced to a pack. Can we even do this with a rewrite-rule or will we need an analysis?
+        // Maybe we can also construct a more dynamic rewrite-rule which considers that.
         // let b = "(fun $_39915 (scope (lit ff Bool)
         //                     (let $return_39922 (scope (extract (var $_39915) (lit tt Bool))
         //                     (let $mapper_40106 (scope

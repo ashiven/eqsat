@@ -7,12 +7,12 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat):
+rule compose_assoc(pat_A: *, pat_B: *, pat_C: *, pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
     %rise.o pat_a (%rise.o pat_b pat_c)
 =>  %rise.o (%rise.o pat_a pat_b) pat_c;
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (compose_assoc, );
+    %eqsat.rules_kind (compose_assoc, );
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

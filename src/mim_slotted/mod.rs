@@ -13,6 +13,7 @@ use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
+pub mod normalizers;
 pub mod rulesets;
 pub mod types;
 pub mod util;

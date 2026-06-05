@@ -23,7 +23,7 @@ rule transpose_mm(pat_a: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
     %rise.o (%rise.transpose @(pat_n1, pat_n2) @Nat) (%rise.map (%rise.map pat_a))
 =>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @Nat);
 
-rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat):
+rule compose_assoc(pat_A: *, pat_B: *, pat_C: *, pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
     %rise.o pat_a (%rise.o pat_b pat_c)
 =>  %rise.o (%rise.o pat_a pat_b) pat_c;
 
@@ -32,7 +32,10 @@ rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_n: Nat):
 =>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, compose_assoc, map_fuse);
+    %eqsat.rules (transpose_mm, map_fuse);
+
+lam extern _rules2(): %eqsat.Rules =
+    %eqsat.rules_kind (compose_assoc, );
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
