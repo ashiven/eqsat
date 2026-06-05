@@ -6,19 +6,18 @@
 ///
 /// [TOC]
 ///
-/// This plugin is responsible for optimizing MimIR
-/// programs through the process of equality saturation.
+/// This plugin can be used to optimize MimIR programs via equality saturation.
 ///
 /// It achieves this in three steps:
 ///
 /// 1) Converts the program into a series of symbolic expressions, one for each closed mutable Def.
 /// 2) Passes these expressions to the 'egg' or 'slotted-egraphs' equality saturation engine for rewriting.
-/// 3) Reconstructs the program based on the results of step 2).
+/// 3) Reconstructs the program based on the results emitted in step 2).
 ///
 ///
 /// MimIR-defined rewrite rules, sets of rewrite rules defined in 'egg' or 'slotted-egraphs',
-/// and a cost function may be specified via configuration lambdas in MimIR.
-/// If no config functions are provided, the default values will be used:
+/// a cost function, and other config values may be specified via lambdas in MimIR.
+/// If no config lambdas are provided, the default values will be used:
 ///
 /// Implementation:   slotted-egraphs
 /// Cost function:    AstSize
