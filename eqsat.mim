@@ -138,6 +138,10 @@ axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %e
 ///
 axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 ///
+/// TODO:
+/// - It would be nice to have an axiom or two for debugging purposes.
+/// - For example, an axiom that prints a rule after it was fully translated into an sexpr pattern.
+/// - Or even, printing out select terms as sexprs might also be useful.
 ///
 /// ## Passes and Phases
 ///

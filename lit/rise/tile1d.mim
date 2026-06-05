@@ -21,18 +21,19 @@ lam extern _impl(): %eqsat.Impl =
 // 4) map @n1 (map @n2 f)     => transpose o (map @n2 (map @n1 f)) o transpose
 // 5) map @(n1 * n2) f        => join o (map @n1 (map @n2 f)) o (split @n2)
 
-rule transpose_mm(pat_a: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
-    %rise.o (%rise.transpose @(pat_n1, pat_n2) @Nat) (%rise.map (%rise.map pat_a))
-=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @Nat);
+rule transpose_mm(pat_T: *, pat_a: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
+    %rise.o (%rise.transpose @(pat_n1, pat_n2) @pat_T) (%rise.map (%rise.map pat_a))
+=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @pat_T);
 
-rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat):
+rule compose_assoc(pat_A pat_B pat_C pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
     %rise.o pat_a (%rise.o pat_b pat_c)
 =>  %rise.o (%rise.o pat_a pat_b) pat_c;
 
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat):
-    %rise.o (%rise.map pat_a) (%rise.map pat_b)
-=>  %rise.map (%rise.o pat_a pat_b);
+rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
+    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
+=>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
+// TODO: Pattern vars for implicit args in the two rules below
 rule wrap_transpose(pat_f: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
     %rise.map @pat_n1 (%rise.map @pat_n2 pat_f)
 =>  %rise.o (%rise.transpose @(pat_n2, pat_n1) @Nat) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.transpose @(pat_n1, pat_n2) @Nat));
