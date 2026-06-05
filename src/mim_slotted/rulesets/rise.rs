@@ -257,41 +257,42 @@ mod test {
         let mut rules = get_rules();
         rules.push(map_fuse_gen);
 
-        let a = "(fun $_39915 (scope (lit ff Bool)
-                            (let $return_39922 (scope (extract (var $_39915) (lit tt Bool))
-                            (let $mapper_40106 (scope
+        let a = "(fun $_82673 (scope (lit ff Bool)
+                            (let $return_82779 (scope (extract (var $_82673) (lit tt Bool))
+                            (let $mapper_82777 (scope
                                 (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
                                     (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))))
                                         (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f)))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_82746)))
                                         (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_82699))))
                                     (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
-                            (let $arg_39916 (scope (extract (var $_39915) (lit ff Bool))
-                                (app (var $return_39922) (app (var $mapper_40106) (var $arg_39916)))))))))))";
+                            (let $arg_82674 (scope (extract (var $_82673) (lit ff Bool))
+                                (app (var $return_82779) (app (var $mapper_82777) (var $arg_82674)))))))))))";
 
-        let _i = "(fun $_40379 (scope (lit ff Bool)
-                            (let $return_40386 (scope (extract (var $_40379) (lit tt Bool))
-                            (let $mapper_40534 (scope
+        let _i = "(fun $_83012 (scope (lit ff Bool)
+                            (let $return_83024 (scope (extract (var $_83012) (lit tt Bool))
+                            (let $mapper_83022 (scope
                                 (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
                                     (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
                                         (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_82746))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_82699))))
                                     (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
-                            (let $arg_40380 (scope (extract (var $_40379) (lit ff Bool))
-                                (app (var $return_40386) (app (var $mapper_40534) (var $arg_40380)))))))))))";
+                            (let $arg_83013 (scope (extract (var $_83012) (lit ff Bool))
+                                (app (var $return_83024) (app (var $mapper_83022) (var $arg_83013)))))))))))";
 
-        let b = "(fun $_40379 (scope (lit ff Bool)
-                            (let $return_40386 (scope (extract (var $_40379) (lit tt Bool))
-                            (let $mapper_40498 (scope
-                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
-                                    (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
-                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat)))
-                                            (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) f) g))))
-                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
-                            (let $arg_40380 (scope (extract (var $_40379) (lit ff Bool))
-                                (app (var $return_40386) (app (var $mapper_40498) (var $arg_40380)))))))))))";
+
+        let b = " (fun $_83027 (scope (lit ff Bool) 
+                            (let $return_83040 (scope (extract (var $_83027) (lit tt Bool)) 
+                            (let $mapper_83038 (scope 
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil))))) 
+                                    (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat))))) 
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) 
+                                            (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) f_82746) g_82699)))) 
+                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat)) 
+                            (let $arg_83028 (scope (extract (var $_83027) (lit ff Bool)) 
+                                (app (var $return_83040) (app (var $mapper_83038) (var $arg_83028)))))))))))";
 
         let reached = assert_reaches(a, b, &rules, 5);
         assert!(reached);

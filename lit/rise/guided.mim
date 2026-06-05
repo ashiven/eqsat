@@ -23,21 +23,19 @@ rule transpose_mm(pat_a: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
     %rise.o (%rise.transpose @(pat_n1, pat_n2) @Nat) (%rise.map (%rise.map pat_a))
 =>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @Nat);
 
-rule compose_assoc(pat_A: *, pat_B: *, pat_C: *, pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
+rule compose_assoc(pat_A pat_B pat_C pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
     %rise.o pat_a (%rise.o pat_b pat_c)
 =>  %rise.o (%rise.o pat_a pat_b) pat_c;
 
-// TODO: We also need pattern vars for the implicit arguments here
-// because they won't always be Nat and the n's can be different as well.
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_n: Nat):
+rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
     %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
 =>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, map_fuse);
+    %eqsat.rules (transpose_mm, );
 
 lam extern _rules2(): %eqsat.Rules =
-    %eqsat.rules_kind (compose_assoc, );
+    %eqsat.rules_kind (compose_assoc, map_fuse);
 
 // The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
 // To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
@@ -55,9 +53,8 @@ fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
     let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4) @Nat);
     return (mapper arg);
 
-// TODO: Doesn't work yet because of compose_assoc - see rule_assoc.mim
-// lam extern _reaches(): %eqsat.Reaches =
-//     %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5);
+lam extern _reaches(): %eqsat.Reaches =
+    %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5);
 
 lam extern _select(): %eqsat.Select =
     %eqsat.select ();
