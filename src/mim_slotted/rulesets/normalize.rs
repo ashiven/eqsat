@@ -5,6 +5,8 @@ pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
     let rules = vec![
         normalize_three_tuple(),
         normalize_three_pack(),
+        normalize_two_tuple(),
+        normalize_two_pack(),
         core_mul_comm(),
     ];
 
@@ -20,6 +22,18 @@ fn normalize_three_tuple() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
 fn normalize_three_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
     let pat = "(pack $dummy (scope (lit 3 Nat) ?a))";
     let outpat = "(tuple (cons ?a (cons ?a (cons ?a nil))))";
+    Rewrite::new("normalize-three-pack", pat, outpat)
+}
+
+fn normalize_two_tuple() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+    let pat = "(tuple (cons ?a (cons ?a nil)))";
+    let outpat = "(pack $dummy (scope (lit 2 Nat) ?a))";
+    Rewrite::new("normalize-three-tuple", pat, outpat)
+}
+
+fn normalize_two_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+    let pat = "(pack $dummy (scope (lit 2 Nat) ?a))";
+    let outpat = "(tuple (cons ?a (cons ?a nil)))";
     Rewrite::new("normalize-three-pack", pat, outpat)
 }
 

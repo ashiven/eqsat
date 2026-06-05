@@ -7,29 +7,38 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_n: Nat):
+rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
     %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
 =>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (map_fuse, );
+    %eqsat.rules_kind (map_fuse, );
 
-fun extern inline(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    return (%rise.o (%rise.map @3 a) (%rise.map @3 b));
+// The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
+// To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
+lam extern _rulesets(): %eqsat.Ruleset =
+    %eqsat.rulesets (%eqsat.normalize, );
 
-fun extern inline_expected(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    return (%rise.map @3 (%rise.o a b));
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+lam g(x: Nat): Nat = %core.nat.add (x, 2);
 
-lam extern _reaches1(): %eqsat.Reaches =
-    %eqsat.reaches (inline, inline_expected, 5);
+fun extern guided(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.o (%rise.map (%rise.map f)) (%rise.map (%rise.map g))) (%rise.transpose @(3, 4) @Nat);
+    return (mapper arg);
 
-fun extern binding(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    let res = (%rise.o (%rise.map @3 a) (%rise.map @3 b));
-    return res;
+fun extern guided_intermediate(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.map (%rise.o (%rise.map f) (%rise.map g))) (%rise.transpose @(3, 4) @Nat);
+    return (mapper arg);
 
-fun extern binding_expected(a: Nat → Nat, b: Nat → Nat): «3; Nat» → «3; Nat» =
-    let res = (%rise.map @3 (%rise.o a b));
-    return res;
+// lam extern _reaches(): %eqsat.Reaches =
+//     %eqsat.reaches (guided, guided_intermediate, 5);
 
-lam extern _reaches2(): %eqsat.Reaches =
-    %eqsat.reaches (binding, binding_expected, 5);
+fun extern guided_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4) @Nat);
+    return (mapper arg);
+
+// lam extern _reaches2(): %eqsat.Reaches =
+//     %eqsat.reaches (guided, guided_expected, 5);
+
+lam extern _select(): %eqsat.Select =
+    %eqsat.select ();
