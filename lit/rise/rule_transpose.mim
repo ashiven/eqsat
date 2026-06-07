@@ -1,0 +1,41 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
+
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
+
+rule transpose_mm(pat_a: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
+    %rise.o (%rise.transpose @(pat_n1, pat_n2) @Nat) (%rise.map (%rise.map pat_a))
+=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @Nat);
+
+lam extern _rules(): %eqsat.Rules =
+    %eqsat.rules (transpose_mm, );
+
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+lam g(x: Nat): Nat = %core.nat.add (x, 2);
+
+fun extern inline(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    return ((%rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)))) arg);
+
+fun extern inline_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    return ((%rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.map (%rise.map g)) (%rise.transpose @(3, 4) @Nat))) arg);
+
+lam extern _reaches1(): %eqsat.Reaches =
+    %eqsat.reaches (inline, inline_expected, 5);
+
+fun extern binding(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)));
+    return (mapper arg);
+
+fun extern binding_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.map (%rise.map g)) (%rise.transpose @(3, 4) @Nat));
+    return (mapper arg);
+
+lam extern _reaches2(): %eqsat.Reaches =
+    %eqsat.reaches (binding, binding_expected, 5);
+
+lam extern _select(): %eqsat.Select =
+    %eqsat.select ();

@@ -174,7 +174,7 @@ mod test {
     use slotted_egraphs::rw;
 
     use super::*;
-    use crate::mim_slotted::util::assert_reaches;
+    use crate::{ffi::bridge::RuleSet, mim_slotted::{rulesets::get_rules, set_rulesets, util::assert_reaches}};
 
     #[test]
     #[ignore = "works but is slow"]
@@ -234,6 +234,113 @@ mod test {
                                 (app (var $return) (app (var $mapper) (var $arg)))))))))))";
 
         let reached = assert_reaches(a, b, &[transpose_mm, compose_assoc, map_fuse], 100);
+        assert!(reached);
+    }
+
+    #[test]
+    fn rule_fuse() {
+        let _map_fuse: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("map-fuse";
+        "(app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil)))))
+         (app (app (app %rise.map ?n) (tuple (cons ?D (cons ?E nil)))) ?a))
+         (app (app (app %rise.map ?n) (tuple (cons ?F (cons ?D nil)))) ?b))"
+        => "(app (app (app %rise.map ?n) (tuple (cons ?F (cons ?E nil))))
+            (app (app (app %rise.o (tuple (cons ?F (cons ?D (cons ?E nil))))) ?a) ?b))");
+
+        let map_fuse_gen: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("map-fuse-gen";
+        "(app (app (app %rise.o (tuple (cons (arr $1 (scope ?n_39499 ?A_39494)) (cons (arr $2 (scope ?n_39499 ?B_39492)) (cons (arr $3 (scope ?n_39499 ?C_39493)) nil)))))
+         (app (app (app %rise.map ?n_39499) (tuple (cons ?B_39492 (cons ?C_39493 nil)))) ?a_39496))
+         (app (app (app %rise.map ?n_39499) (tuple (cons ?A_39494 (cons ?B_39492 nil)))) ?b_39498))"
+        => "(app (app (app %rise.map ?n_39499) (tuple (cons ?A_39494 (cons ?C_39493 nil))))
+            (app (app (app %rise.o (tuple (cons ?A_39494 (cons ?B_39492 (cons ?C_39493 nil))))) ?a_39496) ?b_39498))");
+
+        set_rulesets(vec![RuleSet::Normalize]);
+        let mut rules = get_rules();
+        rules.push(map_fuse_gen);
+
+        let a = "(fun $_82673 (scope (lit ff Bool)
+                            (let $return_82779 (scope (extract (var $_82673) (lit tt Bool))
+                            (let $mapper_82777 (scope
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                    (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))))
+                                        (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_82746)))
+                                        (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_82699))))
+                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
+                            (let $arg_82674 (scope (extract (var $_82673) (lit ff Bool))
+                                (app (var $return_82779) (app (var $mapper_82777) (var $arg_82674)))))))))))";
+
+        let _i = "(fun $_83012 (scope (lit ff Bool)
+                            (let $return_83024 (scope (extract (var $_83012) (lit tt Bool))
+                            (let $mapper_83022 (scope
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                    (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_82746))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_82699))))
+                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
+                            (let $arg_83013 (scope (extract (var $_83012) (lit ff Bool))
+                                (app (var $return_83024) (app (var $mapper_83022) (var $arg_83013)))))))))))";
+
+
+        let b = " (fun $_83027 (scope (lit ff Bool) 
+                            (let $return_83040 (scope (extract (var $_83027) (lit tt Bool)) 
+                            (let $mapper_83038 (scope 
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil))))) 
+                                    (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat))))) 
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) 
+                                            (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) Nat))) f_82746) g_82699)))) 
+                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat)) 
+                            (let $arg_83028 (scope (extract (var $_83027) (lit ff Bool)) 
+                                (app (var $return_83040) (app (var $mapper_83038) (var $arg_83028)))))))))))";
+
+        let reached = assert_reaches(a, b, &rules, 5);
+        assert!(reached);
+    }
+
+    #[test]
+    fn rule_assoc() {
+        let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc";
+        "(app (app (app %rise.o (tuple (cons ?A (cons ?C (cons ?D nil))))) ?a)
+         (app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil))))) ?b) ?c))"
+        => "(app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?D nil)))))
+            (app (app (app %rise.o (tuple (cons ?B (cons ?C (cons ?D nil))))) ?a) ?b)) ?c)");
+
+        // We need to consider the normalization where a tuple of three equivalent terms
+        // gets reduced to a pack in the expected term.
+        let normalize_three_tuple: Rewrite<MimSlotted> = rw!("normalize-three-tuple";
+        "(tuple (cons ?a (cons ?a (cons ?a nil))))"
+        => "(pack $dummy (scope (lit 3 Nat) ?a))");
+
+        let a = "(fun $_39665 (scope (lit ff Bool)
+                            (let $return_39672 (scope (extract (var $_39665) (lit tt Bool))
+                            (let $mapper_39891 (scope
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                    (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                    (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_39609)))
+                                        (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                            (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                            (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633)))
+                                            (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat)))
+                            (let $arg_39666 (scope (extract (var $_39665) (lit ff Bool)) 
+                                (app (var $return_39672) (app (var $mapper_39891) (var $arg_39666)))))))))))";
+
+
+        let b = "(fun $_39915 (scope (lit ff Bool)
+                            (let $return_39922 (scope (extract (var $_39915) (lit tt Bool))
+                            (let $mapper_40106 (scope
+                                (app (app (app %rise.o (tuple (cons (arr $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) (cons (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))) nil)))))
+                                    (app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope (lit 4 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))))
+                                        (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) f_39609)))
+                                        (app (app (app %rise.map (lit 4 Nat)) (pack $dummy (scope (lit 2 Nat) (arr $dummy (scope (lit 3 Nat) Nat)))))
+                                        (app (app (app %rise.map (lit 3 Nat)) (pack $dummy (scope (lit 2 Nat) Nat))) g_39633))))
+                                    (app (app %rise.transpose (tuple (cons (lit 3 Nat) (cons (lit 4 Nat) nil)))) Nat))
+                            (let $arg_39916 (scope (extract (var $_39915) (lit ff Bool))
+                                (app (var $return_39922) (app (var $mapper_40106) (var $arg_39916)))))))))))";
+
+
+        let reached = assert_reaches(a, b, &[compose_assoc, normalize_three_tuple], 5);
         assert!(reached);
     }
 }

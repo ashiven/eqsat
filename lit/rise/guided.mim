@@ -19,30 +19,35 @@ lam extern _impl(): %eqsat.Impl =
 // 2) a o (b o c)             => (a o b) o c
 // 3) map a o map b           => map (a o b)
 
-// Note that we do not emit implicit arguments when creating the rule internally so we can provide some dummy values here to make the program type-check.
-// The types of the meta variables are also not considered internally, so we can provide anything there as long as the type-checker is okay with it.
-rule transpose_mm(pat_a: Nat → Nat): %rise.o (%rise.transpose @(1, 1, Nat)) (%rise.map (%rise.map pat_a)) => %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(1, 1, Nat));
-rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat): %rise.o pat_a (%rise.o pat_b pat_c) => %rise.o (%rise.o pat_a pat_b) pat_c;
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat): %rise.o (%rise.map pat_a) (%rise.map pat_b) => %rise.map (%rise.o pat_a pat_b);
+rule transpose_mm(pat_T: *, pat_a: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
+    %rise.o (%rise.transpose @(pat_n1, pat_n2) @pat_T) (%rise.map (%rise.map pat_a))
+=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @pat_T);
+
+rule compose_assoc(pat_A pat_B pat_C pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
+    %rise.o pat_a (%rise.o pat_b pat_c)
+=>  %rise.o (%rise.o pat_a pat_b) pat_c;
+
+rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
+    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
+=>  %rise.map @pat_n (%rise.o pat_a pat_b);
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, compose_assoc, map_fuse);
+    %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse);
+
+// The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
+// To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
+lam extern _rulesets(): %eqsat.Ruleset =
+    %eqsat.rulesets (%eqsat.normalize, );
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
 
-// We had to provide implicit arguments with '@' in order to give the compiler the information it needed to make the program type-check.
-// The problem is that in the sexpr emitter, we decided to fully omit all implicit arguments and have them always be inferred on reconstruction.
-// This will fail for this example here where the implicits can't be inferred.
-//
-// The workaround currently is to `%eqsat.select ()` so no terms will be rewritten, which internally gets processed
-// by simply transferring the old world to a new world using `Rewriter::rewrite_external` as in `RWPhase::start`.
 fun extern fuse_transpose(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4, Nat)) (%rise.map (%rise.map g)));
+    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)));
     return (mapper arg);
 
 fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4, Nat));
+    let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4) @Nat);
     return (mapper arg);
 
 lam extern _reaches(): %eqsat.Reaches =

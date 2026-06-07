@@ -1,0 +1,37 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
+
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
+
+rule compose_assoc(pat_A: *, pat_B: *, pat_C: *, pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
+    %rise.o pat_a (%rise.o pat_b pat_c)
+=>  %rise.o (%rise.o pat_a pat_b) pat_c;
+
+lam extern _rules(): %eqsat.Rules =
+    %eqsat.rules_kind (compose_assoc, );
+
+// The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
+// To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
+lam extern _rulesets(): %eqsat.Ruleset =
+    %eqsat.rulesets (%eqsat.normalize, );
+
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+lam g(x: Nat): Nat = %core.nat.add (x, 2);
+
+fun extern binding(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.map (%rise.map g)) (%rise.transpose @(3, 4) @Nat));
+    return (mapper arg);
+
+fun extern binding_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = %rise.o (%rise.o (%rise.map (%rise.map f)) (%rise.map (%rise.map g))) (%rise.transpose @(3, 4) @Nat);
+    return (mapper arg);
+
+lam extern _reaches(): %eqsat.Reaches =
+    %eqsat.reaches (binding, binding_expected, 5);
+
+lam extern _select(): %eqsat.Select =
+    %eqsat.select ();

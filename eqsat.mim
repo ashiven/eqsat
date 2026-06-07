@@ -6,19 +6,18 @@
 ///
 /// [TOC]
 ///
-/// This plugin is responsible for optimizing MimIR
-/// programs through the process of equality saturation.
+/// This plugin can be used to optimize MimIR programs via equality saturation.
 ///
 /// It achieves this in three steps:
 ///
 /// 1) Converts the program into a series of symbolic expressions, one for each closed mutable Def.
 /// 2) Passes these expressions to the 'egg' or 'slotted-egraphs' equality saturation engine for rewriting.
-/// 3) Reconstructs the program based on the results of step 2).
+/// 3) Reconstructs the program based on the results emitted in step 2).
 ///
 ///
 /// MimIR-defined rewrite rules, sets of rewrite rules defined in 'egg' or 'slotted-egraphs',
-/// and a cost function may be specified via configuration lambdas in MimIR.
-/// If no config functions are provided, the default values will be used:
+/// a cost function, and other config values may be specified via lambdas in MimIR.
+/// If no config lambdas are provided, the default values will be used:
 ///
 /// Implementation:   slotted-egraphs
 /// Cost function:    AstSize
@@ -32,10 +31,6 @@
 /// - In order to parse large/deeply-nested symbolic expressions, the implementation temporarily increases
 ///   the stack size to 8MB while parsing symbolic expressions, however it may happen that an expression
 ///   is large and nested enough to exceed even the 8MB of stack space.
-/// - Explicitly provided implicit arguments (via the '@' syntax) are not carried over because the sexpr
-///   emitter omits all implicit arguments (for the sake of simpler rewrite-rules that don't have to provide
-///   pattern vars for implicit arguments), so programs that wouldn't type-check without these explicitly
-///   provided implicit args can not be reconstructed.
 ///
 /// ## Dependencies
 ///
@@ -99,12 +94,20 @@ axm %eqsat.math: %eqsat.Ruleset;
 ///
 axm %eqsat.standard: %eqsat.Ruleset;
 axm %eqsat.rise: %eqsat.Ruleset;
+axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 ///
 /// ## Cost functions
 ///
+/// ### Egg
+///
 axm %eqsat.AstSize: %eqsat.CostFun;
 axm %eqsat.AstDepth: %eqsat.CostFun;
+///
+/// ### Slotted
+///
+axm %eqsat.MinAstSize: %eqsat.CostFun;
+axm %eqsat.MaxAstSize: %eqsat.CostFun;
 ///
 ///
 /// ## Operations
@@ -120,10 +123,13 @@ axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Ruleset;
 ///
 /// Configures the equality saturation engine to use a provided set of MimIR-defined rules
 ///
-/// TODO: We should be able to apply this to any and all rewrite rules but that doesn't
-///       quite work yet depending on the types of the meta variables of the rewrite rule.
+/// TODO:
+/// - We use a second axiom %%rules_kind for rules whose variables contain types, which elevates the type of the rule from * to □.
+/// - Ideally we should have one axiom that accepts a tuple of any mixture of rules, regardless of their type-levels.
+/// - Tried(didn't work): axm %eqsat.rules: {n: Nat, Us: «n; Univ»} → {Ts: «i: n; Type (Us#i)»} → «i: n; Ts#i» → %eqsat.Rules;
 ///
 axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Rules;
+axm %eqsat.rules_kind: {n: Nat, Ts: «n; □»} → «i: n; Ts#i» → %eqsat.Rules;
 ///
 /// ### %%eqsat.reaches
 ///
@@ -138,6 +144,10 @@ axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %e
 ///
 axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 ///
+/// TODO:
+/// - It would be nice to have an axiom or two for debugging purposes.
+/// - For example, an axiom that prints a rule after it was fully translated into an sexpr pattern.
+/// - Or even, printing out select terms as sexprs might also be useful.
 ///
 /// ## Passes and Phases
 ///

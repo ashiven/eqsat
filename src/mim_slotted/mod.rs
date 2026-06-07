@@ -1,6 +1,7 @@
 use crate::ffi::FFI;
 use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
+use crate::mim_slotted::cost::MaxAstSize;
 use crate::mim_slotted::rulesets::get_rules;
 use crate::mim_slotted::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
@@ -13,6 +14,7 @@ use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
+pub mod normalizers;
 pub mod rulesets;
 pub mod types;
 pub mod util;
@@ -163,7 +165,8 @@ pub(crate) fn equality_saturate(
     let selected = filter_selected(&sexprs, selected);
 
     match cost_fn {
-        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::MinAstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::MaxAstSize => rewrite_sexprs(&sexprs, &selected, rules, || MaxAstSize),
         _ => panic!("Unknown cost function provided."),
     }
 }
@@ -415,9 +418,14 @@ fn convert_rules(
             let rhs_rexpr = &parsed.children[3];
 
             let mut pat = format!("{}", re_to_pattern(lhs_rexpr));
-            inject_meta_vars(&meta_vars, &mut pat);
             let mut outpat = format!("{}", re_to_pattern(rhs_rexpr));
+
+            inject_meta_vars(&meta_vars, &mut pat);
             inject_meta_vars(&meta_vars, &mut outpat);
+
+            let mut counter = 1;
+            replace_dummy_slots(&mut counter, &mut pat);
+            replace_dummy_slots(&mut counter, &mut outpat);
 
             let rule: Rewrite<MimSlotted, MimSlottedAnalysis> =
                 Rewrite::new(rule_name, &pat, &outpat);
@@ -428,6 +436,23 @@ fn convert_rules(
             true
         }
     });
+}
+
+fn replace_dummy_slots(counter: &mut usize, pattern: &mut String) {
+    let mut result = String::with_capacity(pattern.len());
+    let mut parts = pattern.split("$dummy");
+
+    if let Some(first) = parts.next() {
+        result.push_str(first);
+    }
+
+    for part in parts {
+        result.push_str(&format!("${}", counter));
+        *counter += 1;
+        result.push_str(part);
+    }
+
+    *pattern = result;
 }
 
 fn inject_meta_vars(meta_vars: &[String], pattern: &mut String) {
@@ -445,6 +470,7 @@ fn inject_meta_vars(meta_vars: &[String], pattern: &mut String) {
             return full_name;
         }
 
+        // TODO: What about rules that introduce a new slot? Those shouldn't be wrapped in 'var'
         match kind {
             "pat" => format!("?{}", name),
             "slot" => format!("(var ${})", name),

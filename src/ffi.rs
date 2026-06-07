@@ -21,12 +21,17 @@ pub mod bridge {
         // Slotted
         Standard,
         Rise,
+        Normalize,
     }
 
     #[derive(Debug)]
     enum CostFn {
+        // Egg
         AstSize,
         AstDepth,
+        // Slotted
+        MinAstSize,
+        MaxAstSize,
     }
 
     #[derive(Debug, Hash, Default)]

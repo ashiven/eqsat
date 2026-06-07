@@ -70,7 +70,7 @@ ConfigValues RewriteSlotted::import_config() {
 
     // Import config values from the internalized config lambdas
     RuleSets rulesets;
-    CostFn cost_fn = CostFn::AstSize;
+    CostFn cost_fn = CostFn::MinAstSize;
     ReachesArgs reaches_args;
     OptionSelected selected = {nullptr};
 
@@ -84,6 +84,8 @@ ConfigValues RewriteSlotted::import_config() {
                     rulesets.push_back(RuleSet::Standard);
                 else if (Axm::isa<eqsat::rise>(ruleset))
                     rulesets.push_back(RuleSet::Rise);
+                else if (Axm::isa<eqsat::normalize>(ruleset))
+                    rulesets.push_back(RuleSet::Normalize);
                 else
                     error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
 
@@ -97,9 +99,11 @@ ConfigValues RewriteSlotted::import_config() {
 
             reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
-        } else if (Axm::isa<eqsat::AstSize>(body)) {
+        } else if (Axm::isa<eqsat::MinAstSize>(body)) {
             // Cost functions
-            cost_fn = CostFn::AstSize;
+            cost_fn = CostFn::MinAstSize;
+        } else if (Axm::isa<eqsat::MaxAstSize>(body)) {
+            cost_fn = CostFn::MaxAstSize;
 
         } else if (auto select = Axm::isa<eqsat::select>(body)) {
             // Selections
@@ -517,7 +521,7 @@ const Def* RewriteSlotted::convert_lam(uint32_t id, NodeFFI node) {
 const Def* RewriteSlotted::convert_app(uint32_t id, NodeFFI node) {
     auto callee  = get_def(node.children[0]);
     auto arg     = get_def(node.children[1]);
-    auto new_app = new_world().implicit_app(callee, arg);
+    auto new_app = new_world().app(callee, arg);
     return new_app;
 }
 

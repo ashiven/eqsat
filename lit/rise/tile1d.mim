@@ -21,25 +21,43 @@ lam extern _impl(): %eqsat.Impl =
 // 4) map @n1 (map @n2 f)     => transpose o (map @n2 (map @n1 f)) o transpose
 // 5) map @(n1 * n2) f        => join o (map @n1 (map @n2 f)) o (split @n2)
 
-rule transpose_mm(pat_a: Nat → Nat): %rise.o (%rise.transpose @(1, 1, Nat)) (%rise.map (%rise.map pat_a)) => %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(1, 1, Nat));
-rule compose_assoc(pat_a: Nat → Nat, pat_b: Nat → Nat, pat_c: Nat → Nat): %rise.o pat_a (%rise.o pat_b pat_c) => %rise.o (%rise.o pat_a pat_b) pat_c;
-rule map_fuse(pat_a: Nat → Nat, pat_b: Nat → Nat): %rise.o (%rise.map pat_a) (%rise.map pat_b) => %rise.map (%rise.o pat_a pat_b);
-// TODO: The implicit args n1 and n2 actually need to be considered in these rules - maybe we do need to actually emit implicit args.
-// And we also need to take the inferred n of %rise.map out of the implicit sigma so we can provide it on its own.
-rule wrap_transpose(pat_f: Nat → Nat): %rise.map (%rise.map pat_f) => %rise.o (%rise.transpose @(1, 1, Nat)) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.transpose @(1, 1, Nat)));
-rule join_mm_split(pat_f: Nat → Nat): %rise.map pat_f => %rise.o (%rise.join @(32, 1, Nat)) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.split 32 @(1, Nat)));
+rule transpose_mm(pat_T: *, pat_a: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
+    %rise.o (%rise.transpose @(pat_n1, pat_n2) @pat_T) (%rise.map (%rise.map pat_a))
+=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @pat_T);
+
+rule compose_assoc(pat_A pat_B pat_C pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
+    %rise.o pat_a (%rise.o pat_b pat_c)
+=>  %rise.o (%rise.o pat_a pat_b) pat_c;
+
+rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
+    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
+=>  %rise.map @pat_n (%rise.o pat_a pat_b);
+
+rule wrap_transpose(pat_T: *, pat_f: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
+    %rise.map @pat_n1 (%rise.map @pat_n2 pat_f)
+=>  %rise.o (%rise.transpose @(pat_n2, pat_n1) @pat_T) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.transpose @(pat_n1, pat_n2) @pat_T));
+
+rule join_mm_split(pat_T: *, pat_f: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
+    %rise.map @(%core.nat.mul (pat_n1, pat_n2)) pat_f
+=>  %rise.o (%rise.join @(pat_n1, pat_n2) @pat_T) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.split @pat_n1 @pat_T pat_n2));
 
 lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
+    %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
-fun extern tile1d(arg: «64; Nat»): «64; Nat» =
+// '%core.nat.mul (n1,n2)' gets emitted incorrectly if we don't add some dummy '_x'
+// because otherwise '(n1,n2)' would be equivalent to the var of the lam and we would
+// just end up emitting the name of the var instead of the term '(n1,n2)'.
+// This is a limitation in the sexpr emitter that still needs to be fixed.
+fun extern tile1d(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
     let mapper = %rise.map f;
     return (mapper arg);
 
-fun extern tile1d_expected(arg: «64; Nat»): «64; Nat» =
-    let mapper = %rise.o (%rise.join @(32, 2, Nat)) (%rise.o (%rise.map (%rise.map f)) (%rise.split 32 @(2, Nat)));
+fun extern tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
+    let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
     return (mapper arg);
 
 lam extern _reaches(): %eqsat.Reaches =

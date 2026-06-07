@@ -4,6 +4,7 @@ use crate::mim_slotted::RULESETS;
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use slotted_egraphs::*;
 
+pub mod normalize;
 pub mod rise;
 pub mod standard;
 
@@ -16,6 +17,7 @@ pub fn get_rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
             match *ruleset {
                 RuleSet::Standard => rules.extend(standard::rules()),
                 RuleSet::Rise => rules.extend(rise::rules()),
+                RuleSet::Normalize => rules.extend(normalize::rules()),
                 _ => (),
             }
         }
