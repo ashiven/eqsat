@@ -35,6 +35,7 @@
 /// ## Dependencies
 ///
 import compile;
+import option;
 plugin core;
 ///
 ///
@@ -69,12 +70,19 @@ axm %eqsat.CostFun: *;
 /// Represents the result of an assertion whether one term can reach another term
 ///
 axm %eqsat.Reaches: *;
-/// 
+///
 /// ### %%eqsat.Select
 ///
 /// Represents the result of specifying a set of terms for equality saturation
 ///
 axm %eqsat.Select: *;
+///
+/// ### %%eqsat.Config
+///
+/// A union type of all config types
+///
+let %eqsat.Config = %eqsat.Impl ∪ %eqsat.Rules ∪ %eqsat.Ruleset ∪ %eqsat.CostFun ∪ %eqsat.Reaches ∪ %eqsat.Select;
+let %eqsat.Configs = «6; %eqsat.Config»;
 ///
 ///
 /// ## Implementations
@@ -148,6 +156,38 @@ axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 /// - It would be nice to have an axiom or two for debugging purposes.
 /// - For example, an axiom that prints a rule after it was fully translated into an sexpr pattern.
 /// - Or even, printing out select terms as sexprs might also be useful.
+///
+/// ### %%eqsat.config
+///
+/// Define the config values for eqsat, default values will be used if none provided.
+///
+let %eqsat.impl_default = %eqsat.slotted;
+let %eqsat.cost_default = %eqsat.MinAstSize;
+let %eqsat.rulesets_default = %eqsat.rulesets ();
+let %eqsat.rules_default = %eqsat.rules ();
+axm %eqsat.reaches_default: %eqsat.Reaches;
+axm %eqsat.select_default: %eqsat.Select;
+///
+lam cfg {T: *} (x: T): %eqsat.Config =
+    x inj %eqsat.Config;
+///
+lam %eqsat.config (
+    impl:     %option.Opt %eqsat.Impl,
+    cost_fun: %option.Opt %eqsat.CostFun,
+    rulesets: %option.Opt %eqsat.Ruleset,
+    rules:    %option.Opt %eqsat.Rules,
+    reaches:  %option.Opt %eqsat.Reaches,
+    select:   %option.Opt %eqsat.Select,
+): %eqsat.Configs =
+    (
+        cfg (%option.unwrap_or impl     %eqsat.impl_default),
+        cfg (%option.unwrap_or cost_fun %eqsat.cost_default),
+        cfg (%option.unwrap_or rulesets %eqsat.rulesets_default),
+        cfg (%option.unwrap_or rules    %eqsat.rules_default),
+        cfg (%option.unwrap_or reaches  %eqsat.reaches_default),
+        cfg (%option.unwrap_or select   %eqsat.select_default),
+    );
+///
 ///
 /// ## Passes and Phases
 ///

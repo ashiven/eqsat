@@ -9,8 +9,8 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.slotted;
+// lam extern _impl(): %eqsat.Impl =
+//     %eqsat.slotted;
 
 // From the Guided Equality Saturation paper.
 
@@ -41,8 +41,8 @@ rule join_mm_split(pat_T: *, pat_f: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
     %rise.map @(%core.nat.mul (pat_n1, pat_n2)) pat_f
 =>  %rise.o (%rise.join @(pat_n1, pat_n2) @pat_T) (%rise.o (%rise.map (%rise.map pat_f)) (%rise.split @pat_n1 @pat_T pat_n2));
 
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
+// lam extern _rules(): %eqsat.Rules =
+//     %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
@@ -60,8 +60,19 @@ fun extern tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2);
     let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
     return (mapper arg);
 
-lam extern _reaches(): %eqsat.Reaches =
-    %eqsat.reaches (tile1d, tile1d_expected, 5);
+// lam extern _reaches(): %eqsat.Reaches =
+//     %eqsat.reaches (tile1d, tile1d_expected, 5);
+// 
+// lam extern _select(): %eqsat.Select =
+//     %eqsat.select ();
 
-lam extern _select(): %eqsat.Select =
-    %eqsat.select ();
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.slotted,
+        %option.none @%eqsat.CostFun,
+        %option.some (%eqsat.rulesets (%eqsat.normalize, )),
+        %option.some (%eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split)),
+        %option.some (%eqsat.reaches (tile1d, tile1d_expected, 5)),
+        %option.some (%eqsat.select ()),
+    );
+
