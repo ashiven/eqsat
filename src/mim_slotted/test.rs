@@ -153,10 +153,11 @@ fn rule_replace_dummy_slots() {
          (app (app (app %rise.map ?n) (pack $dummy (scope (lit 2 Nat) Nat))) ?b))"
             .to_string();
 
-    let after = "(app (app (app %rise.o (pack $1 (scope (lit 3 Nat) (arr $2 (scope ?n Nat)))))
-         (app (app (app %rise.map ?n) (pack $3 (scope (lit 2 Nat) Nat))) ?a))
-         (app (app (app %rise.map ?n) (pack $4 (scope (lit 2 Nat) Nat))) ?b))"
-        .to_string();
+    let after =
+        "(app (app (app %rise.o (pack $dummy1 (scope (lit 3 Nat) (arr $dummy2 (scope ?n Nat)))))
+         (app (app (app %rise.map ?n) (pack $dummy3 (scope (lit 2 Nat) Nat))) ?a))
+         (app (app (app %rise.map ?n) (pack $dummy4 (scope (lit 2 Nat) Nat))) ?b))"
+            .to_string();
 
     let mut counter = 1;
     replace_dummy_slots(&mut counter, &mut before);

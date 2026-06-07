@@ -447,7 +447,7 @@ fn replace_dummy_slots(counter: &mut usize, pattern: &mut String) {
     }
 
     for part in parts {
-        result.push_str(&format!("${}", counter));
+        result.push_str(&format!("$dummy{}", counter));
         *counter += 1;
         result.push_str(part);
     }
@@ -463,14 +463,18 @@ fn inject_meta_vars(meta_vars: &[String], pattern: &mut String) {
 
     let res = re.replace_all(pattern, |caps: &regex::Captures| {
         let kind = &caps[1];
-        let name = &caps[2];
+        let mut name = &caps[2];
 
         let full_name = format!("{}_{}", kind, name);
         if !meta_vars.contains(&full_name) {
             return full_name;
         }
 
-        let name = name.trim_end_matches(|c: char| c.is_numeric() || c == '_');
+        if let Some((base, suffix)) = name.rsplit_once('_')
+            && suffix.chars().all(|c| c.is_ascii_digit())
+        {
+            name = base;
+        }
 
         // TODO: What about rules that introduce a new slot? Those shouldn't be wrapped in 'var'
         match kind {

@@ -119,19 +119,12 @@ ConfigValues RewriteSlotted::import_config() {
                     selected.option = option;
 
                 } else if (Axm::isa<eqsat::rules>(config_val) || Axm::isa<eqsat::rules_kind>(config_val)) {
-                    auto annex     = old_world().annex<plug::eqsat::Rules>();
-                    auto annex_new = new_world().annex<eqsat::Rules>();
-                    std::cout << annex << "\n";
-                    std::cout << "Creating new rules lam\n";
-                    auto rules_lam_new = new_world().mut_lam({}, annex_new);
-                    std::cout << "Creating old rules lam\n";
-                    auto rules_lam = old_world().mut_lam({}, annex);
-                    std::cout << "Created rules lam\n";
+                    auto dom       = old_world().sigma();
+                    auto codom     = old_world().annex<eqsat::Rules>();
+                    auto rules_lam = old_world().mut_lam(dom, codom)->set("_rules");
                     rules_lam->set_filter(false);
-                    std::cout << "Setting body\n";
                     rules_lam->set_body(config_val);
                     rules_lam->externalize();
-                    std::cout << "External: " << rules_lam->is_external() << "\n";
 
                 } else if (Axm::isa<eqsat::slotted>(config_val) || Axm::isa<eqsat::egg>(config_val)) {
                     // Implementations
