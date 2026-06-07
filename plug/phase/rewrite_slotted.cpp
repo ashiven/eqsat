@@ -119,6 +119,7 @@ ConfigValues RewriteSlotted::import_config() {
                     selected.option = option;
 
                 } else if (Axm::isa<eqsat::rules>(config_val) || Axm::isa<eqsat::rules_kind>(config_val)) {
+                    // Rules
                     auto dom       = old_world().sigma();
                     auto codom     = old_world().annex<eqsat::Rules>();
                     auto rules_lam = old_world().mut_lam(dom, codom)->set("_rules");

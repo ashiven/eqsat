@@ -1,0 +1,13 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
+plugin eqsat;
+
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.slotted,
+        %option.none @%eqsat.CostFun,
+        %option.none @%eqsat.Ruleset,
+        %option.none @%eqsat.Rules,
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );

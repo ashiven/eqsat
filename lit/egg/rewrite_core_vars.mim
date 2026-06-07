@@ -3,16 +3,17 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.egg;
-
 rule foo (a: Nat, b: Nat) : (%core.nat.add (a, (%core.nat.sub (b, a)))) => b;
 
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (foo);
-
-lam extern _cost_fn(): %eqsat.CostFun =
-    %eqsat.AstSize;
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.egg,
+        %option.some %eqsat.AstSize,
+        %option.some (%eqsat.rulesets (%eqsat.core)),
+        %option.some (%eqsat.rules (foo)),
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 con extern mul_lit_nat [a: Nat, b: Nat, return : Cn Nat] =
     return (%core.nat.add (a, (%core.nat.sub (b, a))));

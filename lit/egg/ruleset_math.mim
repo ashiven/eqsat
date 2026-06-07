@@ -3,11 +3,15 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.egg;
-
-lam extern _rulesets(): %eqsat.Ruleset =
-    %eqsat.rulesets (%eqsat.math,);
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.egg,
+        %option.some %eqsat.AstSize,
+        %option.some (%eqsat.rulesets (%eqsat.math)),
+        %option.none @%eqsat.Rules,
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 con extern and_lit [return : Cn Bool] =
     return (%core.bit2.and_ 0 (%core.icmp.uge (tt, ff), %core.icmp.ug (tt, ff)));

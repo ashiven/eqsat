@@ -3,13 +3,7 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.slotted;
-
 rule foo (pat_a: Nat) : (%core.nat.mul ((%core.nat.mul (pat_a, 4)), 4)) => (%core.nat.mul (pat_a, 16));
-
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (foo, );
 
 fun extern start_term (a: Nat): Nat =
     return (%core.nat.mul ((%core.nat.mul (a, 4)), 4));
@@ -17,8 +11,12 @@ fun extern start_term (a: Nat): Nat =
 fun extern end_term (a: Nat): Nat =
     return (%core.nat.mul (a, 16));
 
-lam extern _reaches(): %eqsat.Reaches =
-    %eqsat.reaches (start_term, end_term, 5);
-
-lam extern _select(): %eqsat.Select =
-    %eqsat.select (start_term, );
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.slotted,
+        %option.none @%eqsat.CostFun,
+        %option.none @%eqsat.Ruleset,
+        %option.some (%eqsat.rules (foo)),
+        %option.some (%eqsat.reaches (start_term, end_term, 5)),
+        %option.some (%eqsat.select (start_term)),
+    );
