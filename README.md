@@ -64,7 +64,15 @@ int main(int, char**) {
         foo->set_guard(w.lit_tt());
 
         // Quickly define config values
-        eqsat_config(w, eqsat::slotted, eqsat::AstSize, {eqsat::standard}, {foo});
+        eqsat_config(
+            w,
+            eqsat::slotted,
+            eqsat::MinAstSize,
+            {eqsat::standard},
+            {foo},
+            std::nullopt,
+            std::nullopt
+        );   
 
         // fun extern main(x: Nat): Nat = return %core.nat.add (x, 0);
         auto main   = w.mut_fun({w.type_nat()}, {w.type_nat()})->set("main");

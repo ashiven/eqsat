@@ -24,6 +24,15 @@ inline std::optional<const Def*> get_config_option(const Def* config_def) {
 
 namespace mim {
 
+// TODO: implement
+inline void eqsat_config(World& world,
+                         std::optional<flags_t> impl,
+                         std::optional<flags_t> cost_fun,
+                         std::optional<std::vector<flags_t>> rulesets,
+                         std::optional<DefVec> rules,
+                         std::optional<DefVec> reaches,
+                         std::optional<DefVec> select) {}
+
 // lam extern _impl(): %eqsat.Impl =
 //     <impl>;
 inline void eqsat_impl(World& world, flags_t impl) {
