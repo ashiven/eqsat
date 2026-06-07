@@ -67,7 +67,7 @@ int main(int, char**) {
         eqsat_config(
             w,
             eqsat::slotted,
-            eqsat::MinAstSize,
+            eqsat::AstSize,
             {eqsat::standard},
             {foo},
             std::nullopt,
@@ -120,7 +120,7 @@ lam extern _config() =
         %option.some %eqsat.slotted,
 
         // To define the cost function that should be used for term extraction
-        %option.some %eqsat.MinAstSize,
+        %option.some %eqsat.AstSize,
 
         // To use a set of rules directly implemented in `egg` or `slotted-egraphs`.
         // To see the existing rulesets, have a look at `src\mim_[egg|slotted]\rulesets`.

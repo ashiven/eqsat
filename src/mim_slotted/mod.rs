@@ -165,7 +165,7 @@ pub(crate) fn equality_saturate(
     let selected = filter_selected(&sexprs, selected);
 
     match cost_fn {
-        CostFn::MinAstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
         CostFn::MaxAstSize => rewrite_sexprs(&sexprs, &selected, rules, || MaxAstSize),
         _ => panic!("Unknown cost function provided."),
     }

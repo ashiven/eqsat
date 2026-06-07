@@ -17,7 +17,7 @@ lam extern _config() =
         %option.some %eqsat.slotted,
         // Use the following config value to specify the cost function
         // that will be used to extract the most optimal term after rewriting.
-        %option.some %eqsat.MinAstSize,
+        %option.some %eqsat.AstSize,
         // If you want to use a set of rules defined in 'slotted-egraphs' as part of
         // the 'eqsat-rs' library, simply provide the name of the ruleset.
         %option.some (%eqsat.rulesets (%eqsat.standard)),

@@ -19,7 +19,7 @@
 /// a cost function, and other config values may be specified via lambdas in MimIR.
 /// If no config lambdas are provided, the default values will be used:
 ///
-/// Implementation:   slotted-egraphs
+/// Implementation:   slotted
 /// Cost function:    AstSize
 /// Rulesets:         None
 /// Rules:            None
@@ -107,14 +107,15 @@ axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 /// ## Cost functions
 ///
-/// ### Egg
+/// ### Egg/Slotted
 ///
 axm %eqsat.AstSize: %eqsat.CostFun;
+///
+/// ### Egg
 axm %eqsat.AstDepth: %eqsat.CostFun;
 ///
 /// ### Slotted
 ///
-axm %eqsat.MinAstSize: %eqsat.CostFun;
 axm %eqsat.MaxAstSize: %eqsat.CostFun;
 ///
 ///
@@ -162,7 +163,7 @@ axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 /// Define the config values for eqsat, default values will be used if none provided.
 ///
 let %eqsat.impl_default = %eqsat.slotted;
-let %eqsat.cost_default = %eqsat.MinAstSize;
+let %eqsat.cost_default = %eqsat.AstSize;
 let %eqsat.rulesets_default = %eqsat.rulesets ();
 let %eqsat.rules_default = %eqsat.rules ();
 axm %eqsat.reaches_default: %eqsat.Reaches;

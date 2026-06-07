@@ -23,7 +23,7 @@ fn eqsat_equals(file: &str, file_rw: &str) {
     let slotted = fs::read_to_string(file).expect("Failed to read file.slotted");
 
     let selected = OptionSelected::none();
-    let nodes = eqsat_slotted(&slotted, selected, vec![], CostFn::MinAstSize);
+    let nodes = eqsat_slotted(&slotted, selected, vec![], CostFn::AstSize);
 
     let slotted = pretty_ffi(nodes, LINE_LEN);
     let slotted_rw = fs::read_to_string(file_rw)

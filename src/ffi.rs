@@ -26,11 +26,11 @@ pub mod bridge {
 
     #[derive(Debug)]
     enum CostFn {
-        // Egg
+        // Egg/Slotted
         AstSize,
+        // Egg
         AstDepth,
         // Slotted
-        MinAstSize,
         MaxAstSize,
     }
 
