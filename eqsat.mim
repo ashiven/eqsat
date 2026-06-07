@@ -99,8 +99,15 @@ axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 /// ## Cost functions
 ///
+/// ### Egg
+///
 axm %eqsat.AstSize: %eqsat.CostFun;
 axm %eqsat.AstDepth: %eqsat.CostFun;
+///
+/// ### Slotted
+///
+axm %eqsat.MinAstSize: %eqsat.CostFun;
+axm %eqsat.MaxAstSize: %eqsat.CostFun;
 ///
 ///
 /// ## Operations

@@ -28,7 +28,7 @@ lam extern _rulesets(): %eqsat.Ruleset =
 // Use the following config function to specify the cost function
 // that will be used to extract the most optimal term after rewriting.
 lam extern _cost_fn(): %eqsat.CostFun =
-    %eqsat.AstSize;
+    %eqsat.MinAstSize;
 
 fun extern main(mem: %mem.M 0, argc: I32, argv: %mem.Ptr0 (%mem.Ptr0 I8)): [%mem.M 0, I32] =
     return (mem, argc);

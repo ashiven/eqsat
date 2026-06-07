@@ -28,13 +28,13 @@ fn normalize_three_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
 fn normalize_two_tuple() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
     let pat = "(tuple (cons ?a (cons ?a nil)))";
     let outpat = "(pack $dummy (scope (lit 2 Nat) ?a))";
-    Rewrite::new("normalize-three-tuple", pat, outpat)
+    Rewrite::new("normalize-two-tuple", pat, outpat)
 }
 
 fn normalize_two_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
     let pat = "(pack $dummy (scope (lit 2 Nat) ?a))";
     let outpat = "(tuple (cons ?a (cons ?a nil)))";
-    Rewrite::new("normalize-three-pack", pat, outpat)
+    Rewrite::new("normalize-two-pack", pat, outpat)
 }
 
 fn core_mul_comm() -> Rewrite<MimSlotted, MimSlottedAnalysis> {

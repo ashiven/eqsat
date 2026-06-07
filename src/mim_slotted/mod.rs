@@ -1,6 +1,7 @@
 use crate::ffi::FFI;
 use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
+use crate::mim_slotted::cost::MaxAstSize;
 use crate::mim_slotted::rulesets::get_rules;
 use crate::mim_slotted::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
@@ -164,7 +165,8 @@ pub(crate) fn equality_saturate(
     let selected = filter_selected(&sexprs, selected);
 
     match cost_fn {
-        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::MinAstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::MaxAstSize => rewrite_sexprs(&sexprs, &selected, rules, || MaxAstSize),
         _ => panic!("Unknown cost function provided."),
     }
 }

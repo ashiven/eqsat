@@ -70,7 +70,7 @@ ConfigValues RewriteSlotted::import_config() {
 
     // Import config values from the internalized config lambdas
     RuleSets rulesets;
-    CostFn cost_fn = CostFn::AstSize;
+    CostFn cost_fn = CostFn::MinAstSize;
     ReachesArgs reaches_args;
     OptionSelected selected = {nullptr};
 
@@ -99,9 +99,11 @@ ConfigValues RewriteSlotted::import_config() {
 
             reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
-        } else if (Axm::isa<eqsat::AstSize>(body)) {
+        } else if (Axm::isa<eqsat::MinAstSize>(body)) {
             // Cost functions
-            cost_fn = CostFn::AstSize;
+            cost_fn = CostFn::MinAstSize;
+        } else if (Axm::isa<eqsat::MaxAstSize>(body)) {
+            cost_fn = CostFn::MaxAstSize;
 
         } else if (auto select = Axm::isa<eqsat::select>(body)) {
             // Selections

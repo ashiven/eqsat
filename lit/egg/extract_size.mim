@@ -3,6 +3,9 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
+lam extern _impl(): %eqsat.Impl =
+    %eqsat.egg;
+
 // This is not a mathematically correct rewrite but it serves to demonstrate extraction by term-size.
 // With this rewrite:
 // - The term-size increases
