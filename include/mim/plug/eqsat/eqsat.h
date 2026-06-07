@@ -4,6 +4,24 @@
 
 #include "mim/plug/eqsat/autogen.h"
 
+namespace mim::plug::eqsat {
+
+inline std::optional<const Def*> get_config_option(const Def* config_def) {
+    if (auto inj_outer = config_def->isa<Inj>()) {
+        if (auto match = inj_outer->value()->isa<Match>()) {
+            if (auto inj_inner = match->scrutinee()->isa<Inj>()) {
+                auto val = inj_inner->value();
+                if (auto tuple = val->isa<Tuple>(); tuple && tuple->ops().empty())
+                    return std::nullopt;
+                else
+                    return val;
+            }
+        }
+    }
+    return std::nullopt;
+}
+} // namespace mim::plug::eqsat
+
 namespace mim {
 
 // lam extern _impl(): %eqsat.Impl =
