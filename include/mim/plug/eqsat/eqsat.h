@@ -24,42 +24,7 @@ inline std::optional<const Def*> get_config_option(const Def* config_def) {
 
 namespace mim {
 
-// TODO: implement
-inline void eqsat_config(World& world,
-                         std::optional<flags_t> impl,
-                         std::optional<flags_t> cost_fun,
-                         std::optional<std::vector<flags_t>> rulesets,
-                         std::optional<DefVec> rules,
-                         std::optional<DefVec> reaches,
-                         std::optional<DefVec> select) {}
-
-// lam extern _impl(): %eqsat.Impl =
-//     <impl>;
-inline void eqsat_impl(World& world, flags_t impl) {
-    auto Impl     = world.annex<plug::eqsat::Impl>();
-    auto impl_axm = world.annex(impl);
-    auto _impl    = world.mut_lam({}, Impl)->set("_impl");
-    _impl->set_filter(false);
-    _impl->set_body(impl_axm);
-    _impl->externalize();
-}
-
-// lam extern _cost_fun(): %eqsat.CostFun =
-//     <cost_fun>;
-inline void eqsat_cost_fun(World& world, flags_t cost_fun) {
-    auto CostFun      = world.annex<plug::eqsat::CostFun>();
-    auto cost_fun_axm = world.annex(cost_fun);
-    auto _cost_fun    = world.mut_lam({}, CostFun)->set("_cost_fun");
-    _cost_fun->set_filter(false);
-    _cost_fun->set_body(cost_fun_axm);
-    _cost_fun->externalize();
-}
-
-// lam extern _rulesets(): %eqsat.Ruleset =
-//     %eqsat.rulesets (<rulesets>,);
-inline void eqsat_rulesets(World& world, std::vector<flags_t> rulesets) {
-    auto Ruleset = world.annex<plug::eqsat::Ruleset>();
-
+inline const Def* eqsat_rulesets(World& world, std::vector<flags_t> rulesets) {
     DefVec ruleset_axms;
     for (auto ruleset : rulesets) {
         auto ruleset_axm = world.annex(ruleset);
@@ -68,24 +33,67 @@ inline void eqsat_rulesets(World& world, std::vector<flags_t> rulesets) {
     auto ruleset_tuple = world.tuple(ruleset_axms);
     auto rulesets_app  = world.call(world.annex<plug::eqsat::rulesets>(), ruleset_tuple);
 
-    auto _rulesets = world.mut_lam({}, Ruleset)->set("_rulesets");
-    _rulesets->set_filter(false);
-    _rulesets->set_body(rulesets_app);
-    _rulesets->externalize();
+    return rulesets_app;
 }
 
-// lam extern _rules(): %eqsat.Rules =
-//     %eqsat.rules (<rules>,);
-inline void eqsat_rules(World& world, DefVec rules) {
-    auto Rules = world.annex<plug::eqsat::Rules>();
-
+inline const Def* eqsat_rules(World& world, DefVec rules) {
     auto rules_tuple = world.tuple(rules);
     auto rules_app   = world.call(world.annex<plug::eqsat::rules>(), rules_tuple);
 
-    auto _rules = world.mut_lam({}, Rules)->set("_rules");
-    _rules->set_filter(false);
-    _rules->set_body(rules_app);
-    _rules->externalize();
+    return rules_app;
+}
+
+inline const Def* eqsat_reaches(World& world, DefVec reaches) {
+    auto reaches_tuple = world.tuple(reaches);
+    auto reaches_app   = world.call(world.annex<plug::eqsat::reaches>(), reaches_tuple);
+
+    return reaches_app;
+}
+
+inline const Def* eqsat_select(World& world, DefVec select) {
+    auto select_tuple = world.tuple(select);
+    auto select_app   = world.call(world.annex<plug::eqsat::select>(), select_tuple);
+
+    return select_app;
+}
+
+// lam extern _config() =
+//     %eqsat.config (
+//         %option.Opt <impl>
+//         %option.Opt <cost_fun>
+//         %option.Opt <rulesets>
+//         %option.Opt <rules>
+//         %option.Opt <reaches>
+//         %option.Opt <select>
+//     );
+inline void eqsat_config(World& world,
+                         std::optional<flags_t> impl,
+                         std::optional<flags_t> cost_fun,
+                         std::optional<std::vector<flags_t>> rulesets,
+                         std::optional<DefVec> rules,
+                         std::optional<DefVec> reaches,
+                         std::optional<DefVec> select) {
+    auto Configs = world.externals()[world.sym("%eqsat.Configs")];
+    auto _config = world.mut_lam(world.sigma(), Configs)->set("_config");
+
+    auto option_some = world.externals()[world.sym("%option.some")];
+    auto option_none = world.externals()[world.sym("%option.none")];
+
+    auto impl_v     = impl.has_value() ? world.app(option_some, world.annex(impl.value())) : option_none;
+    auto cost_fun_v = cost_fun.has_value() ? world.app(option_some, world.annex(cost_fun.value())) : option_none;
+    auto rulesets_v
+        = rulesets.has_value() ? world.app(option_some, eqsat_rulesets(world, rulesets.value())) : option_none;
+    auto rules_v   = rules.has_value() ? world.app(option_some, eqsat_rules(world, rules.value())) : option_none;
+    auto reaches_v = reaches.has_value() ? world.app(option_some, eqsat_reaches(world, reaches.value())) : option_none;
+    auto select_v  = select.has_value() ? world.app(option_some, eqsat_select(world, select.value())) : option_none;
+
+    auto eqsat_config     = world.externals()[world.sym("%eqsat.config")];
+    auto config_tuple     = world.tuple({impl_v, cost_fun_v, rulesets_v, rules_v, reaches_v, select_v});
+    auto eqsat_config_app = world.app(eqsat_config, config_tuple);
+
+    _config->set_filter(false);
+    _config->set_body(eqsat_config_app);
+    _config->externalize();
 }
 
 } // namespace mim
