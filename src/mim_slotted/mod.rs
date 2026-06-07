@@ -470,6 +470,8 @@ fn inject_meta_vars(meta_vars: &[String], pattern: &mut String) {
             return full_name;
         }
 
+        let name = name.trim_end_matches(|c: char| c.is_numeric() || c == '_');
+
         // TODO: What about rules that introduce a new slot? Those shouldn't be wrapped in 'var'
         match kind {
             "pat" => format!("?{}", name),

@@ -247,11 +247,11 @@ mod test {
             (app (app (app %rise.o (tuple (cons ?F (cons ?D (cons ?E nil))))) ?a) ?b))");
 
         let map_fuse_gen: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("map-fuse-gen";
-        "(app (app (app %rise.o (tuple (cons (arr $1 (scope ?n_39499 ?A_39494)) (cons (arr $2 (scope ?n_39499 ?B_39492)) (cons (arr $3 (scope ?n_39499 ?C_39493)) nil)))))
-         (app (app (app %rise.map ?n_39499) (tuple (cons ?B_39492 (cons ?C_39493 nil)))) ?a_39496))
-         (app (app (app %rise.map ?n_39499) (tuple (cons ?A_39494 (cons ?B_39492 nil)))) ?b_39498))"
-        => "(app (app (app %rise.map ?n_39499) (tuple (cons ?A_39494 (cons ?C_39493 nil))))
-            (app (app (app %rise.o (tuple (cons ?A_39494 (cons ?B_39492 (cons ?C_39493 nil))))) ?a_39496) ?b_39498))");
+        "(app (app (app %rise.o (tuple (cons (arr $1 (scope ?n ?A)) (cons (arr $2 (scope ?n ?B)) (cons (arr $3 (scope ?n ?C)) nil)))))
+         (app (app (app %rise.map ?n) (tuple (cons ?B (cons ?C nil)))) ?a))
+         (app (app (app %rise.map ?n) (tuple (cons ?A (cons ?B nil)))) ?b))"
+        => "(app (app (app %rise.map ?n) (tuple (cons ?A (cons ?C nil))))
+            (app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil))))) ?a) ?b))");
 
         set_rulesets(vec![RuleSet::Normalize]);
         let mut rules = get_rules();
