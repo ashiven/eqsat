@@ -7,9 +7,7 @@ plugin core;
 //
 // plugin eqsat;
 // import _pipeline;
-// 
-// lam extern _impl(): %eqsat.Impl =
-//     %eqsat.__IMPL__;
+// import _config___IMPL__;
 
 fun pow(a b: I32): I32 =
     con pow_cont(v: I32) =

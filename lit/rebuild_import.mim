@@ -4,9 +4,7 @@
 plugin core;
 plugin eqsat;
 import _pipeline;
-
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.__IMPL__;
+import _config___IMPL__;
 
 ccon atoi[%mem.M 0, %mem.Ptr («⊤:Nat; I8», 0), Cn [%mem.M 0, I32]];
 

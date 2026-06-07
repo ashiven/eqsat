@@ -4,9 +4,7 @@
 plugin core;
 plugin eqsat;
 import _pipeline;
-
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.__IMPL__;
+import _config___IMPL__;
 
 con seq {A: *} (n: Nat) (body: [Cn A] → Cn A) (exit: Cn A) (acc: A)@tt =
     head(0, acc)

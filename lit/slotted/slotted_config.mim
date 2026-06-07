@@ -3,11 +3,6 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-// If you want to use the 'slotted-egraphs' implementation
-// instead of 'egg' just define the config lambda below.
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.slotted;
-
 // Note that you need to provide specific prefixes in the names
 // of your rule variables. Any variable starting with "pat_" is
 // interpreted as a pattern variable so "pat_foo" becomes "?foo"
@@ -15,20 +10,23 @@ lam extern _impl(): %eqsat.Impl =
 // will be converted to "(var $bar)".
 rule foo (pat_a: Nat, slot_b: Nat) : (%core.nat.add (pat_a, (%core.nat.sub (slot_b, pat_a)))) => slot_b;
 
-// Here you can specify which of the rules that you defined
-// above should be used for rewriting.
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (foo);
-
-// If you want to use a set of rules defined in 'slotted-egraphs' as part of
-// the 'eqsat-rs' library, simply provide the name of the ruleset.
-lam extern _rulesets(): %eqsat.Ruleset =
-    %eqsat.rulesets (%eqsat.standard,);
-
-// Use the following config function to specify the cost function
-// that will be used to extract the most optimal term after rewriting.
-lam extern _cost_fn(): %eqsat.CostFun =
-    %eqsat.MinAstSize;
+lam extern _config() =
+    %eqsat.config (
+        // If you want to use the 'slotted-egraphs' implementation
+        // instead of 'egg' just define the config lambda below.
+        %option.some %eqsat.slotted,
+        // Use the following config value to specify the cost function
+        // that will be used to extract the most optimal term after rewriting.
+        %option.some %eqsat.MinAstSize,
+        // If you want to use a set of rules defined in 'slotted-egraphs' as part of
+        // the 'eqsat-rs' library, simply provide the name of the ruleset.
+        %option.some (%eqsat.rulesets (%eqsat.standard)),
+        // Here you can specify which of the rules that you defined
+        // above should be used for rewriting.
+        %option.some (%eqsat.rules (foo)),
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 fun extern main(mem: %mem.M 0, argc: I32, argv: %mem.Ptr0 (%mem.Ptr0 I8)): [%mem.M 0, I32] =
     return (mem, argc);

@@ -5,9 +5,7 @@ plugin math;
 plugin mem;
 plugin eqsat;
 import _pipeline;
-
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.__IMPL__;
+import _config___IMPL__;
 
 rec Num = [T: *, add: [T, T] → T];
 lam my_add {pe: «2; Nat»} (a b: %math.F pe): %math.F pe = %math.arith.add 0 (a, b);

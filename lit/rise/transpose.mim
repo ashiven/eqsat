@@ -9,11 +9,15 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-lam extern _impl(): %eqsat.Impl = 
-    %eqsat.slotted;
-
-lam extern _rulesets(): %eqsat.Ruleset =
-    %eqsat.rulesets (%eqsat.rise, );
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.slotted,
+        %option.none @%eqsat.CostFun,
+        %option.some (%eqsat.rulesets (%eqsat.rise)),
+        %option.none @%eqsat.Rules,
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 fun extern transpose(arg: «3; «4; Nat»»): «3; «4; Nat»» =
     return (%rise.transpose (%rise.transpose arg));

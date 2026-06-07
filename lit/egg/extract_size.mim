@@ -3,9 +3,6 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.egg;
-
 // This is not a mathematically correct rewrite but it serves to demonstrate extraction by term-size.
 // With this rewrite:
 // - The term-size increases
@@ -13,11 +10,15 @@ lam extern _impl(): %eqsat.Impl =
 // Therefore we would expect to end up with the lhs when extracting by term-size.
 rule foo (a: Nat, b: Nat, c: Nat) : %core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, 1)))) => %core.nat.add (%core.nat.add (a, b), %core.nat.add (c, %core.nat.add (a, 1)));
 
-lam extern _rules(): %eqsat.Rules =
-    %eqsat.rules (foo);
-
-lam extern _cost_fn(): %eqsat.CostFun =
-    %eqsat.AstSize;
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.egg,
+        %option.some %eqsat.AstSize,
+        %option.none @%eqsat.Ruleset,
+        %option.some (%eqsat.rules (foo)),
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =
     return (%core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, 1)))));

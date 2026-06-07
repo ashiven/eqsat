@@ -3,9 +3,7 @@
 plugin core;
 plugin eqsat;
 import _pipeline;
-
-lam extern _impl(): %eqsat.Impl =
-    %eqsat.__IMPL__;
+import _config___IMPL__;
 
 lam pow(a b: Nat)@(%core.pe.is_closed b): Nat =
     (%core.nat.mul (a, pow(a, %core.nat.sub (b, 1))), 1)#(%core.ncmp.e (b, 0));

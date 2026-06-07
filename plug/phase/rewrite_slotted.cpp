@@ -59,9 +59,7 @@ ConfigValues RewriteSlotted::import_config() {
     DefVec lams;
     for (auto def : old_world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
-            auto codom = lam->codom();
-            if (Axm::isa<eqsat::Ruleset>(codom) || Axm::isa<eqsat::CostFun>(codom) || Axm::isa<eqsat::Impl>(codom)
-                || Axm::isa<eqsat::Reaches>(codom) || Axm::isa<eqsat::Select>(codom)) {
+            if (lam->codom()->sym().str() == "%eqsat.Configs") {
                 lams.push_back(lam);
                 def->internalize();
             }
@@ -75,52 +73,68 @@ ConfigValues RewriteSlotted::import_config() {
     OptionSelected selected = {nullptr};
 
     for (auto lam : lams) {
-        auto body = lam->as<Lam>()->body();
+        auto body        = lam->as<Lam>()->body();
+        auto config_defs = body->as<Tuple>()->ops();
+        for (auto config_def : config_defs) {
+            auto config_opt = get_config_option(config_def);
+            if (config_opt.has_value()) {
+                auto config_val = config_opt.value();
 
-        if (auto ruleset_config = Axm::isa<eqsat::rulesets>(body)) {
-            // Rulesets
-            for (auto ruleset : ruleset_config->args())
-                if (Axm::isa<eqsat::standard>(ruleset))
-                    rulesets.push_back(RuleSet::Standard);
-                else if (Axm::isa<eqsat::rise>(ruleset))
-                    rulesets.push_back(RuleSet::Rise);
-                else if (Axm::isa<eqsat::normalize>(ruleset))
-                    rulesets.push_back(RuleSet::Normalize);
-                else
-                    error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
+                if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {
+                    // Rulesets
+                    for (auto ruleset : ruleset_config->args())
+                        if (Axm::isa<eqsat::standard>(ruleset))
+                            rulesets.push_back(RuleSet::Standard);
+                        else if (Axm::isa<eqsat::rise>(ruleset))
+                            rulesets.push_back(RuleSet::Rise);
+                        else if (Axm::isa<eqsat::normalize>(ruleset))
+                            rulesets.push_back(RuleSet::Normalize);
+                        else
+                            error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
 
-        } else if (auto reaches = Axm::isa<eqsat::reaches>(body)) {
-            // Reaches assertions
-            auto [start_term, end_term, max_steps] = reaches->args<3>();
-            if (auto start_lam = start_term->isa<Lam>(); !(start_lam && start_lam->is_closed()))
-                error("%eqsat.reaches currently only supports variables to root-level lambdas");
-            if (auto end_lam = end_term->isa<Lam>(); !(end_lam && end_lam->is_closed()))
-                error("%eqsat.reaches currently only supports variables to root-level lambdas");
+                } else if (auto reaches = Axm::isa<eqsat::reaches>(config_val)) {
+                    // Reaches assertions
+                    auto [start_term, end_term, max_steps] = reaches->args<3>();
+                    if (auto start_lam = start_term->isa<Lam>(); !(start_lam && start_lam->is_closed()))
+                        error("%eqsat.reaches currently only supports variables to root-level lambdas");
+                    if (auto end_lam = end_term->isa<Lam>(); !(end_lam && end_lam->is_closed()))
+                        error("%eqsat.reaches currently only supports variables to root-level lambdas");
+                    reaches_args.push_back(
+                        {start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
-            reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
+                } else if (Axm::isa<eqsat::MinAstSize>(config_val)) {
+                    // Cost functions
+                    cost_fn = CostFn::MinAstSize;
+                } else if (Axm::isa<eqsat::MaxAstSize>(config_val)) {
+                    cost_fn = CostFn::MaxAstSize;
 
-        } else if (Axm::isa<eqsat::MinAstSize>(body)) {
-            // Cost functions
-            cost_fn = CostFn::MinAstSize;
-        } else if (Axm::isa<eqsat::MaxAstSize>(body)) {
-            cost_fn = CostFn::MaxAstSize;
+                } else if (auto select = Axm::isa<eqsat::select>(config_val)) {
+                    // Selections
+                    auto option = new rust::Vec<rust::String>();
+                    for (auto term : select->args()) {
+                        if (auto lam = term->isa<Lam>(); !(lam && lam->is_closed()))
+                            error("%eqsat.select currently only supports variables to root-level lambdas");
+                        option->push_back(term->sym().str());
+                    }
+                    selected.option = option;
 
-        } else if (auto select = Axm::isa<eqsat::select>(body)) {
-            // Selections
-            auto option = new rust::Vec<rust::String>();
-            for (auto term : select->args()) {
-                if (auto lam = term->isa<Lam>(); !(lam && lam->is_closed()))
-                    error("%eqsat.select currently only supports variables to root-level lambdas");
-                option->push_back(term->sym().str());
+                } else if (Axm::isa<eqsat::rules>(config_val) || Axm::isa<eqsat::rules_kind>(config_val)) {
+                    // Rules
+                    auto dom       = old_world().sigma();
+                    auto codom     = old_world().annex<eqsat::Rules>();
+                    auto rules_lam = old_world().mut_lam(dom, codom)->set("_rules");
+                    rules_lam->set_filter(false);
+                    rules_lam->set_body(config_val);
+                    rules_lam->externalize();
+
+                } else if (Axm::isa<eqsat::slotted>(config_val) || Axm::isa<eqsat::egg>(config_val)) {
+                    // Implementations
+                    continue;
+
+                } else {
+                    error("Slotted: Invalid config value: {}", config_val);
+                }
             }
-            selected.option = option;
-
-        } else if (Axm::isa<eqsat::slotted>(body) || Axm::isa<eqsat::egg>(body)) {
-            // Implementations
-            continue;
-
-        } else {
-            error("Slotted: Invalid config value: {}", body);
         }
     }
 

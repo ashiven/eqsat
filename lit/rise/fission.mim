@@ -9,12 +9,17 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-lam extern _impl(): %eqsat.Impl = 
-    %eqsat.slotted;
-
-// Works but takes a very long time (30s), so we leave it commented out for now.
-// lam extern _rulesets(): %eqsat.Ruleset =
-//   %eqsat.rulesets (%eqsat.rise, );
+lam extern _config() =
+    %eqsat.config (
+        %option.some %eqsat.slotted,
+        %option.none @%eqsat.CostFun,
+        // Works but takes a very long time (30s), so we leave it commented out for now.
+        // %option.some (%eqsat.rulesets (%eqsat.rise)),
+        %option.none @%eqsat.Ruleset,
+        %option.none @%eqsat.Rules,
+        %option.none @%eqsat.Reaches,
+        %option.none @%eqsat.Select,
+    );
 
 lam f1(a: Nat)@ff = %core.nat.add (a, 1);
 lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
