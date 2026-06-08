@@ -1,5 +1,5 @@
-use crate::mim_slotted::{MimSlotted, analysis::MimSlottedAnalysis};
-use slotted_egraphs::Rewrite;
+use crate::mim_slotted::{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis};
+use slotted_egraphs::{EGraph, Rewrite};
 
 pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
     let rules = vec![
@@ -41,4 +41,16 @@ fn core_mul_comm() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
     let pat = "(app %core.nat.mul (tuple (cons ?a (cons ?b nil))))";
     let outpat = "(app %core.nat.mul (tuple (cons ?b (cons ?a nil))))";
     Rewrite::new("core-mul-comm", pat, outpat)
+}
+
+pub type NormalizeData = ();
+
+pub struct NormalizeAnalysis;
+impl NormalizeAnalysis {
+    pub fn make(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, _enode: &MimSlotted) -> AnalysisData {
+        AnalysisData::default()
+    }
+    pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {
+        AnalysisData::default()
+    }
 }
