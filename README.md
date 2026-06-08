@@ -56,7 +56,7 @@ int main(int, char**) {
 
         // rule foo (x: Nat): %core.nat.add (x, 0) => x;
         auto foo = w.mut_rule(w.type_nat())->set("foo");
-        auto x = foo->var()->set("pat_x");
+        auto x = foo->var()->set("x");
         auto lhs = w.call(core::nat::add, w.tuple(x, lit_nat(0)))
         auto rhs = x;
         foo->set_lhs(lhs);
@@ -106,9 +106,7 @@ plugin core;
 plugin eqsat;
 
 // You can define your own syntactic rewrite-rules in `MimIR`.
-// To differentiate between slots: "(var $x)" and patterns: "?x" you should
-// prefix variables with "slot_" or "pat_" when using the `slotted` implementation.
-rule foo (slot_x: Nat): %core.nat.add (slot_x, 0) => slot_x;
+rule foo (x: Nat): %core.nat.add (x, 0) => x;
 
 lam extern _config() =
     %eqsat.config (

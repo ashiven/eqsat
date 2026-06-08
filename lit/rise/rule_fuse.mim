@@ -7,9 +7,9 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
-    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
-=>  %rise.map @pat_n (%rise.o pat_a pat_b);
+rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
+    %rise.o (%rise.map @n a) (%rise.map @n b)
+=>  %rise.map @n (%rise.o a b);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

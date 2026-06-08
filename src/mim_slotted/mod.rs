@@ -456,32 +456,22 @@ fn replace_dummy_slots(counter: &mut usize, pattern: &mut String) {
 }
 
 fn inject_meta_vars(meta_vars: &[String], pattern: &mut String) {
-    // We differentiate between meta vars with prefix "pat_" and meta vars with prefix "slot_".
-    // As the names suggest, the first kind are pattern vars and the second are slots
-
-    let re = Regex::new(r"(pat|slot)_([_A-Za-z0-9]+)").unwrap();
+    let re = Regex::new(r"[_A-Za-z0-9]+").unwrap();
 
     let res = re.replace_all(pattern, |caps: &regex::Captures| {
-        let kind = &caps[1];
-        let mut name = &caps[2];
+        let mut name = caps[0].to_string();
 
-        let full_name = format!("{}_{}", kind, name);
-        if !meta_vars.contains(&full_name) {
-            return full_name;
+        if !meta_vars.contains(&name) {
+            return name;
         }
 
         if let Some((base, suffix)) = name.rsplit_once('_')
             && suffix.chars().all(|c| c.is_ascii_digit())
         {
-            name = base;
+            name = base.to_string();
         }
 
-        // TODO: What about rules that introduce a new slot? Those shouldn't be wrapped in 'var'
-        match kind {
-            "pat" => format!("?{}", name),
-            "slot" => format!("(var ${})", name),
-            _ => unreachable!(),
-        }
+        format!("?{}", name)
     });
 
     *pattern = res.into_owned();

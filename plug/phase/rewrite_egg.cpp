@@ -58,6 +58,8 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
                         rulesets.push_back(RuleSet::Core);
                     else if (Axm::isa<eqsat::math>(ruleset))
                         rulesets.push_back(RuleSet::Math);
+                    // AUTOGEN START: egg-ruleset-cpp
+                    // AUTOGEN END: egg-ruleset-cpp
                     else
                         assert(false && "Provided ruleset does not exist for egg");
 

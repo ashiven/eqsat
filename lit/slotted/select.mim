@@ -3,7 +3,7 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-rule foo (pat_a: Nat) : (%core.nat.mul ((%core.nat.mul (pat_a, 4)), 4)) => (%core.nat.mul (pat_a, 16));
+rule foo (a: Nat) : (%core.nat.mul ((%core.nat.mul (a, 4)), 4)) => (%core.nat.mul (a, 16));
 
 fun extern start_term (a: Nat): Nat =
     return (%core.nat.mul ((%core.nat.mul (a, 4)), 4));

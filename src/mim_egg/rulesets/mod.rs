@@ -13,6 +13,8 @@ pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
         match ruleset {
             RuleSet::Core => rules.extend(core::rules()),
             RuleSet::Math => rules.extend(math::rules()),
+            // AUTOGEN START: egg-ruleset-rust-match
+            // AUTOGEN END: egg-ruleset-rust-match
             _ => (),
         }
     }

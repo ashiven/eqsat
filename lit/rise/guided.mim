@@ -16,17 +16,17 @@ lam extern _compile(): %compile.Phase =
 // 2) a o (b o c)             => (a o b) o c
 // 3) map a o map b           => map (a o b)
 
-rule transpose_mm(pat_T: *, pat_a: pat_T → pat_T, pat_n1: Nat, pat_n2: Nat):
-    %rise.o (%rise.transpose @(pat_n1, pat_n2) @pat_T) (%rise.map (%rise.map pat_a))
-=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @pat_T);
+rule transpose_mm(T: *, a: T → T, n1: Nat, n2: Nat):
+    %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
+=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
 
-rule compose_assoc(pat_A pat_B pat_C pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
-    %rise.o pat_a (%rise.o pat_b pat_c)
-=>  %rise.o (%rise.o pat_a pat_b) pat_c;
+rule compose_assoc(A B C D: *, a: C → D, b: B → C, c: A → B):
+    %rise.o a (%rise.o b c)
+=>  %rise.o (%rise.o a b) c;
 
-rule map_fuse(pat_A pat_B pat_C: *, pat_a: pat_B → pat_C, pat_b: pat_A → pat_B, pat_n: Nat):
-    %rise.o (%rise.map @pat_n pat_a) (%rise.map @pat_n pat_b)
-=>  %rise.map @pat_n (%rise.o pat_a pat_b);
+rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
+    %rise.o (%rise.map @n a) (%rise.map @n b)
+=>  %rise.map @n (%rise.o a b);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

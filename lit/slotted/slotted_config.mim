@@ -3,12 +3,7 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-// Note that you need to provide specific prefixes in the names
-// of your rule variables. Any variable starting with "pat_" is
-// interpreted as a pattern variable so "pat_foo" becomes "?foo"
-// and any variable starting with "slot_" is seen as a slot so "slot_bar"
-// will be converted to "(var $bar)".
-rule foo (pat_a: Nat, slot_b: Nat) : (%core.nat.add (pat_a, (%core.nat.sub (slot_b, pat_a)))) => slot_b;
+rule foo (a: Nat, b: Nat) : (%core.nat.add (a, (%core.nat.sub (b, a)))) => b;
 
 lam extern _config() =
     %eqsat.config (

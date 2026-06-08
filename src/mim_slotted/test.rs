@@ -103,7 +103,7 @@ fn convert_custom_rule() {
         foo
         (cons
             (metavar
-                pat_a_22735
+                a_22735
                 Nat)
         (cons
             (metavar
@@ -120,10 +120,10 @@ fn convert_custom_rule() {
                             (cons
                                 slot_b_22734
                             (cons
-                                pat_a_22735
+                                a_22735
                             nil))))
                 (cons
-                    pat_a_22735
+                    a_22735
                 nil))))
         slot_b_22734
         (lit tt Bool))";
@@ -167,9 +167,20 @@ fn rule_replace_dummy_slots() {
 
 #[test]
 fn rule_inject_meta_vars() {
-    let meta_vars = vec!["pat_a".to_string(), "slot_b".to_string(), "c".to_string()];
-    let mut before = "(app pat_d (app pat_a (app c slot_b)))".to_string();
-    let after = "(app pat_d (app ?a (app c (var $b))))".to_string();
+    let meta_vars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+    let mut before = "(app d (app a (app c b)))".to_string();
+    let after = "(app d (app ?a (app ?c ?b)))".to_string();
+
+    inject_meta_vars(&meta_vars, &mut before);
+
+    assert_eq!(before, after);
+}
+
+#[test]
+fn rule_inject_meta_vars_substr() {
+    let meta_vars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+    let mut before = "(app d (app abc (app c b)))".to_string();
+    let after = "(app d (app abc (app ?c ?b)))".to_string();
 
     inject_meta_vars(&meta_vars, &mut before);
 

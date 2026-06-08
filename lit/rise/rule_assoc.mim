@@ -7,9 +7,9 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule compose_assoc(pat_A: *, pat_B: *, pat_C: *, pat_D: *, pat_a: pat_C → pat_D, pat_b: pat_B → pat_C, pat_c: pat_A → pat_B):
-    %rise.o pat_a (%rise.o pat_b pat_c)
-=>  %rise.o (%rise.o pat_a pat_b) pat_c;
+rule compose_assoc(A: *, B: *, C: *, D: *, a: C → D, b: B → C, c: A → B):
+    %rise.o a (%rise.o b c)
+=>  %rise.o (%rise.o a b) c;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

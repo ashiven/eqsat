@@ -7,9 +7,9 @@ lam extern _compile(): %compile.Phase =
         %eqsat.eqsat_phase,
     );
 
-rule transpose_mm(pat_a: Nat → Nat, pat_n1: Nat, pat_n2: Nat):
-    %rise.o (%rise.transpose @(pat_n1, pat_n2) @Nat) (%rise.map (%rise.map pat_a))
-=>  %rise.o (%rise.map (%rise.map pat_a)) (%rise.transpose @(pat_n1, pat_n2) @Nat);
+rule transpose_mm(a: Nat → Nat, n1: Nat, n2: Nat):
+    %rise.o (%rise.transpose @(n1, n2) @Nat) (%rise.map (%rise.map a))
+=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @Nat);
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

@@ -66,12 +66,16 @@ axm %eqsat.slotted: %eqsat.Config;
 ///
 axm %eqsat.core: %eqsat.Ruleset;
 axm %eqsat.math: %eqsat.Ruleset;
+/// AUTOGEN START: egg-ruleset-mim
+/// AUTOGEN END: egg-ruleset-mim
 ///
 /// ### Slotted
 ///
 axm %eqsat.standard: %eqsat.Ruleset;
 axm %eqsat.rise: %eqsat.Ruleset;
 axm %eqsat.normalize: %eqsat.Ruleset;
+/// AUTOGEN START: slotted-ruleset-mim
+/// AUTOGEN END: slotted-ruleset-mim
 ///
 ///
 /// ## Cost functions

@@ -18,6 +18,8 @@ pub fn get_rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
                 RuleSet::Standard => rules.extend(standard::rules()),
                 RuleSet::Rise => rules.extend(rise::rules()),
                 RuleSet::Normalize => rules.extend(normalize::rules()),
+                // AUTOGEN START: slotted-ruleset-rust-match
+                // AUTOGEN END: slotted-ruleset-rust-match
                 _ => (),
             }
         }

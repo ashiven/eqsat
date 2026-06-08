@@ -85,6 +85,8 @@ ConfigValues RewriteSlotted::import_config() {
                         rulesets.push_back(RuleSet::Rise);
                     else if (Axm::isa<eqsat::normalize>(ruleset))
                         rulesets.push_back(RuleSet::Normalize);
+                    // AUTOGEN START: slotted-ruleset-cpp
+                    // AUTOGEN END: slotted-ruleset-cpp
                     else
                         error("%eqsat.rulesets: Ruleset {} not found for %eqsat.slotted", ruleset);
 

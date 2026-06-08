@@ -18,10 +18,15 @@ pub mod bridge {
         // Egg
         Core,
         Math,
+        // AUTOGEN START: egg-ruleset-rust-ffi
+        // AUTOGEN END: egg-ruleset-rust-ffi
+
         // Slotted
         Standard,
         Rise,
         Normalize,
+        // AUTOGEN START: slotted-ruleset-rust-ffi
+        // AUTOGEN END: slotted-ruleset-rust-ffi
     }
 
     #[derive(Debug)]
