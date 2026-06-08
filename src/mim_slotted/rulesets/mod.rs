@@ -7,6 +7,8 @@ use slotted_egraphs::*;
 pub mod normalize;
 pub mod rise;
 pub mod standard;
+// AUTOGEN START: slotted-ruleset-rust-mod
+// AUTOGEN END: slotted-ruleset-rust-mod
 
 pub fn get_rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
     let mut rules = Vec::new();

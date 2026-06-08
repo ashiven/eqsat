@@ -5,6 +5,8 @@ use egg::Rewrite;
 
 pub mod core;
 pub mod math;
+// AUTOGEN START: egg-ruleset-rust-mod
+// AUTOGEN END: egg-ruleset-rust-mod
 
 pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
     let mut rules = Vec::new();

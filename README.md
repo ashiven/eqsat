@@ -172,21 +172,19 @@ cmake --build build -j$(nproc)
 ## Rulesets
 
 You may want to define a set of rewrite-rules that are more complex than the syntactic rewrite-rules
-that can be defined in **MimIR**. In this case, you should follow this implementation guide on adding
+that can be defined in **MimIR**. In this case, you should follow the implementation guide below on adding
 a set of rules directly in **egg** or **slotted-egraphs**. (The example defines a ruleset for **egg**)
 
-**1. First you should fork and then clone this repository**
+To automatically generate all of the boilerplate code shown below, use the following script:
 
 ```bash
-# After forking:
-git clone https://github.com/your-username/eqsat.git
+python ./scripts/new_ruleset.py egg myrules
 ```
 
-**2. Define a set of rules in `src/mim_egg/rulesets/myrules.rs`**
+**1. Define a set of rules in `src/mim_egg/rulesets/myrules.rs`**
 
 ```rust
-use crate::mim_egg::Mim;
-use crate::mim_egg::analysis::MimAnalysis;
+use crate::mim_egg::{Mim, analysis::MimAnalysis};
 use egg::{Rewrite, Pattern};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
@@ -199,11 +197,11 @@ pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
 fn my_rule() -> Rewrite<Mim, MimAnalysis> {
     let pat: Pattern<Mim> = "(app %foo.bar ?baz)".parse().unwrap();
     let outpat: Pattern<Mim> = "?baz".parse().unwrap();
-    Rewrite::new("my_rule", pat, outpat).unwrap()
+    Rewrite::new("my-rule", pat, outpat).unwrap()
 }
 ```
 
-**3. Add your ruleset to the RuleSet enum in `src/ffi.rs`**
+**2. Add your ruleset to the RuleSet enum in `src/ffi.rs`**
 
 ```rust
 // ...
@@ -220,7 +218,7 @@ pub mod bridge {
 // ...
 ```
 
-**4. Ensure that your ruleset is registered in `src/mim_egg/rulesets/mod.rs`**
+**3. Ensure that your ruleset is registered in `src/mim_egg/rulesets/mod.rs`**
 
 ```rust
 use crate::RuleSet;
@@ -246,7 +244,7 @@ pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
 }
 ```
 
-**5. Add your ruleset as a new axiom to `eqsat.mim`**
+**4. Add your ruleset as a new axiom to `eqsat.mim`**
 
 ```
 /// ...
@@ -263,25 +261,18 @@ axm %eqsat.standard: %eqsat.Ruleset;
 /// ...
 ```
 
-**6. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`**
+**5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`**
 
 ```cpp
-std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
     // ...
-    rust::Vec<RuleSet> rulesets;
-    CostFn cost_fn = CostFn::AstSize;
-    for (auto lam : lams) {
-        auto body = lam->as<Lam>()->body();
-        if (auto body_app = body->isa<App>()) {
-            if (auto ruleset_config = Axm::isa<eqsat::rulesets>(body_app->arg())) {
-                for (auto ruleset : ruleset_config->args())
-                    if (Axm::isa<eqsat::core>(ruleset))
-                        rulesets.push_back(RuleSet::Core);
-                    // Add this:
-                    else if (Axm::isa<eqsat::myrules>(ruleset))
-                        rulesets.push_back(RuleSet::MyRules);
-                    else
-                        assert(false && "Provided ruleset does not exist for egg");
+    for (auto ruleset : ruleset_config->args())
+        if (Axm::isa<eqsat::core>(ruleset))
+            rulesets.push_back(RuleSet::Core);
+        else if (Axm::isa<eqsat::math>(ruleset))
+            rulesets.push_back(RuleSet::Math);
+        // Add the ruleset:
+        else if (Axm::isa<eqsat::myrules>(ruleset))
+            rulesets.push_back(RuleSet::MyRules);
     // ...
 }
 ```
