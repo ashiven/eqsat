@@ -134,7 +134,7 @@ def replace_analysis_rust_import(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-use crate::mim_{implementation}::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
+use crate::mim_{implementation}::rulesets::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
 """
 
     file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
