@@ -43,9 +43,11 @@ fn core_mul_comm() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
     Rewrite::new("core-mul-comm", pat, outpat)
 }
 
+#[allow(dead_code)]
 pub type NormalizeData = ();
-
 pub struct NormalizeAnalysis;
+
+#[allow(dead_code)]
 impl NormalizeAnalysis {
     pub fn make(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, _enode: &MimSlotted) -> AnalysisData {
         AnalysisData::default()

@@ -1,5 +1,7 @@
 use crate::ffi::bridge::RuleSet;
 use crate::mim_slotted::types::{TypeAnalysis, TypeData};
+// AUTOGEN START: slotted-analysis-rust-import
+// AUTOGEN END: slotted-analysis-rust-import
 use crate::mim_slotted::{MimSlotted, RULESETS};
 use slotted_egraphs::*;
 
@@ -12,10 +14,8 @@ pub struct AnalysisData {
 }
 
 impl AnalysisData {
-    fn combine(self, other: AnalysisData) -> Self {
-        Self {
-            type_: self.type_.or(other.type_),
-        }
+    fn combine(&mut self, other: AnalysisData) {
+        self.type_ = self.type_.take().or(other.type_);
     }
 }
 
@@ -24,7 +24,7 @@ fn combined_make(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
     // Analyses applied for all rulesets
     let type_data = TypeAnalysis::make(eg, enode);
-    combined_data = combined_data.combine(type_data);
+    combined_data.combine(type_data);
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
@@ -32,9 +32,11 @@ fn combined_make(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
             #[allow(clippy::single_match)]
             match *ruleset {
                 RuleSet::Rise => {
-                    // let type_data = TypeAnalysis::make(eg, enode);
-                    // combined_data = combined_data.combine(type_data)
+                    // let data = RiseAnalysis::make(eg, enode);
+                    // combined_data.combine(data)
                 }
+                // AUTOGEN START: slotted-analysis-rust-make
+                // AUTOGEN END: slotted-analysis-rust-make
                 _ => (),
             };
         }
@@ -48,7 +50,7 @@ fn combined_merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
 
     // Analyses applied for all rulesets
     let type_data = TypeAnalysis::merge(l.clone(), r.clone());
-    combined_data = combined_data.combine(type_data);
+    combined_data.combine(type_data);
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
@@ -56,9 +58,11 @@ fn combined_merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
             #[allow(clippy::single_match)]
             match *ruleset {
                 RuleSet::Rise => {
-                    // let type_data = TypeAnalysis::merge(l.clone(), r.clone());
-                    // combined_data = combined_data.combine(type_data)
+                    // let data = RiseAnalysis::merge(l.clone(), r.clone());
+                    // combined_data.combine(data)
                 }
+                // AUTOGEN START: slotted-analysis-rust-merge
+                // AUTOGEN END: slotted-analysis-rust-merge
                 _ => (),
             };
         }

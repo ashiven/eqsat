@@ -125,29 +125,116 @@ def replace_ruleset_rust_ffi(implementation: str, ruleset_name: str):
     file_path.write_text(content)
 
 
+def replace_analysis_rust_import(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-import\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-import\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+use crate::mim_{implementation}::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
+def replace_analysis_rust_make(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-make\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-make\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+                RuleSet::{ruleset_name.capitalize()} => {{
+                    let data = {ruleset_name.capitalize()}Analysis::make(eg, enode);
+                    combined_data.combine(data)
+                }}
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
+def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-merge\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-merge\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+                RuleSet::{ruleset_name.capitalize()} => {{
+                    let data = {ruleset_name.capitalize()}Analysis::merge(l.clone(), r.clone());
+                    combined_data.combine(data)
+                }}
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
 def create_new_ruleset_file(implementation: str, ruleset_name: str):
     file_path = (
         Path(__file__).parent.parent
         / f"src/mim_{implementation}/rulesets/{ruleset_name}.rs"
     )
 
-    generated_slotted = """
-use crate::mim_slotted::{MimSlotted, analysis::MimSlottedAnalysis};
-use slotted_egraphs::Rewrite;
+    generated_slotted = f"""
+use crate::mim_slotted::{{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis}};
+use slotted_egraphs::{{EGraph, Rewrite}};
 
-pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
+pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {{
     let rules = vec![
         my_rule(),
     ];
 
     rules
-}
+}}
 
-fn my_rule() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn my_rule() -> Rewrite<MimSlotted, MimSlottedAnalysis> {{
     let pat = "(tuple (cons ?a (cons ?a (cons ?a nil))))";
     let outpat = "(pack $dummy (scope (lit 3 Nat) ?a))";
     Rewrite::new("my-rule", pat, outpat)
-}
+}}
+
+pub type {ruleset_name.capitalize()}Data = ();
+pub struct {ruleset_name.capitalize()}Analysis;
+
+impl {ruleset_name.capitalize()}Analysis {{
+    pub fn make(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, _enode: &MimSlotted) -> AnalysisData {{
+        AnalysisData::default()
+    }}
+    pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {{
+        AnalysisData::default()
+    }}
+}}
 """.lstrip()
 
     generated_egg = """
@@ -186,6 +273,10 @@ def main():
     replace_ruleset_rust_mod(args.implementation, args.ruleset_name)
     replace_ruleset_rust_match(args.implementation, args.ruleset_name)
     replace_ruleset_rust_ffi(args.implementation, args.ruleset_name)
+
+    replace_analysis_rust_import(args.implementation, args.ruleset_name)
+    replace_analysis_rust_make(args.implementation, args.ruleset_name)
+    replace_analysis_rust_merge(args.implementation, args.ruleset_name)
 
     create_new_ruleset_file(args.implementation, args.ruleset_name)
 
