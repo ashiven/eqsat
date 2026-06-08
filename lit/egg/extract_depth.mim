@@ -12,12 +12,9 @@ rule foo (a: Nat, b: Nat, c: Nat) : %core.nat.add (a, (%core.nat.add (b, %core.n
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.egg,
-        %option.some %eqsat.AstDepth,
-        %option.none @%eqsat.Ruleset,
-        %option.some (%eqsat.rules (foo)),
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.egg,
+        %eqsat.AstDepth,
+        %eqsat.rules (foo),
     );
 
 con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =

@@ -8,12 +8,8 @@ rule bar (pat_a: Nat) : (%core.nat.add ((%core.nat.add (pat_a, 2)), 2)) => (%cor
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.none @%eqsat.CostFun,
-        %option.none @%eqsat.Ruleset,
-        %option.some (%eqsat.rules (foo, bar)),
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.slotted,
+        %eqsat.rules (foo, bar),
     );
 
 con extern mul_lit_nat [a: Nat, return : Cn Nat] =

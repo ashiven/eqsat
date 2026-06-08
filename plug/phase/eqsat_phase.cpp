@@ -14,19 +14,15 @@ void EqsatPhase::start() {
     // config functions and internalize all of them, including this one.
     for (auto def : world().externals().mutate()) {
         if (auto lam = def->isa<Lam>()) {
-            if (lam->codom()->sym().str() == "%eqsat.Configs") {
+            if (auto arr = lam->codom()->isa<Arr>();
+                (arr && Axm::isa<eqsat::Config>(arr->body())) || Axm::isa<eqsat::Config>(lam->codom())) {
                 auto body        = lam->as<Lam>()->body();
-                auto config_defs = body->as<Tuple>()->ops();
-                for (auto config_def : config_defs) {
-                    auto config_opt = get_config_option(config_def);
-                    if (config_opt.has_value()) {
-                        auto config_val = config_opt.value();
-                        if (Axm::isa<eqsat::slotted>(config_val))
-                            slotted = true;
-                        else if (Axm::isa<eqsat::egg>(config_val))
-                            slotted = false;
-                    }
-                }
+                auto config_vals = body->isa<Tuple>() ? body->as<Tuple>()->ops() : View<const Def*>{body};
+                for (auto config_val : config_vals)
+                    if (Axm::isa<eqsat::slotted>(config_val))
+                        slotted = true;
+                    else if (Axm::isa<eqsat::egg>(config_val))
+                        slotted = false;
             }
         }
     }

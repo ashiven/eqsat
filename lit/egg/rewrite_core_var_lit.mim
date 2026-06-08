@@ -8,12 +8,10 @@ rule bar (a: Nat) : (%core.nat.add ((%core.nat.add (a, 2)), 2)) => (%core.nat.ad
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.egg,
-        %option.some %eqsat.AstSize,
-        %option.some (%eqsat.rulesets (%eqsat.core)),
-        %option.some (%eqsat.rules (foo, bar)),
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.egg,
+        %eqsat.AstSize,
+        %eqsat.rulesets (%eqsat.core),
+        %eqsat.rules (foo, bar),
     );
 
 con extern mul_lit_nat [a: Nat, return : Cn Nat] =

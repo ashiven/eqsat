@@ -5,12 +5,9 @@ import _pipeline;
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.egg,
-        %option.some %eqsat.AstSize,
-        %option.some (%eqsat.rulesets (%eqsat.math)),
-        %option.none @%eqsat.Rules,
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.egg,
+        %eqsat.AstSize,
+        %eqsat.rulesets (%eqsat.math),
     );
 
 con extern and_lit [return : Cn Bool] =

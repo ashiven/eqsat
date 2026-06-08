@@ -14,18 +14,16 @@ lam extern _config() =
     %eqsat.config (
         // If you want to use the 'slotted-egraphs' implementation
         // instead of 'egg' just define the config lambda below.
-        %option.some %eqsat.slotted,
+        %eqsat.slotted,
         // Use the following config value to specify the cost function
         // that will be used to extract the most optimal term after rewriting.
-        %option.some %eqsat.AstSize,
+        %eqsat.AstSize,
         // If you want to use a set of rules defined in 'slotted-egraphs' as part of
         // the 'eqsat-rs' library, simply provide the name of the ruleset.
-        %option.some (%eqsat.rulesets (%eqsat.standard)),
+        %eqsat.rulesets (%eqsat.standard),
         // Here you can specify which of the rules that you defined
         // above should be used for rewriting.
-        %option.some (%eqsat.rules (foo)),
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.rules (foo),
     );
 
 fun extern main(mem: %mem.M 0, argc: I32, argv: %mem.Ptr0 (%mem.Ptr0 I8)): [%mem.M 0, I32] =

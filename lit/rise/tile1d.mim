@@ -56,11 +56,10 @@ fun extern tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2);
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.none @%eqsat.CostFun,
-        %option.some (%eqsat.rulesets (%eqsat.normalize, )),
-        %option.some (%eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split)),
-        %option.some (%eqsat.reaches (tile1d, tile1d_expected, 5)),
-        %option.some (%eqsat.select ()),
+        %eqsat.slotted,
+        %eqsat.rulesets (%eqsat.normalize),
+        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
+        %eqsat.reaches (tile1d, tile1d_expected, 5),
+        %eqsat.select (),
     );
 

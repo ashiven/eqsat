@@ -7,12 +7,9 @@ rule foo (slot_a: Nat, slot_b: Nat, slot_c: Nat) : %core.nat.add (slot_a, (%core
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.some %eqsat.AstSize,
-        %option.none @%eqsat.Ruleset,
-        %option.some (%eqsat.rules (foo)),
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.slotted,
+        %eqsat.AstSize,
+        %eqsat.rules (foo),
     );
 
 con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =

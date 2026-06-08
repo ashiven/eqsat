@@ -41,12 +41,11 @@ fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.none @%eqsat.CostFun,
+        %eqsat.slotted,
         // The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
         // To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
-        %option.some (%eqsat.rulesets (%eqsat.normalize)),
-        %option.some (%eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse)),
-        %option.some (%eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5)),
-        %option.some (%eqsat.select ()),
+        %eqsat.rulesets (%eqsat.normalize),
+        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse),
+        %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5),
+        %eqsat.select (),
     );

@@ -41,54 +41,23 @@ plugin core;
 ///
 /// ## Types
 ///
-/// ### %%eqsat.Impl
-///
-/// Represents the equality saturation implementation that should be used
-///
-axm %eqsat.Impl: *;
-///
-/// ### %%eqsat.Rules
-///
-/// Represents a set of rules defined in MimIR
-///
-axm %eqsat.Rules: *;
-///
 /// ### %%eqsat.Ruleset
 ///
-/// Represents a set of rules defined in 'egg' or 'slotted-egraphs'
+/// The type of a ruleset
 ///
 axm %eqsat.Ruleset: *;
 ///
-/// ### %%eqsat.CostFun
-///
-/// Represents a cost function for extracting the most optimal term from an egraph
-///
-axm %eqsat.CostFun: *;
-///
-/// ### %%eqsat.Reaches
-///
-/// Represents the result of an assertion whether one term can reach another term
-///
-axm %eqsat.Reaches: *;
-///
-/// ### %%eqsat.Select
-///
-/// Represents the result of specifying a set of terms for equality saturation
-///
-axm %eqsat.Select: *;
-///
 /// ### %%eqsat.Config
 ///
-/// A union type of all config types
+/// The type of all config values
 ///
-let %eqsat.Config = %eqsat.Impl ∪ %eqsat.Rules ∪ %eqsat.Ruleset ∪ %eqsat.CostFun ∪ %eqsat.Reaches ∪ %eqsat.Select;
-let %eqsat.Configs = «6; %eqsat.Config»;
+axm %eqsat.Config: *;
 ///
 ///
 /// ## Implementations
 ///
-axm %eqsat.egg: %eqsat.Impl;
-axm %eqsat.slotted: %eqsat.Impl;
+axm %eqsat.egg: %eqsat.Config;
+axm %eqsat.slotted: %eqsat.Config;
 ///
 ///
 /// ## Rulesets
@@ -109,14 +78,14 @@ axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 /// ### Egg/Slotted
 ///
-axm %eqsat.AstSize: %eqsat.CostFun;
+axm %eqsat.AstSize: %eqsat.Config;
 ///
 /// ### Egg
-axm %eqsat.AstDepth: %eqsat.CostFun;
+axm %eqsat.AstDepth: %eqsat.Config;
 ///
 /// ### Slotted
 ///
-axm %eqsat.MaxAstSize: %eqsat.CostFun;
+axm %eqsat.MaxAstSize: %eqsat.Config;
 ///
 ///
 /// ## Operations
@@ -126,7 +95,7 @@ axm %eqsat.MaxAstSize: %eqsat.CostFun;
 /// Configures the equality saturation engine to use the specified rulesets
 /// that are implemented in github.com/ashiven/eqsat/src/[mim_egg|mim_slotted]/rulesets
 ///
-axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Ruleset;
+axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Config;
 ///
 /// ### %%eqsat.rules
 ///
@@ -137,21 +106,21 @@ axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Ruleset;
 /// - Ideally we should have one axiom that accepts a tuple of any mixture of rules, regardless of their type-levels.
 /// - Tried(didn't work): axm %eqsat.rules: {n: Nat, Us: «n; Univ»} → {Ts: «i: n; Type (Us#i)»} → «i: n; Ts#i» → %eqsat.Rules;
 ///
-axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Rules;
-axm %eqsat.rules_kind: {n: Nat, Ts: «n; □»} → «i: n; Ts#i» → %eqsat.Rules;
+axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Config;
+axm %eqsat.rules_kind: {n: Nat, Ts: «n; □»} → «i: n; Ts#i» → %eqsat.Config;
 ///
 /// ### %%eqsat.reaches
 ///
 /// Asserts at runtime whether a start term is able to reach an end term in under n steps.
 ///
-axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %eqsat.Reaches;
+axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %eqsat.Config;
 ///
 /// ### %%eqsat.select
 ///
 /// Select a set of root-level terms for equality saturation. If this is not specified, all terms
 /// will be saturated. If you want no terms to be saturated, apply this axiom to an empty tuple.
 ///
-axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
+axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Config;
 ///
 /// TODO:
 /// - It would be nice to have an axiom or two for debugging purposes.
@@ -160,34 +129,8 @@ axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Select;
 ///
 /// ### %%eqsat.config
 ///
-/// Define the config values for eqsat, default values will be used if none provided.
-///
-let %eqsat.impl_default = %eqsat.slotted;
-let %eqsat.cost_default = %eqsat.AstSize;
-let %eqsat.rulesets_default = %eqsat.rulesets ();
-let %eqsat.rules_default = %eqsat.rules ();
-axm %eqsat.reaches_default: %eqsat.Reaches;
-axm %eqsat.select_default: %eqsat.Select;
-///
-lam cfg {T: *} (x: T): %eqsat.Config =
-    x inj %eqsat.Config;
-///
-lam %eqsat.config (
-    impl:     %option.Opt %eqsat.Impl,
-    cost_fun: %option.Opt %eqsat.CostFun,
-    rulesets: %option.Opt %eqsat.Ruleset,
-    rules:    %option.Opt %eqsat.Rules,
-    reaches:  %option.Opt %eqsat.Reaches,
-    select:   %option.Opt %eqsat.Select,
-): %eqsat.Configs =
-    (
-        cfg (%option.unwrap_or impl     %eqsat.impl_default),
-        cfg (%option.unwrap_or cost_fun %eqsat.cost_default),
-        cfg (%option.unwrap_or rulesets %eqsat.rulesets_default),
-        cfg (%option.unwrap_or rules    %eqsat.rules_default),
-        cfg (%option.unwrap_or reaches  %eqsat.reaches_default),
-        cfg (%option.unwrap_or select   %eqsat.select_default),
-    );
+lam %eqsat.config {n: Nat} (config_vals: «n; %eqsat.Config»): «n; %eqsat.Config» =
+    config_vals;
 ///
 ///
 /// ## Passes and Phases

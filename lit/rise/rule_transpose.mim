@@ -30,10 +30,9 @@ fun extern binding_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.none @%eqsat.CostFun,
-        %option.some (%eqsat.rulesets (%eqsat.normalize)),
-        %option.some (%eqsat.rules (transpose_mm)),
-        %option.some (%eqsat.reaches (binding, binding_expected, 5)),
-        %option.some (%eqsat.select ()),
+        %eqsat.slotted,
+        %eqsat.rulesets (%eqsat.normalize),
+        %eqsat.rules (transpose_mm),
+        %eqsat.reaches (binding, binding_expected, 5),
+        %eqsat.select (),
     );

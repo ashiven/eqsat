@@ -4,10 +4,5 @@ plugin eqsat;
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.egg,
-        %option.none @%eqsat.CostFun,
-        %option.none @%eqsat.Ruleset,
-        %option.none @%eqsat.Rules,
-        %option.none @%eqsat.Reaches,
-        %option.none @%eqsat.Select,
+        %eqsat.egg,
     );

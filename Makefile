@@ -18,7 +18,7 @@ compile:
 	cmake --build ../../build -j 8 --target install -- /verbosity:quiet
 
 build-lit:
-	cmake --build ../../build -j 8 --target lit -- /verbosity:quiet
+	cmake --build ../../build -j 8 --target lit
 
 test:
 	MIM_PLUGIN_PATH=$(MIM_PLUGIN_PATH) && $(MIM_BINARY_PATH) ./lit/$(TEST) -o -

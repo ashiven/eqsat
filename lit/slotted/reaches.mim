@@ -13,10 +13,7 @@ fun extern end_term (a: Nat): Nat =
 
 lam extern _config() =
     %eqsat.config (
-        %option.some %eqsat.slotted,
-        %option.none @%eqsat.CostFun,
-        %option.none @%eqsat.Ruleset,
-        %option.some (%eqsat.rules (foo)),
-        %option.some (%eqsat.reaches (start_term, end_term, 5)),
-        %option.none @%eqsat.Select,
+        %eqsat.slotted,
+        %eqsat.rules (foo),
+        %eqsat.reaches (start_term, end_term, 5),
     );
