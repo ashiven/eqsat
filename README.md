@@ -264,17 +264,16 @@ axm %eqsat.standard: %eqsat.Ruleset;
 **5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`**
 
 ```cpp
-    // ...
-    for (auto ruleset : ruleset_config->args())
-        if (Axm::isa<eqsat::core>(ruleset))
-            rulesets.push_back(RuleSet::Core);
-        else if (Axm::isa<eqsat::math>(ruleset))
-            rulesets.push_back(RuleSet::Math);
-        // Add the ruleset:
-        else if (Axm::isa<eqsat::myrules>(ruleset))
-            rulesets.push_back(RuleSet::MyRules);
-    // ...
-}
+// ...
+for (auto ruleset : ruleset_config->args())
+    if (Axm::isa<eqsat::core>(ruleset))
+        rulesets.push_back(RuleSet::Core);
+    else if (Axm::isa<eqsat::math>(ruleset))
+        rulesets.push_back(RuleSet::Math);
+    // Add the ruleset:
+    else if (Axm::isa<eqsat::myrules>(ruleset))
+        rulesets.push_back(RuleSet::MyRules);
+// ...
 ```
 
 ## Provided Methods
