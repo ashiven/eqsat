@@ -1,11 +1,56 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
+
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
 
 // Another example from the Guided Equality Saturation paper
-//
-// Uses additional rewrite rules (other rules defined in guided.mim):
-// 4) map @n1 (map @n2 f) => transpose o (map @n2 (map @n1 f)) o transpose
-// 5) map @(n1 * n2) f    => join o (map @n1 (map @n2 f)) o (split @n2)
-//
+
 // map @(n1 * 32) (map @(n2 * 32) f) => join o (map @n1 (map @32 join)) o (map @n1 transpose) o
 //                                        (map @n1 (map @n2 (map @32 (map @32 f)))) o
 //                                           (map @n1 transpose) o (map @n1 (map @32 (split @32))) o (split @32)
+
+rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
+    %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
+=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
+
+rule compose_assoc(A B C D: *, a: C → D, b: B → C, c: A → B):
+    %rise.o a (%rise.o b c)
+=>  %rise.o (%rise.o a b) c;
+
+rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
+    %rise.o (%rise.map @n a) (%rise.map @n b)
+=>  %rise.map @n (%rise.o a b);
+
+rule wrap_transpose(T: *, f: T → T, n1 n2: Nat):
+    %rise.map @n1 (%rise.map @n2 f)
+=>  %rise.o (%rise.transpose @(n2, n1) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(n1, n2) @T));
+
+rule join_mm_split(T: *, f: T → T, n1 n2: Nat):
+    %rise.map @(%core.nat.mul (n1, n2)) f
+=>  %rise.o (%rise.join @(n1, n2) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @T n2));
+
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+
+fun extern tile2d(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
+    let mapper = %rise.map f;
+    return (mapper arg);
+
+fun extern tile2d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); 2›;
+    let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
+    return (mapper arg);
+
+lam extern _config() =
+    %eqsat.config (
+        %eqsat.slotted,
+        %eqsat.rulesets (%eqsat.normalize),
+        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
+        %eqsat.reaches (tile2d, tile2d_expected, 200),
+        %eqsat.select (),
+    );
+
