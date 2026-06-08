@@ -2,6 +2,7 @@
 
 #include "mim/world.h"
 
+#include "mim/plug/compile/autogen.h"
 #include "mim/plug/eqsat/autogen.h"
 
 namespace mim {
@@ -68,6 +69,17 @@ inline void eqsat_config(World& world,
     _config->set_filter(false);
     _config->set_body(eqsat_config_app);
     _config->externalize();
+}
+
+inline void eqsat_pipeline(World& world) {
+    auto _compile = world.mut_lam(world.sigma(), world.annex<plug::compile::Phase>());
+
+    auto body = world.call(world.annex<plug::compile::phases>(), world.lit_ff(),
+                           world.tuple({world.annex<plug::eqsat::eqsat_phase>()}));
+
+    _compile->set_filter(false);
+    _compile->set_body(body);
+    _compile->externalize();
 }
 
 } // namespace mim
