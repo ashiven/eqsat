@@ -85,7 +85,7 @@ typedef absl::flat_hash_map<size_t, Cache> CacheMap;
 typedef absl::flat_hash_map<size_t, size_t> DepthVisits;
 typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
 typedef absl::flat_hash_map<size_t, ScopeTree> ScopeTreeMap;
-typedef std::set<std::pair<std::string, const Def*>> RootScope;
+typedef fe::SymMap<const Def*> RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
 
 typedef struct State {
@@ -268,8 +268,8 @@ private:
 
         while (name != curr_scope->var_name) {
             if (curr_scope->parent_loc.depth == ROOT_SCOPE_DEPTH) {
-                for (auto [var_name, def] : root_scope())
-                    if (var_name == name) return def;
+                auto it = root_scope().find(name);
+                if (it != root_scope().end()) return it->second;
                 break;
             }
             curr_scope = scope(curr_scope->parent_loc);
@@ -462,7 +462,7 @@ private:
     /************** Root Scope ************/
     const RootScope& root_scope() const { return root_scope_; }
 
-    void root_scope_add(Sym name, const Def* def) { root_scope_.insert({name.str(), def}); }
+    void root_scope_add(Sym name, const Def* def) { root_scope_[name] = def; }
 
     /********** SCOPES INTERFACE **********/
     const int32_t ROOT_SCOPE_DEPTH = -1;
