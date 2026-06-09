@@ -14,7 +14,7 @@ namespace mim::plug::eqsat {
 /****************** DEBUG *********************/
 inline constexpr bool DEBUG       = false;
 inline constexpr bool SCOPES      = false;
-inline constexpr bool PERFORMANCE = true;
+inline constexpr bool PERFORMANCE = false;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
 void dbg(Args&&... args) {
