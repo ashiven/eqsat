@@ -14,8 +14,30 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-const bool DEBUG        = false;
-const bool DEBUG_SCOPES = false;
+inline constexpr bool DEBUG        = false;
+inline constexpr bool SCOPES       = false;
+inline constexpr bool MEASURE_PERF = false;
+
+template<bool DBG_KIND = DEBUG, typename... Args>
+void dbg(Args&&... args) {
+    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args)) << "\n";
+}
+
+template<bool DBG_KIND = DEBUG, typename... Args>
+void dbg_(Args&&... args) {
+    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args));
+}
+
+#define START_TIMER(name) auto _start_##name = std::chrono::steady_clock::now();
+#define END_TIMER(name)                                                                                             \
+    {                                                                                                               \
+        auto _end_##name = std::chrono::steady_clock::now();                                                        \
+        if constexpr (MEASURE_PERF) {                                                                               \
+            std::cout << #name << " took: "                                                                         \
+                      << std::chrono::duration_cast<std::chrono::milliseconds>(_end_##name - _start_##name).count() \
+                      << "ms\n";                                                                                    \
+        }                                                                                                           \
+    }
 
 /***************** TYPES **********************/
 typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;
@@ -235,10 +257,10 @@ private:
     void register_var(std::string name, const Def* def) {
         if (loc().depth == ROOT_SCOPE_DEPTH) {
             root_scope_add(name, def);
-            if (DEBUG_SCOPES) std::cout << "Registering: " << name << "-" << def << " in root scope\n";
+            dbg<SCOPES>("Registering: ", name, "-", def, " in root scope");
         } else {
             scope_add(name, def);
-            if (DEBUG_SCOPES) std::cout << "Registering: " << scope()->to_str() << "\n";
+            dbg<SCOPES>("Registering: ", scope()->to_str());
         }
     }
 
@@ -398,13 +420,13 @@ private:
 
             update_scope();
             scope()->parent_loc = parent_loc;
-            if (DEBUG_SCOPES) std::cout << "Entering: " << scope()->to_str() << "\n";
+            dbg<SCOPES>("Entering: ", scope()->to_str());
         }
     }
 
     void exit_scope(NodeFFI node, bool count_visit = false) {
         if (node.kind == MimKind::Scope) {
-            if (DEBUG_SCOPES) std::cout << "Exiting: " << scope()->to_str() << "\n";
+            dbg<SCOPES>("Exiting: ", scope()->to_str());
 
             if (count_visit) inc_visit_count(loc().depth);
 
