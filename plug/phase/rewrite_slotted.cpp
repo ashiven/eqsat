@@ -28,15 +28,7 @@ void RewriteSlotted::start() {
 
     // If no terms are selected for saturation, we simply use the Rewriter to transfer the old world to
     // the new world unchanged, which is faster and less involved than init + convert.
-    if (selected.option && selected.option->empty()) {
-        delete selected.option;
-        for (auto mut : old_world().externals().muts()) {
-            auto new_mut = rewrite(mut)->as_mut();
-            if (mut->is_external()) new_mut->externalize();
-        }
-        swap(old_world(), new_world());
-        return;
-    }
+    if (swap_world_unchanged(selected)) return;
 
     START_TIMER(eqsat)
     auto rec_exprs = eqsat_slotted(sexpr.str(), selected, rulesets, cost_fn);
@@ -55,6 +47,19 @@ void RewriteSlotted::start() {
     END_TIMER(rewrite)
 
     swap(old_world(), new_world());
+}
+
+bool RewriteSlotted::swap_world_unchanged(OptionSelected selected) {
+    if (selected.option && selected.option->empty()) {
+        delete selected.option;
+        for (auto mut : old_world().externals().muts()) {
+            auto new_mut = rewrite(mut)->as_mut();
+            if (mut->is_external()) new_mut->externalize();
+        }
+        swap(old_world(), new_world());
+        return true;
+    }
+    return false;
 }
 
 ConfigValues RewriteSlotted::import_config() {

@@ -14,9 +14,9 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-inline constexpr bool DEBUG        = false;
-inline constexpr bool SCOPES       = false;
-inline constexpr bool MEASURE_PERF = false;
+inline constexpr bool DEBUG       = false;
+inline constexpr bool SCOPES      = false;
+inline constexpr bool PERFORMANCE = false;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
 void dbg(Args&&... args) {
@@ -32,7 +32,7 @@ void dbg_(Args&&... args) {
 #define END_TIMER(name)                                                                                             \
     {                                                                                                               \
         auto _end_##name = std::chrono::steady_clock::now();                                                        \
-        if constexpr (MEASURE_PERF) {                                                                               \
+        if constexpr (PERFORMANCE) {                                                                                \
             std::cout << #name << " took: "                                                                         \
                       << std::chrono::duration_cast<std::chrono::milliseconds>(_end_##name - _start_##name).count() \
                       << "ms\n";                                                                                    \
@@ -142,6 +142,7 @@ private:
         aliases_["i32"]  = new_world().lit_nat(0x100000000);
     }
 
+    bool swap_world_unchanged(OptionSelected selected);
     ConfigValues import_config();
 
     // Asserts whether a start term can reach an
