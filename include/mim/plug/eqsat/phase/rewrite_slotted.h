@@ -411,8 +411,8 @@ private:
     //
     // The location of scope s5 would be at (2, 1) because it is at
     // at a tree-depth of 2 and at an offset of 1 at that depth.
-    Loc loc() const { return curr_loc_; }
-    void set_loc(Loc loc) { curr_loc_ = loc; }
+    Loc loc() const { return loc_; }
+    void set_loc(Loc loc) { loc_ = loc; }
 
     void reset_loc() {
         // We start at Loc {depth: -1, offset: 0} because
@@ -422,9 +422,9 @@ private:
     }
 
     /******************* Scope **************/
-    Scope* scope() { return curr_scope_; }
+    Scope* scope() { return scope_; }
     Scope* scope(Loc loc) { return &(*scope_tree_)[loc]; }
-    void set_scope(Scope* scope) { curr_scope_ = scope; }
+    void set_scope(Scope* scope) { scope_ = scope; }
     void set_scope(Loc loc) { set_scope(scope(loc)); }
 
     void scope_add(Sym name, const Def* def) {
@@ -493,19 +493,16 @@ private:
     void set_scope_tree(size_t rec_expr_id) { set_scope_tree(scope_tree(rec_expr_id)); }
 
     /************** Root Scope ************/
+    const int32_t ROOT_SCOPE_DEPTH = -1;
     const RootScope& root_scope() const { return root_scope_; }
-
     void root_scope_add(Sym name, const Def* def) { root_scope_[name] = def; }
 
-    /********** SCOPES INTERFACE **********/
-    const int32_t ROOT_SCOPE_DEPTH = -1;
     DepthVisits depth_visits_;
-    Loc curr_loc_;
-    Scope* curr_scope_;
+    Loc loc_;
+    Scope* scope_;
     ScopeTree* scope_tree_;
     ScopeTreeMap scope_tree_map_;
     RootScope root_scope_;
-
     Nodes* nodes_;
     NodesMap nodes_map_;
     Cache* cache_;
