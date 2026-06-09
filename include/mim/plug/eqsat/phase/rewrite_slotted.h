@@ -203,9 +203,9 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
-    void set_curr_rec_expr_id(size_t rec_expr_id) { curr_rec_expr_id_ = rec_expr_id; }
-    size_t curr_rec_expr_id() const { return curr_rec_expr_id_; }
-    size_t curr_rec_expr_id_;
+    void set_rec_expr_id(size_t rec_expr_id) { rec_expr_id_ = rec_expr_id; }
+    size_t rec_expr_id() const { return rec_expr_id_; }
+    size_t rec_expr_id_;
 
     // The nodes of the RecExprFFI we are currently processing
     Nodes* nodes() { return nodes_; }
@@ -317,43 +317,43 @@ private:
     }
 
     /************ State *************/
-    void set_state(size_t rec_expr_id, RecExprFFI rec_expr) {
-        set_curr_rec_expr_id(rec_expr_id);
-        nodes_map_[curr_rec_expr_id()] = rec_expr.nodes;
+    void set_state(size_t id, RecExprFFI rec_expr) {
+        set_rec_expr_id(id);
+        nodes_map_[rec_expr_id()] = rec_expr.nodes;
 
-        set_cache(curr_rec_expr_id());
-        set_scope_tree(curr_rec_expr_id());
+        set_cache(rec_expr_id());
+        set_scope_tree(rec_expr_id());
 
         reset_loc();
         reset_depth_visits();
         set_scope(loc());
 
-        set_nodes(curr_rec_expr_id());
+        set_nodes(rec_expr_id());
     }
 
-    State save_state() { return State{loc(), depth_visits(), curr_rec_expr_id()}; }
+    State save_state() { return State{loc(), depth_visits(), rec_expr_id()}; }
 
     State temp_state(Nodes nodes) {
         // Note: It would be better to use something else like -1 as the index
         // for temporary rec exprs but this is what we use for now.
-        set_curr_rec_expr_id(SIZE_MAX);
-        scope_tree_map_[curr_rec_expr_id()] = {};
-        cache_map_[curr_rec_expr_id()]      = {};
-        nodes_map_[curr_rec_expr_id()]      = nodes;
+        set_rec_expr_id(SIZE_MAX);
+        scope_tree_map_[rec_expr_id()] = {};
+        cache_map_[rec_expr_id()]      = {};
+        nodes_map_[rec_expr_id()]      = nodes;
 
-        set_cache(curr_rec_expr_id());
-        set_scope_tree(curr_rec_expr_id());
+        set_cache(rec_expr_id());
+        set_scope_tree(rec_expr_id());
 
         reset_loc();
         reset_depth_visits();
         set_scope(loc());
 
-        set_nodes(curr_rec_expr_id());
+        set_nodes(rec_expr_id());
         return save_state();
     }
 
     void restore_state(State state, bool keep_cache = false) {
-        set_curr_rec_expr_id(state.rec_expr_id);
+        set_rec_expr_id(state.rec_expr_id);
 
         if (!keep_cache) set_cache(state.rec_expr_id);
         set_scope_tree(state.rec_expr_id);
@@ -366,11 +366,11 @@ private:
     }
 
     void dump_cache() {
-        for (auto [id, def] : *cache(curr_rec_expr_id()))
+        for (auto [id, def] : *cache(rec_expr_id()))
             std::cout << id << ": " << def << "\n";
     }
     void dump_scope_tree() {
-        for (auto [l, s] : *scope_tree(curr_rec_expr_id()))
+        for (auto [l, s] : *scope_tree(rec_expr_id()))
             std::cout << l.to_str() << ": " << s.to_str() << "\n";
     }
     void dump_depth_visits() {
@@ -378,12 +378,12 @@ private:
             std::cout << d << ": " << v << "\n";
     }
     void dump_nodes() {
-        for (auto n : *nodes(curr_rec_expr_id()))
+        for (auto n : *nodes(rec_expr_id()))
             std::cout << node_ffi_str(n).c_str() << "\n";
     }
     void dump_state() {
         dbg("----------STATE-----------");
-        dbg("Curr ID: ", curr_rec_expr_id());
+        dbg("Curr ID: ", rec_expr_id());
         dbg("Curr Cache: ");
         dump_cache();
         dbg("Curr Scope Tree: ");
