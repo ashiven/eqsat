@@ -203,9 +203,8 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
-    void set_rec_expr_id(size_t rec_expr_id) { rec_expr_id_ = rec_expr_id; }
     size_t rec_expr_id() const { return rec_expr_id_; }
-    size_t rec_expr_id_;
+    void set_rec_expr_id(size_t rec_expr_id) { rec_expr_id_ = rec_expr_id; }
 
     // The nodes of the RecExprFFI we are currently processing
     Nodes* nodes() { return nodes_; }
@@ -504,6 +503,7 @@ private:
     const RootScope& root_scope() const { return root_scope_; }
     void root_scope_add(Sym name, const Def* def) { root_scope_[name] = def; }
 
+    size_t rec_expr_id_;
     DepthVisits depth_visits_;
     Loc loc_;
     Scope* scope_;
