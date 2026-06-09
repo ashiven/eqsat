@@ -84,9 +84,9 @@ ConfigValues RewriteSlotted::import_config() {
     OptionSelected selected = {nullptr};
 
     for (auto lam : lams) {
-        auto body                     = lam->as<Lam>()->body();
-        const Def* singleton_config[] = {body};
-        auto config_vals              = body->isa<Tuple>() ? body->as<Tuple>()->ops() : Defs(singleton_config);
+        auto body               = lam->as<Lam>()->body();
+        DefVec singleton_config = {body};
+        auto config_vals        = body->isa<Tuple>() ? body->as<Tuple>()->ops() : Defs(singleton_config);
         for (auto config_val : config_vals) {
             if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {
                 // Rulesets
