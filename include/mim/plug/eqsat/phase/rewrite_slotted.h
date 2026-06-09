@@ -12,8 +12,8 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-inline constexpr bool DEBUG       = true;
-inline constexpr bool SCOPES      = true;
+inline constexpr bool DEBUG       = false;
+inline constexpr bool SCOPES      = false;
 inline constexpr bool PERFORMANCE = true;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
@@ -208,25 +208,25 @@ private:
     size_t curr_rec_expr_id_;
 
     // The nodes of the RecExprFFI we are currently processing
-    Nodes& nodes() { return nodes_; }
-    Nodes& nodes(size_t rec_expr_id) { return nodes_map_[rec_expr_id]; }
-    void set_nodes(rust::Vec<NodeFFI> nodes) { nodes_ = nodes; }
+    Nodes* nodes() { return nodes_; }
+    Nodes* nodes(size_t rec_expr_id) { return &nodes_map_[rec_expr_id]; }
+    void set_nodes(Nodes* nodes) { nodes_ = nodes; }
     void set_nodes(size_t rec_expr_id) { set_nodes(nodes(rec_expr_id)); }
 
     // Stores Defs that were already created for a node via the nodes' id
-    Cache& cache() { return cache_; }
-    Cache& cache(size_t rec_expr_id) { return cache_map_[rec_expr_id]; }
-    void set_cache(Cache& cache) { cache_ = cache; }
+    Cache* cache() { return cache_; }
+    Cache* cache(size_t rec_expr_id) { return &cache_map_[rec_expr_id]; }
+    void set_cache(Cache* cache) { cache_ = cache; }
     void set_cache(size_t rec_expr_id) { set_cache(cache(rec_expr_id)); }
 
     const Def* cache_get(uint32_t id) {
-        auto it = cache().find(id);
-        return it != cache().end() ? it->second : nullptr;
+        auto it = cache()->find(id);
+        return it != cache()->end() ? it->second : nullptr;
     }
-    const Def* cache_set(uint32_t id, const Def* def) { return cache()[id] = def; }
+    const Def* cache_set(uint32_t id, const Def* def) { return (*cache())[id] = def; }
     uint32_t get_id(const Def* def) {
-        auto it = std::find_if(cache().begin(), cache().end(), [&](const auto& pair) { return pair.second == def; });
-        if (it != cache().end()) return it->first;
+        auto it = std::find_if(cache()->begin(), cache()->end(), [&](const auto& pair) { return pair.second == def; });
+        if (it != cache()->end()) return it->first;
         error("Could not find the given Def in the cache.");
         return -1;
     }
@@ -254,23 +254,23 @@ private:
             dbg<SCOPES>("Registering: ", name, "-", def, " in root scope");
         } else {
             scope_add(name, def);
-            dbg<SCOPES>("Registering: ", scope().to_str());
+            dbg<SCOPES>("Registering: ", scope()->to_str());
         }
     }
 
     const Def* get_var(Sym name) {
         auto curr_scope = scope();
 
-        while (name != curr_scope.var_name) {
-            if (curr_scope.parent_loc.depth == ROOT_SCOPE_DEPTH) {
+        while (name != curr_scope->var_name) {
+            if (curr_scope->parent_loc.depth == ROOT_SCOPE_DEPTH) {
                 auto it = root_scope().find(name);
                 if (it != root_scope().end()) return it->second;
                 break;
             }
-            curr_scope = scope(curr_scope.parent_loc);
+            curr_scope = scope(curr_scope->parent_loc);
         }
 
-        if (name == curr_scope.var_name) return curr_scope.def;
+        if (name == curr_scope->var_name) return curr_scope->def;
 
         return nullptr;
     }
@@ -281,18 +281,21 @@ private:
     const Def* get_axm(Sym name) { return axms_.contains(name) ? axms_[name] : nullptr; }
 
     NodeFFI get_node(MimKind expected, uint32_t id) {
-        assert(nodes()[id].kind == expected && "get_node: mismatch between expected and actual node kind");
-        return nodes()[id];
+        auto node = (*nodes())[id];
+        assert(node.kind == expected && "get_node: mismatch between expected and actual node kind");
+        return node;
     }
-    NodeFFI get_node_unsafe(uint32_t id) { return nodes()[id]; }
+    NodeFFI get_node_unsafe(uint32_t id) { return (*nodes())[id]; }
 
     Sym get_symbol(uint32_t id) {
-        auto sym = nodes()[id].symbol.c_str();
+        auto node = (*nodes())[id];
+        auto sym  = node.symbol.c_str();
         return new_world().sym(sym);
     }
-    uint64_t get_num(uint32_t id) { return nodes()[id].num; }
+    uint64_t get_num(uint32_t id) { return (*nodes())[id].num; }
     Sym get_slot(uint32_t id) {
-        auto slot = nodes()[id].slot.c_str();
+        auto node = (*nodes())[id];
+        auto slot = node.slot.c_str();
         return new_world().sym(slot);
     }
 
@@ -355,11 +358,11 @@ private:
     }
 
     void dump_cache() {
-        for (auto [id, def] : cache(curr_rec_expr_id()))
+        for (auto [id, def] : *cache(curr_rec_expr_id()))
             std::cout << id << ": " << def << "\n";
     }
     void dump_scope_tree() {
-        for (auto [l, s] : scope_tree(curr_rec_expr_id()))
+        for (auto [l, s] : *scope_tree(curr_rec_expr_id()))
             std::cout << l.to_str() << ": " << s.to_str() << "\n";
     }
     void dump_depth_visits() {
@@ -367,7 +370,7 @@ private:
             std::cout << d << ": " << v << "\n";
     }
     void dump_nodes() {
-        for (auto n : nodes(curr_rec_expr_id()))
+        for (auto n : *nodes(curr_rec_expr_id()))
             std::cout << node_ffi_str(n).c_str() << "\n";
     }
     void dump_state() {
@@ -380,7 +383,7 @@ private:
         dbg("Curr Loc: ", loc().to_str());
         dbg("Curr Depth Visits: ");
         dump_depth_visits();
-        dbg("Curr Scope: ", scope().to_str());
+        dbg("Curr Scope: ", scope()->to_str());
         dbg("Curr Nodes: ");
         dump_nodes();
         dbg("---------------------------");
@@ -418,19 +421,19 @@ private:
     }
 
     /******************* Scope **************/
-    Scope& scope() { return curr_scope_; }
-    Scope& scope(Loc loc) { return scope_tree_[loc]; }
-    void set_scope(Scope& scope) { curr_scope_ = scope; }
+    Scope* scope() { return curr_scope_; }
+    Scope* scope(Loc loc) { return &(*scope_tree_)[loc]; }
+    void set_scope(Scope* scope) { curr_scope_ = scope; }
     void set_scope(Loc loc) { set_scope(scope(loc)); }
 
     void scope_add(Sym name, const Def* def) {
-        scope().var_name = name;
-        scope().def      = def;
+        scope()->var_name = name;
+        scope()->def      = def;
     }
 
     void update_scope() {
         auto curr_scope = scope(loc());
-        curr_scope.loc  = loc();
+        curr_scope->loc = loc();
         set_scope(curr_scope);
     }
 
@@ -462,14 +465,14 @@ private:
             }
 
             update_scope();
-            scope().parent_loc = parent_loc;
-            dbg<SCOPES>("Entering: ", scope().to_str());
+            scope()->parent_loc = parent_loc;
+            dbg<SCOPES>("Entering: ", scope()->to_str());
         }
     }
 
     void exit_scope(NodeFFI node, bool count_visit = false) {
         if (node.kind == MimKind::Scope) {
-            dbg<SCOPES>("Exiting: ", scope().to_str());
+            dbg<SCOPES>("Exiting: ", scope()->to_str());
 
             if (count_visit) inc_visit_count(loc().depth);
 
@@ -483,9 +486,9 @@ private:
     }
 
     /************** Scope Tree ************/
-    const ScopeTree& scope_tree() const { return scope_tree_; }
-    ScopeTree& scope_tree(size_t rec_expr_id) { return scope_tree_map_[rec_expr_id]; }
-    void set_scope_tree(ScopeTree& scope_tree) { scope_tree_ = scope_tree; }
+    ScopeTree* scope_tree() { return scope_tree_; }
+    ScopeTree* scope_tree(size_t rec_expr_id) { return &scope_tree_map_[rec_expr_id]; }
+    void set_scope_tree(ScopeTree* scope_tree) { scope_tree_ = scope_tree; }
     void set_scope_tree(size_t rec_expr_id) { set_scope_tree(scope_tree(rec_expr_id)); }
 
     /************** Root Scope ************/
@@ -497,14 +500,14 @@ private:
     const int32_t ROOT_SCOPE_DEPTH = -1;
     DepthVisits depth_visits_;
     Loc curr_loc_;
-    Scope curr_scope_;
-    ScopeTree scope_tree_;
+    Scope* curr_scope_;
+    ScopeTree* scope_tree_;
     ScopeTreeMap scope_tree_map_;
     RootScope root_scope_;
 
-    Nodes nodes_;
+    Nodes* nodes_;
     NodesMap nodes_map_;
-    Cache cache_;
+    Cache* cache_;
     CacheMap cache_map_;
     fe::SymMap<const Def*> axms_;
     fe::SymMap<const Def*> aliases_;

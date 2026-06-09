@@ -155,18 +155,15 @@ void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, Reache
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
-    dump_state();
     auto outer_state = save_state();
 
-    auto type_state = temp_state(type_.nodes);
-    dump_state();
+    auto type_state   = temp_state(type_.nodes);
     auto type_root_id = type_.nodes.size() - 1;
     init(type_root_id);
 
     dbg("Type init stage complete!");
 
     restore_state(type_state, true);
-    dump_state();
     auto res = convert(type_root_id);
 
     dbg("Type convert stage complete!");
@@ -182,7 +179,7 @@ void RewriteSlotted::init(rust::Vec<RecExprFFI> rec_exprs) {
         auto rec_expr = rec_exprs[rec_expr_id];
         set_state(rec_expr_id, rec_expr);
 
-        auto root_id = nodes().size() - 1;
+        auto root_id = nodes()->size() - 1;
         init(root_id);
     }
 }
@@ -429,7 +426,7 @@ void RewriteSlotted::convert(rust::Vec<RecExprFFI> rec_exprs) {
         auto rec_expr = rec_exprs[rec_expr_id];
         set_state(rec_expr_id, rec_expr);
 
-        auto root_id = nodes().size() - 1;
+        auto root_id = nodes()->size() - 1;
         convert(root_id);
     }
 }
