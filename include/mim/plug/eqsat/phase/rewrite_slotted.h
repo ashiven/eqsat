@@ -327,8 +327,9 @@ private:
     State save_state() { return State{loc(), depth_visits(), curr_rec_expr_id()}; }
 
     State temp_state(Nodes nodes) {
-        // TODO: Use a special index like -1 (can't because of size_t)
-        set_curr_rec_expr_id(1000);
+        // Note: It would be better to use something else like -1 as the index
+        // for temporary rec exprs but this is what we use for now.
+        set_curr_rec_expr_id(SIZE_MAX);
         scope_tree_map_[curr_rec_expr_id()] = {};
         cache_map_[curr_rec_expr_id()]      = {};
         nodes_map_[curr_rec_expr_id()]      = nodes;
