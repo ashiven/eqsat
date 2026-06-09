@@ -1,4 +1,4 @@
-.PHONY: build compile build-lit test test-all sexpr
+.PHONY: build compile compile-v build-lit test test-all sexpr
 
 CMAKE_INSTALL_PREFIX ?= $(abspath ../../build/install)
 MIM_PLUGIN_PATH ?= $(abspath lit)
@@ -16,6 +16,9 @@ build:
 
 compile:
 	cmake --build ../../build -j 8 --target install -- /verbosity:quiet
+
+compile-v:
+	cmake --build ../../build -j 8 --target install
 
 build-lit:
 	cmake --build ../../build -j 8 --target lit

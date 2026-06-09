@@ -82,7 +82,8 @@ ConfigValues RewriteSlotted::import_config() {
     OptionSelected selected = {nullptr};
 
     for (auto lam : lams) {
-        auto body        = lam->as<Lam>()->body();
+        auto body = lam->as<Lam>()->body();
+        // TODO: This line causes segfaults in ci for singleton configs (i.e. body wrapped in View)
         auto config_vals = body->isa<Tuple>() ? body->as<Tuple>()->ops() : View<const Def*>{body};
         for (auto config_val : config_vals) {
             if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {

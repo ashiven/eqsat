@@ -16,7 +16,7 @@ namespace mim::plug::eqsat {
 /****************** DEBUG *********************/
 inline constexpr bool DEBUG       = false;
 inline constexpr bool SCOPES      = false;
-inline constexpr bool PERFORMANCE = false;
+inline constexpr bool PERFORMANCE = true;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
 void dbg(Args&&... args) {
@@ -66,7 +66,7 @@ typedef struct LocHash {
 typedef struct Scope {
     Loc loc;
     Loc parent_loc;
-    std::string var_name;
+    Sym var_name;
     const Def* def;
 
     std::string to_str() const {
@@ -124,22 +124,22 @@ public:
 private:
     void register_symbols() {
         for (auto [flags, annex] : old_world().flags2annex()) {
-            auto new_annex                = new_world().register_annex(flags, rewrite(annex));
-            axms_[new_annex->sym().str()] = new_annex;
+            auto new_annex          = new_world().register_annex(flags, rewrite(annex));
+            axms_[new_annex->sym()] = new_annex;
         }
 
-        aliases_["Univ"] = new_world().univ();
-        aliases_["Bool"] = new_world().type_bool();
-        aliases_["Nat"]  = new_world().type_nat();
-        aliases_["I8"]   = new_world().type_i8();
-        aliases_["I16"]  = new_world().type_i16();
-        aliases_["I32"]  = new_world().type_i32();
-        aliases_["I64"]  = new_world().type_i64();
-        aliases_["ff"]   = new_world().lit_ff();
-        aliases_["tt"]   = new_world().lit_tt();
-        aliases_["i8"]   = new_world().lit_nat(0x100);
-        aliases_["i16"]  = new_world().lit_nat(0x10000);
-        aliases_["i32"]  = new_world().lit_nat(0x100000000);
+        aliases_[new_world().sym("Univ")] = new_world().univ();
+        aliases_[new_world().sym("Bool")] = new_world().type_bool();
+        aliases_[new_world().sym("Nat")]  = new_world().type_nat();
+        aliases_[new_world().sym("I8")]   = new_world().type_i8();
+        aliases_[new_world().sym("I16")]  = new_world().type_i16();
+        aliases_[new_world().sym("I32")]  = new_world().type_i32();
+        aliases_[new_world().sym("I64")]  = new_world().type_i64();
+        aliases_[new_world().sym("ff")]   = new_world().lit_ff();
+        aliases_[new_world().sym("tt")]   = new_world().lit_tt();
+        aliases_[new_world().sym("i8")]   = new_world().lit_nat(0x100);
+        aliases_[new_world().sym("i16")]  = new_world().lit_nat(0x10000);
+        aliases_[new_world().sym("i32")]  = new_world().lit_nat(0x100000000);
     }
 
     bool swap_world_unchanged(OptionSelected selected);
@@ -208,7 +208,7 @@ private:
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
     // The nodes of the RecExprFFI we are currently processing
-    rust::Vec<NodeFFI> nodes() const { return nodes_; }
+    const Nodes& nodes() const { return nodes_; }
     void set_nodes(rust::Vec<NodeFFI> nodes) { nodes_ = nodes; }
 
     // Stores Defs that were already created for a node via the nodes' id
@@ -253,9 +253,9 @@ private:
         return def;
     }
 
-    const Def* get_alias(std::string name) { return aliases_.contains(name) ? aliases_[name] : nullptr; }
+    const Def* get_alias(Sym name) { return aliases_.contains(name) ? aliases_[name] : nullptr; }
 
-    void register_var(std::string name, const Def* def) {
+    void register_var(Sym name, const Def* def) {
         if (loc().depth == ROOT_SCOPE_DEPTH) {
             root_scope_add(name, def);
             dbg<SCOPES>("Registering: ", name, "-", def, " in root scope");
@@ -265,7 +265,7 @@ private:
         }
     }
 
-    const Def* get_var(std::string name) {
+    const Def* get_var(Sym name) {
         auto curr_scope = scope();
 
         while (name != curr_scope->var_name) {
@@ -282,10 +282,10 @@ private:
         return nullptr;
     }
 
-    void register_axm(std::string name, const Axm* converted) {
+    void register_axm(Sym name, const Axm* converted) {
         if (!axms_.contains(name)) axms_[name] = converted;
     }
-    const Def* get_axm(std::string name) { return axms_.contains(name) ? axms_[name] : nullptr; }
+    const Def* get_axm(Sym name) { return axms_.contains(name) ? axms_[name] : nullptr; }
 
     NodeFFI get_node(MimKind expected, uint32_t id) {
         assert(nodes()[id].kind == expected && "get_node: mismatch between expected and actual node kind");
@@ -293,9 +293,15 @@ private:
     }
     NodeFFI get_node_unsafe(uint32_t id) { return nodes()[id]; }
 
-    std::string get_symbol(uint32_t id) { return nodes()[id].symbol.c_str(); }
+    Sym get_symbol(uint32_t id) {
+        auto sv = std::string_view(nodes()[id].symbol);
+        return new_world().sym(sv);
+    }
     uint64_t get_num(uint32_t id) { return nodes()[id].num; }
-    std::string get_slot(uint32_t id) { return nodes()[id].slot.c_str(); }
+    Sym get_slot(uint32_t id) {
+        auto sv = std::string_view(nodes()[id].slot);
+        return new_world().sym(sv);
+    }
 
     // Returns a flattened vector of node id's for a cons list
     // i.e.: (cons 23 (cons 12 nil)) => [23, 12]
@@ -340,9 +346,12 @@ private:
     }
 
     /************ Depth Visits*************/
-    DepthVisits depth_visits() const { return depth_visits_; }
+    const DepthVisits& depth_visits() const { return depth_visits_; }
     void set_depth_visits(std::unordered_map<size_t, size_t> depth_visits) { depth_visits_ = depth_visits; }
 
+    // I doubt that any practical examples would be able to exceed such a scope depth
+    // Still, some dynamic resizing needs to be added at some point.
+    const size_t MAX_DEPTH = 1024;
     void reset_depth_visits() { set_depth_visits({}); }
     void inc_visit_count(size_t depth) { depth_visits_[depth] += 1; }
 
@@ -387,7 +396,7 @@ private:
     void set_scope(Scope* scope) { curr_scope_ = scope; }
     void set_scope(Loc loc) { set_scope(scope(loc)); }
 
-    void scope_add(std::string name, const Def* def) {
+    void scope_add(Sym name, const Def* def) {
         scope()->var_name = name;
         scope()->def      = def;
     }
@@ -398,13 +407,19 @@ private:
         set_scope(curr_scope);
     }
 
+    size_t next_offset(size_t next_depth) {
+        auto it          = depth_visits().find(next_depth);
+        auto next_offset = it == depth_visits().end() ? 0 : it->second;
+        return next_offset;
+    }
+
     void enter_scope(NodeFFI node, bool revisit = false) {
         if (node.kind == MimKind::Scope) {
             auto parent_loc = loc();
 
-            auto next_depth  = loc().depth + 1;
-            auto next_offset = depth_visits()[next_depth];
-            auto next_loc    = Loc{next_depth, next_offset};
+            auto next_depth = loc().depth + 1;
+            auto nxt_offset = next_offset(next_depth);
+            auto next_loc   = Loc{next_depth, nxt_offset};
             set_loc(next_loc);
 
             // We sometimes need to be able to revisit a scope we just exited
@@ -431,9 +446,9 @@ private:
 
             if (count_visit) inc_visit_count(loc().depth);
 
-            auto next_depth  = loc().depth - 1;
-            auto next_offset = depth_visits()[next_depth];
-            auto next_loc    = Loc{next_depth, next_offset};
+            auto next_depth = loc().depth - 1;
+            auto nxt_offset = next_offset(next_depth);
+            auto next_loc   = Loc{next_depth, nxt_offset};
             set_loc(next_loc);
 
             update_scope();
@@ -449,7 +464,7 @@ private:
     /************** Root Scope ************/
     const RootScope& root_scope() const { return root_scope_; }
 
-    void root_scope_add(std::string name, const Def* def) { root_scope_.insert({name, def}); }
+    void root_scope_add(Sym name, const Def* def) { root_scope_.insert({name.str(), def}); }
 
     /********** SCOPES INTERFACE **********/
     const int32_t ROOT_SCOPE_DEPTH = -1;
@@ -472,9 +487,8 @@ private:
     Nodes nodes_;
     Cache* cache_;
     CacheMap cache_map_;
-    std::unordered_map<std::string, const Def*> vars_;
-    std::unordered_map<std::string, const Def*> axms_;
-    std::unordered_map<std::string, const Def*> aliases_;
+    fe::SymMap<const Def*> axms_;
+    fe::SymMap<const Def*> aliases_;
 };
 
 }; // namespace mim::plug::eqsat
