@@ -155,15 +155,18 @@ void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, Reache
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
+    dump_state();
     auto outer_state = save_state();
 
-    auto type_state   = temp_state(type_.nodes);
+    auto type_state = temp_state(type_.nodes);
+    dump_state();
     auto type_root_id = type_.nodes.size() - 1;
     init(type_root_id);
 
     dbg("Type init stage complete!");
 
     restore_state(type_state, true);
+    dump_state();
     auto res = convert(type_root_id);
 
     dbg("Type convert stage complete!");

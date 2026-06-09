@@ -203,6 +203,10 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
+    void set_curr_rec_expr_id(size_t rec_expr_id) { curr_rec_expr_id_ = rec_expr_id; }
+    size_t curr_rec_expr_id() const { return curr_rec_expr_id_; }
+    size_t curr_rec_expr_id_;
+
     // The nodes of the RecExprFFI we are currently processing
     Nodes& nodes() { return nodes_; }
     Nodes& nodes(size_t rec_expr_id) { return nodes_map_[rec_expr_id]; }
@@ -214,10 +218,6 @@ private:
     Cache& cache(size_t rec_expr_id) { return cache_map_[rec_expr_id]; }
     void set_cache(Cache& cache) { cache_ = cache; }
     void set_cache(size_t rec_expr_id) { set_cache(cache(rec_expr_id)); }
-    void dump_cache() {
-        for (auto [id, def] : cache_map_[0])
-            std::cout << id << ": " << def << "\n";
-    }
 
     const Def* cache_get(uint32_t id) {
         auto it = cache().find(id);
@@ -231,11 +231,6 @@ private:
         return -1;
     }
 
-    // A node that is associated with a Def can be:
-    // 1) A node representing an arbitrary term
-    // 2) A symbol node representing an annex
-    // 3) A symbol node representing a type or term alias
-    // 4) A symbol node representing a variable
     const Def* get_def(uint32_t id) {
         auto def = cache_get(id);
         if (!def) {
@@ -301,8 +296,6 @@ private:
         return new_world().sym(slot);
     }
 
-    // Returns a flattened vector of node id's for a cons list
-    // i.e.: (cons 23 (cons 12 nil)) => [23, 12]
     std::vector<uint32_t> get_cons_flat(uint32_t id) {
         std::vector<uint32_t> flattened;
         auto curr_cons = get_node_unsafe(id);
@@ -361,6 +354,38 @@ private:
         set_nodes(state.rec_expr_id);
     }
 
+    void dump_cache() {
+        for (auto [id, def] : cache(curr_rec_expr_id()))
+            std::cout << id << ": " << def << "\n";
+    }
+    void dump_scope_tree() {
+        for (auto [l, s] : scope_tree(curr_rec_expr_id()))
+            std::cout << l.to_str() << ": " << s.to_str() << "\n";
+    }
+    void dump_depth_visits() {
+        for (auto [d, v] : depth_visits())
+            std::cout << d << ": " << v << "\n";
+    }
+    void dump_nodes() {
+        for (auto n : nodes(curr_rec_expr_id()))
+            std::cout << node_ffi_str(n).c_str() << "\n";
+    }
+    void dump_state() {
+        dbg("----------STATE-----------");
+        dbg("Curr ID: ", curr_rec_expr_id());
+        dbg("Curr Cache: ");
+        dump_cache();
+        dbg("Curr Scope Tree: ");
+        dump_scope_tree();
+        dbg("Curr Loc: ", loc().to_str());
+        dbg("Curr Depth Visits: ");
+        dump_depth_visits();
+        dbg("Curr Scope: ", scope().to_str());
+        dbg("Curr Nodes: ");
+        dump_nodes();
+        dbg("---------------------------");
+    }
+
     /************ Depth Visits*************/
     const DepthVisits& depth_visits() const { return depth_visits_; }
     void set_depth_visits(DepthVisits depth_visits) { depth_visits_ = depth_visits; }
@@ -382,17 +407,6 @@ private:
     //
     // The location of scope s5 would be at (2, 1) because it is at
     // at a tree-depth of 2 and at an offset of 1 at that depth.
-    //
-    // The reason we do this is because we convert the RecExprFFI's
-    // into the new_world() in multiple traverses. First, we perform
-    // a top-down traverse to create all bindings in their proper scopes
-    // and then we perform a bottom-up traverse to create all other Defs.
-    //
-    // To be able to access the variables we bound in the first top-down
-    // traverse, in the second bottom-up traverse, we need only to provide
-    // our current location and the name of the variable whose definition
-    // we need and we can simply look it up in the scopes_ map.
-
     Loc loc() const { return curr_loc_; }
     void set_loc(Loc loc) { curr_loc_ = loc; }
 
@@ -405,7 +419,7 @@ private:
 
     /******************* Scope **************/
     Scope& scope() { return curr_scope_; }
-    Scope& scope(Loc loc) { return (scope_tree_)[loc]; }
+    Scope& scope(Loc loc) { return scope_tree_[loc]; }
     void set_scope(Scope& scope) { curr_scope_ = scope; }
     void set_scope(Loc loc) { set_scope(scope(loc)); }
 
@@ -487,10 +501,6 @@ private:
     ScopeTree scope_tree_;
     ScopeTreeMap scope_tree_map_;
     RootScope root_scope_;
-
-    void set_curr_rec_expr_id(size_t rec_expr_id) { curr_rec_expr_id_ = rec_expr_id; }
-    size_t curr_rec_expr_id() const { return curr_rec_expr_id_; }
-    size_t curr_rec_expr_id_;
 
     Nodes nodes_;
     NodesMap nodes_map_;
