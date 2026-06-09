@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include <unordered_map>
-
 #include <mim/phase.h>
 
 #include "mim/def.h"
@@ -82,11 +80,11 @@ typedef struct Scope {
     }
 } Scope;
 
-typedef std::unordered_map<uint32_t, const Def*> Cache;
-typedef std::unordered_map<size_t, Cache> CacheMap;
-typedef std::unordered_map<size_t, size_t> DepthVisits;
+typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
+typedef absl::flat_hash_map<size_t, Cache> CacheMap;
+typedef absl::flat_hash_map<size_t, size_t> DepthVisits;
 typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
-typedef std::unordered_map<size_t, ScopeTree> ScopeTreeMap;
+typedef absl::flat_hash_map<size_t, ScopeTree> ScopeTreeMap;
 typedef std::set<std::pair<std::string, const Def*>> RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
 
@@ -347,7 +345,7 @@ private:
 
     /************ Depth Visits*************/
     const DepthVisits& depth_visits() const { return depth_visits_; }
-    void set_depth_visits(std::unordered_map<size_t, size_t> depth_visits) { depth_visits_ = depth_visits; }
+    void set_depth_visits(absl::flat_hash_map<size_t, size_t> depth_visits) { depth_visits_ = depth_visits; }
 
     // I doubt that any practical examples would be able to exceed such a scope depth
     // Still, some dynamic resizing needs to be added at some point.
