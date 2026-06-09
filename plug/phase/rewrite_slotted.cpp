@@ -24,7 +24,9 @@ void RewriteSlotted::start() {
 
     dbg(sexpr.str());
 
+    START_TIMER(reaches)
     assert_reaches(sexpr.str(), rulesets, reaches_args);
+    END_TIMER(reaches)
 
     // If no terms are selected for saturation, we simply use the Rewriter to transfer the old world to
     // the new world unchanged, which is faster and less involved than init + convert.
@@ -82,9 +84,9 @@ ConfigValues RewriteSlotted::import_config() {
     OptionSelected selected = {nullptr};
 
     for (auto lam : lams) {
-        auto body = lam->as<Lam>()->body();
-        // TODO: This line causes segfaults in ci for singleton configs (i.e. body wrapped in View)
-        auto config_vals = body->isa<Tuple>() ? body->as<Tuple>()->ops() : View<const Def*>{body};
+        auto body                     = lam->as<Lam>()->body();
+        const Def* singleton_config[] = {body};
+        auto config_vals              = body->isa<Tuple>() ? body->as<Tuple>()->ops() : Defs(singleton_config);
         for (auto config_val : config_vals) {
             if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {
                 // Rulesets
