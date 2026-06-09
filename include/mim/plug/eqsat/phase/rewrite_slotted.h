@@ -246,7 +246,10 @@ private:
         return def;
     }
 
-    const Def* get_alias(Sym name) { return aliases_.contains(name) ? aliases_[name] : nullptr; }
+    const Def* get_alias(Sym name) {
+        auto it = aliases_.find(name);
+        return it == aliases_.end() ? nullptr : it->second;
+    }
 
     void register_var(Sym name, const Def* def) {
         if (loc().depth == ROOT_SCOPE_DEPTH) {
@@ -278,14 +281,17 @@ private:
     void register_axm(Sym name, const Axm* converted) {
         if (!axms_.contains(name)) axms_[name] = converted;
     }
-    const Def* get_axm(Sym name) { return axms_.contains(name) ? axms_[name] : nullptr; }
+    const Def* get_axm(Sym name) {
+        auto it = axms_.find(name);
+        return it == axms_.end() ? nullptr : it->second;
+    }
 
-    NodeFFI get_node(MimKind expected, uint32_t id) {
-        auto node = (*nodes())[id];
+    NodeFFI& get_node(MimKind expected, uint32_t id) {
+        NodeFFI& node = (*nodes())[id];
         assert(node.kind == expected && "get_node: mismatch between expected and actual node kind");
         return node;
     }
-    NodeFFI get_node_unsafe(uint32_t id) { return (*nodes())[id]; }
+    NodeFFI& get_node_unsafe(uint32_t id) { return (*nodes())[id]; }
 
     Sym get_symbol(uint32_t id) {
         auto node = (*nodes())[id];
@@ -301,6 +307,7 @@ private:
 
     std::vector<uint32_t> get_cons_flat(uint32_t id) {
         std::vector<uint32_t> flattened;
+        flattened.reserve(16);
         auto curr_cons = get_node_unsafe(id);
         while (curr_cons.kind != MimKind::Nil) {
             flattened.push_back(curr_cons.children[0]);
