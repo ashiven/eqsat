@@ -16,8 +16,9 @@ void EqsatPhase::start() {
         if (auto lam = def->isa<Lam>()) {
             if (auto arr = lam->codom()->isa<Arr>();
                 (arr && Axm::isa<eqsat::Config>(arr->body())) || Axm::isa<eqsat::Config>(lam->codom())) {
-                auto body        = lam->as<Lam>()->body();
-                auto config_vals = body->isa<Tuple>() ? body->as<Tuple>()->ops() : View<const Def*>{body};
+                auto body               = lam->as<Lam>()->body();
+                DefVec singleton_config = {body};
+                auto config_vals        = body->isa<Tuple>() ? body->as<Tuple>()->ops() : Defs(singleton_config);
                 for (auto config_val : config_vals)
                     if (Axm::isa<eqsat::slotted>(config_val))
                         slotted = true;

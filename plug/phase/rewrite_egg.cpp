@@ -49,8 +49,9 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
     rust::Vec<RuleSet> rulesets;
     CostFn cost_fn = CostFn::AstSize;
     for (auto lam : lams) {
-        auto body        = lam->as<Lam>()->body();
-        auto config_vals = body->isa<Tuple>() ? body->as<Tuple>()->ops() : View<const Def*>{body};
+        auto body               = lam->as<Lam>()->body();
+        DefVec singleton_config = {body};
+        auto config_vals        = body->isa<Tuple>() ? body->as<Tuple>()->ops() : Defs(singleton_config);
         for (auto config_val : config_vals) {
             if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {
                 for (auto ruleset : ruleset_config->args())
