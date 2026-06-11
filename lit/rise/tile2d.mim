@@ -48,9 +48,7 @@ fun extern tile2d(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 
     let mapper = %rise.map @(%core.nat.mul (n1, 32)) (%rise.map @(%core.nat.mul (n2, 32)) f);
     return (mapper arg);
 
-// TODO: Maybe we will have to make the codom actually match the original codom of <n1*32; <n2*32; Nat>>
-// The reason it isn't right now is likely again because of the normalizer changing the order of multiplication args.
-fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, n2); «%core.nat.mul (32, 32); Nat»» = 
+fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
 
     // Splits the array into n1 arrays of 32 arrays of n2 arrays of length 32
@@ -59,34 +57,41 @@ fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, n2); «%core.nat.
                 (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
                 (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32);
 
-    // Applies f to each element in each array (4 loops)
-    let c2 = %rise.o
-                (%rise.map @n1 (%rise.map @32 (%rise.map @n2 (%rise.map @32 f))))
-                c1;
-
     // Transposes each array of the n1 outermost arrays from
     // [32; [n2; [32; Nat]]] to [n2; [32; [32; Nat]]]
-    let c3 = %rise.o
+    let c2 = %rise.o
                 (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))
+                c1;
+
+    // Applies f to each element in each array (4 loops)
+    let c3 = %rise.o
+                (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
                 c2;
 
-    // Joins all of the [32; [32; Nat]] arrays together to [1024; Nat] arrays
+    // Transposes each array of the n1 outermost arrays from
+    // [n2; [32; [32; Nat]]] to [32; [n2; [32; Nat]]]
     let c4 = %rise.o
-                (%rise.map @n1 (%rise.map @n2 (%rise.join @(32, 32) @Nat)))
+                (%rise.map @n1 (%rise.transpose @(n2, 32) @«32; Nat»))
                 c3;
 
-    // Joins all of the [n1; [n2; [1024; Nat]]] arrays together to [n1 * n2; [1024; Nat]] arrays
+    // Joins all of the [n2; [32; Nat]] arrays together to [n2 * 32; Nat] arrays
     let c5 = %rise.o
-                (%rise.join @(n1, n2) @«%core.nat.mul (32, 32); Nat»)
+                (%rise.map @n1 (%rise.map @32 (%rise.join @(n2, 32) @Nat)))
                 c4;
 
+    // Joins all of the [n1; [32; [n2 * 32; Nat]]] arrays together to [n1 * 32; [n2 * 32; Nat]] arrays
+    let c6 = %rise.o
+                (%rise.join @(n1, 32) @«%core.nat.mul (n2, 32); Nat»)
+                c5;
+
     let mapper =
-      %rise.o (%rise.join @(n1, n2) @«%core.nat.mul (32, 32); Nat»)
-        (%rise.o (%rise.map @n1 (%rise.map @n2 (%rise.join @(32, 32) @Nat)))
-          (%rise.o (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))
-            (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.map @n2 (%rise.map @32 f))))
-              (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
-                (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32)))));
+      %rise.o (%rise.join @(n1, 32) @«%core.nat.mul (n2, 32); Nat»)
+        (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.join @(n2, 32) @Nat)))
+          (%rise.o (%rise.map @n1 (%rise.transpose @(n2, 32) @«32; Nat»))
+            (%rise.o (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
+              (%rise.o (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))
+                (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
+                  (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32))))));
 
     return (mapper arg);
 
