@@ -80,12 +80,13 @@ typedef struct Scope {
     }
 } Scope;
 
+typedef fe::SymMap<const Def*> Sym2Def;
 typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
 typedef absl::flat_hash_map<size_t, Cache> CacheMap;
 typedef absl::flat_hash_map<size_t, size_t> DepthVisits;
 typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
 typedef absl::flat_hash_map<size_t, ScopeTree> ScopeTreeMap;
-typedef fe::SymMap<const Def*> RootScope;
+typedef Sym2Def RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
 typedef absl::flat_hash_map<size_t, Nodes> NodesMap;
 
@@ -493,12 +494,11 @@ private:
     const RootScope& root_scope() const { return root_scope_; }
     void root_scope_add(Sym name, const Def* def) { root_scope_[name] = def; }
 
-    RootScope root_scope_;
-    fe::SymMap<const Def*> axms_;
-    fe::SymMap<const Def*> aliases_;
-
+    Sym2Def axms_;
+    Sym2Def aliases_;
     Context ctx_;
     RecExprStates states_;
+    RootScope root_scope_;
 };
 
 }; // namespace mim::plug::eqsat
