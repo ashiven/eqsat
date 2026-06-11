@@ -157,32 +157,39 @@ void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, Reache
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
-    auto outer_state = save_state();
+    dbg("\nCreating Type");
 
-    auto type_state   = temp_state(type_.nodes);
-    auto type_root_id = type_.nodes.size() - 1;
-    init(type_root_id);
+    auto outer_ctx = ctx();
+
+    // We use SIZE_MAX as a special id for this temporary type-creation context
+    init_state(SIZE_MAX, type_);
+    switch_context(SIZE_MAX);
+
+    auto type_root = root();
+    init(type_root);
 
     dbg("Type init stage complete!");
 
-    restore_state(type_state, true);
-    auto res = convert(type_root_id);
+    reset_loc();
+    reset_depth_visits();
+    auto res = convert(type_root);
 
-    dbg("Type convert stage complete!");
+    dbg("Type convert stage complete!\n");
 
-    restore_state(outer_state);
+    switch_context(outer_ctx);
     return res;
 }
 
 void RewriteSlotted::init(rust::Vec<RecExprFFI> rec_exprs) {
-    for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
-        dbg("\nInitializing RecExpr: ", rec_expr_id);
+    for (size_t id = 0; id < rec_exprs.size(); id++) {
+        dbg("\nInitializing RecExpr: ", id);
 
-        auto rec_expr = rec_exprs[rec_expr_id];
-        set_state(rec_expr_id, rec_expr);
+        auto rec_expr = rec_exprs[id];
+        init_state(id, rec_expr);
+        switch_context(id);
 
-        auto root_id = nodes()->size() - 1;
-        init(root_id);
+        auto root_node = root();
+        init(root_node);
     }
 }
 
@@ -190,7 +197,7 @@ const Def* RewriteSlotted::init(uint32_t id) {
     auto node = get_node_unsafe(id);
     enter_scope(node);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (!res) {
         switch (node.kind) {
             case MimKind::Axm: res = init_axm(id, node); break;
@@ -214,13 +221,13 @@ const Def* RewriteSlotted::init(uint32_t id) {
         init(child);
 
     exit_scope(node, true);
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 const Def* RewriteSlotted::init_lookahead(uint32_t id) {
     auto node = get_node_unsafe(id);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (!res) {
         switch (node.kind) {
             case MimKind::Fun:
@@ -234,17 +241,21 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
             case MimKind::Arr: res = init_arr(id, node); break;
             case MimKind::Pack: res = init_pack(id, node); break;
             default:
-                auto saved_state = save_state();
+                auto saved_loc          = loc();
+                auto saved_depth_visits = depth_visits();
 
                 init(id);
-                restore_state(saved_state, true);
+                set_loc(saved_loc);
+                set_depth_visits(saved_depth_visits);
 
                 res = convert(id);
-                restore_state(saved_state, true);
+                set_loc(saved_loc);
+                set_depth_visits(saved_depth_visits);
+
                 break;
         }
     }
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 // (axm <name>)
@@ -354,13 +365,15 @@ const Def* RewriteSlotted::init_sigma(uint32_t id, NodeFFI node) {
     var->set(var_name);
     register_var(var_name, var);
 
-    auto saved_state = save_state();
+    auto saved_loc          = loc();
+    auto saved_depth_visits = depth_visits();
     for (size_t i = 0; i < size; i++) {
         auto type = init_lookahead(type_ids[i]);
         mut_sigma->set(i, type);
         inc_visit_count(loc().depth + 1);
     }
-    restore_state(saved_state);
+    set_loc(saved_loc);
+    set_depth_visits(saved_depth_visits);
 
     dbg(mut_sigma);
     exit_scope(var_scope);
@@ -423,13 +436,13 @@ const Def* RewriteSlotted::init_pack(uint32_t id, NodeFFI node) {
 }
 
 void RewriteSlotted::convert(rust::Vec<RecExprFFI> rec_exprs) {
-    for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
-        dbg("\nConverting RecExpr: ", rec_expr_id);
-        auto rec_expr = rec_exprs[rec_expr_id];
-        set_state(rec_expr_id, rec_expr);
+    for (size_t id = 0; id < rec_exprs.size(); id++) {
+        dbg("\nConverting RecExpr: ", id);
+        auto rec_expr = rec_exprs[id];
+        switch_context(id);
 
-        auto root_id = nodes()->size() - 1;
-        convert(root_id);
+        auto root_node = root();
+        convert(root_node);
     }
 }
 
@@ -442,7 +455,7 @@ const Def* RewriteSlotted::convert(uint32_t id) {
     for (uint32_t child : node.children)
         convert(child);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (res && !MUTABLES.contains(node.kind)) return res;
 
     dbg_("convert - current node(", id, "): ", node_ffi_str(node).c_str(), " - ");
@@ -488,7 +501,7 @@ const Def* RewriteSlotted::convert(uint32_t id) {
     exit_scope(node, true);
 
     dbg(res);
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 // (root <extern> <name> <definition>)
