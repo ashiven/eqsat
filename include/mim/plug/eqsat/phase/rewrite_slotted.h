@@ -329,36 +329,24 @@ private:
     void set_state(RecExprState* state) { ctx_.state = state; }
     void set_state(size_t id) { ctx_.state = &states_[id]; }
 
-    RecExprState init_state(size_t id, RecExprFFI& rec_expr) {
+    void init_state(size_t id, RecExprFFI& rec_expr) {
         set_depth_visits(id, {});
         set_cache(id, {});
         set_scope_tree(id, {});
         set_nodes(id, rec_expr.nodes);
-        return state_copy(id);
     }
 
-    Context switch_context(size_t id) {
+    void switch_context(size_t id) {
         set_id(id);
         set_state(id);
         reset_loc();
         reset_depth_visits();
-        return ctx();
     }
 
-    Context switch_context(Context& other) {
+    void switch_context(Context& other) {
         set_id(other.id);
-        set_loc(other.loc);
         set_state(other.id);
-        return ctx();
-    }
-
-    void restore(RecExprState& state, Context& ctx, bool keep_cache = false) {
-        set_depth_visits(ctx.id, state.depth_visits);
-        if (!keep_cache) set_cache(ctx.id, state.cache);
-        set_scope_tree(ctx.id, state.scope_tree);
-        set_nodes(ctx.id, state.nodes);
-
-        set_loc(ctx.loc);
+        set_loc(other.loc);
     }
 
     void dump_cache() {

@@ -162,15 +162,16 @@ const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     auto outer_ctx = ctx();
 
     // We use SIZE_MAX as a special id for this temporary type-creation context
-    auto type_state = init_state(SIZE_MAX, type_);
-    auto type_ctx   = switch_context(SIZE_MAX);
+    init_state(SIZE_MAX, type_);
+    switch_context(SIZE_MAX);
 
     auto type_root = root();
     init(type_root);
 
     dbg("Type init stage complete!");
 
-    restore(type_state, type_ctx, true);
+    reset_loc();
+    reset_depth_visits();
     auto res = convert(type_root);
 
     dbg("Type convert stage complete!\n");
