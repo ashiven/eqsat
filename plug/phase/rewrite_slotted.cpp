@@ -165,13 +165,13 @@ const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     auto type_state = init_state(SIZE_MAX, type_);
     auto type_ctx   = switch_context(SIZE_MAX);
 
-    auto type_root_id = nodes().size() - 1;
-    init(type_root_id);
+    auto type_root = root();
+    init(type_root);
 
     dbg("Type init stage complete!");
 
     restore(type_state, type_ctx, true);
-    auto res = convert(type_root_id);
+    auto res = convert(type_root);
 
     dbg("Type convert stage complete!\n");
 
@@ -180,15 +180,15 @@ const Def* RewriteSlotted::create_type(RecExprFFI type_) {
 }
 
 void RewriteSlotted::init(rust::Vec<RecExprFFI> rec_exprs) {
-    for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
-        dbg("\nInitializing RecExpr: ", rec_expr_id);
+    for (size_t id = 0; id < rec_exprs.size(); id++) {
+        dbg("\nInitializing RecExpr: ", id);
 
-        auto rec_expr = rec_exprs[rec_expr_id];
-        init_state(rec_expr_id, rec_expr);
-        switch_context(rec_expr_id);
+        auto rec_expr = rec_exprs[id];
+        init_state(id, rec_expr);
+        switch_context(id);
 
-        auto root_id = nodes().size() - 1;
-        init(root_id);
+        auto root_node = root();
+        init(root_node);
     }
 }
 
@@ -364,14 +364,15 @@ const Def* RewriteSlotted::init_sigma(uint32_t id, NodeFFI node) {
     var->set(var_name);
     register_var(var_name, var);
 
-    auto saved_ctx   = ctx();
-    auto saved_state = state_copy();
+    auto saved_loc          = loc();
+    auto saved_depth_visits = depth_visits();
     for (size_t i = 0; i < size; i++) {
         auto type = init_lookahead(type_ids[i]);
         mut_sigma->set(i, type);
         inc_visit_count(loc().depth + 1);
     }
-    restore(saved_state, saved_ctx);
+    set_loc(saved_loc);
+    set_depth_visits(saved_depth_visits);
 
     dbg(mut_sigma);
     exit_scope(var_scope);
@@ -434,14 +435,14 @@ const Def* RewriteSlotted::init_pack(uint32_t id, NodeFFI node) {
 }
 
 void RewriteSlotted::convert(rust::Vec<RecExprFFI> rec_exprs) {
-    for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
-        dbg("\nConverting RecExpr: ", rec_expr_id);
-        auto rec_expr = rec_exprs[rec_expr_id];
-        switch_context(rec_expr_id);
+    for (size_t id = 0; id < rec_exprs.size(); id++) {
+        dbg("\nConverting RecExpr: ", id);
+        auto rec_expr = rec_exprs[id];
+        switch_context(id);
         reset_depth_visits();
 
-        auto root_id = nodes().size() - 1;
-        convert(root_id);
+        auto root_node = root();
+        convert(root_node);
     }
 }
 

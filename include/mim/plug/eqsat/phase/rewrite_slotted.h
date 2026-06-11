@@ -14,7 +14,7 @@ namespace mim::plug::eqsat {
 /****************** DEBUG *********************/
 inline constexpr bool DEBUG       = false;
 inline constexpr bool SCOPES      = false;
-inline constexpr bool PERFORMANCE = true;
+inline constexpr bool PERFORMANCE = false;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
 void dbg(Args&&... args) {
@@ -216,8 +216,8 @@ private:
 
     Nodes& nodes() { return ctx_.state->nodes; }
     void set_nodes(size_t id, Nodes nodes) { states_[id].nodes = nodes; }
+    size_t root() { return nodes().size() - 1; }
 
-    // Stores Defs that were already created for a node via the nodes' id
     Cache& cache() { return ctx_.state->cache; }
     void set_cache(size_t id, Cache cache) { states_[id].cache = cache; }
 
@@ -338,8 +338,9 @@ private:
 
     Context switch_context(size_t id) {
         set_id(id);
-        reset_loc();
         set_state(id);
+        reset_loc();
+        reset_depth_visits();
         return ctx();
     }
 
