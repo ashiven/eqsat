@@ -222,20 +222,8 @@ private:
     Cache& cache() { return state()->cache; }
     void set_cache(size_t id, Cache cache) { states_[id].cache = cache; }
 
-    const Def* cache_get(uint32_t id) {
-        auto it = cache().find(id);
-        return it != cache().end() ? it->second : nullptr;
-    }
-    const Def* cache_set(uint32_t id, const Def* def) { return cache()[id] = def; }
-    uint32_t get_id(const Def* def) {
-        auto it = std::find_if(cache().begin(), cache().end(), [&](const auto& pair) { return pair.second == def; });
-        if (it != cache().end()) return it->first;
-        error("Could not find the given Def in the cache.");
-        return -1;
-    }
-
     const Def* get_def(uint32_t id) {
-        auto def = cache_get(id);
+        auto def = cache()[id];
         if (!def) {
             auto sym = get_symbol(id);
             sym.empty() ? sym = get_slot(id) : sym;

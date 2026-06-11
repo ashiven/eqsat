@@ -197,7 +197,7 @@ const Def* RewriteSlotted::init(uint32_t id) {
     auto node = get_node_unsafe(id);
     enter_scope(node);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (!res) {
         switch (node.kind) {
             case MimKind::Axm: res = init_axm(id, node); break;
@@ -221,13 +221,13 @@ const Def* RewriteSlotted::init(uint32_t id) {
         init(child);
 
     exit_scope(node, true);
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 const Def* RewriteSlotted::init_lookahead(uint32_t id) {
     auto node = get_node_unsafe(id);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (!res) {
         switch (node.kind) {
             case MimKind::Fun:
@@ -255,7 +255,7 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
                 break;
         }
     }
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 // (axm <name>)
@@ -455,7 +455,7 @@ const Def* RewriteSlotted::convert(uint32_t id) {
     for (uint32_t child : node.children)
         convert(child);
 
-    const Def* res = cache_get(id);
+    const Def* res = cache()[id];
     if (res && !MUTABLES.contains(node.kind)) return res;
 
     dbg_("convert - current node(", id, "): ", node_ffi_str(node).c_str(), " - ");
@@ -501,7 +501,7 @@ const Def* RewriteSlotted::convert(uint32_t id) {
     exit_scope(node, true);
 
     dbg(res);
-    return cache_set(id, res);
+    return cache()[id] = res;
 }
 
 // (root <extern> <name> <definition>)
