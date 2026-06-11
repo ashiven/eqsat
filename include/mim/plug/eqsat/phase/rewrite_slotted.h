@@ -12,8 +12,8 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-inline constexpr bool DEBUG       = true;
-inline constexpr bool SCOPES      = true;
+inline constexpr bool DEBUG       = false;
+inline constexpr bool SCOPES      = false;
 inline constexpr bool PERFORMANCE = false;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
@@ -336,13 +336,10 @@ private:
         return state_copy(id);
     }
 
-    static constexpr int32_t ROOT_SCOPE_DEPTH = -1;
-    static constexpr Loc ROOT_LOC             = Loc{ROOT_SCOPE_DEPTH, 0};
-
     Context switch_context(size_t id) {
         set_id(id);
-        set_state(id);
         reset_loc();
+        set_state(id);
         return ctx();
     }
 
@@ -397,7 +394,9 @@ private:
     /************ Depth Visits*************/
     const DepthVisits& depth_visits() const { return ctx_.state->depth_visits; }
     void set_depth_visits(size_t id, DepthVisits depth_visits) { states_[id].depth_visits = depth_visits; }
+    void set_depth_visits(DepthVisits depth_visits) { ctx_.state->depth_visits = depth_visits; }
 
+    void reset_depth_visits() { set_depth_visits({}); }
     void reset_depth_visits(size_t id) { set_depth_visits(id, {}); }
     void inc_visit_count(size_t depth) { ctx_.state->depth_visits[depth] += 1; }
 
@@ -417,6 +416,9 @@ private:
     // at a tree-depth of 2 and at an offset of 1 at that depth.
     Loc loc() const { return ctx_.loc; }
     void set_loc(Loc loc) { ctx_.loc = loc; }
+
+    static constexpr int32_t ROOT_SCOPE_DEPTH = -1;
+    static constexpr Loc ROOT_LOC             = Loc{ROOT_SCOPE_DEPTH, 0};
 
     void reset_loc() {
         // We start at Loc {depth: -1, offset: 0} because
