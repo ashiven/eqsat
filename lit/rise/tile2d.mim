@@ -54,14 +54,14 @@ fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.
     // The compositions of mapper constructed sequentially for debugging purposes.
     let c1 = %rise.o
                 (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
-                (%rise.split @n1 @Nat 32);
+                (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32);
 
     let c2 = %rise.o
-                (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
+                (%rise.map @n1 (%rise.map @32 (%rise.map @n2 (%rise.map @32 f))))
                 c1;
 
     let c3 = %rise.o
-                (%rise.map @n1 %rise.transpose)
+                (%rise.map @n1 (%rise.transpose @(n1, 32) @«n2; «32; Nat»»))
                 c2;
 
     let c4 = %rise.o
