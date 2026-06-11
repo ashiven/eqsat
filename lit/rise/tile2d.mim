@@ -9,9 +9,17 @@ lam extern _compile(): %compile.Phase =
 
 // Another example from the Guided Equality Saturation paper
 
-// map @(n1 * 32) (map @(n2 * 32) f) => join o (map @n1 (map @32 join)) o (map @n1 transpose) o
-//                                        (map @n1 (map @n2 (map @32 (map @32 f)))) o
-//                                           (map @n1 transpose) o (map @n1 (map @32 (split @32))) o (split @32)
+// map @(n1 * 32) (map @(n2 * 32) f)
+//
+// =>
+//
+// join
+// o (map @n1 (map @32 join))
+// o (map @n1 transpose)
+// o (map @n1 (map @n2 (map @32 (map @32 f))))
+// o (map @n1 transpose)
+// o (map @n1 (map @32 (split 32)))
+// o (split 32)
 
 rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
     %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
@@ -35,22 +43,51 @@ rule join_mm_split(T: *, f: T → T, n1 n2: Nat):
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
-fun extern tile2d(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
-    let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
-    let mapper = %rise.map @(%core.nat.mul (n1, 32)) (%rise.map @(%core.nat.mul (n2, 32)) f);
-    return (mapper arg);
+// fun extern tile2d(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
+//     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
+//     let mapper = %rise.map @(%core.nat.mul (n1, 32)) (%rise.map @(%core.nat.mul (n2, 32)) f);
+//     return (mapper arg);
 
 fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
-    let mapper = %rise.map @(%core.nat.mul (n1, 32)) (%rise.map @(%core.nat.mul (n2, 32)) f);
+
+    // The compositions of mapper constructed sequentially for debugging purposes.
+    let c1 = %rise.o
+                (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
+                (%rise.split @n1 @Nat 32);
+
+    let c2 = %rise.o
+                (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
+                c1;
+
+    let c3 = %rise.o
+                (%rise.map @n1 %rise.transpose)
+                c2;
+
+    let c4 = %rise.o
+                (%rise.map @n1 (%rise.map @32 %rise.join))
+                c3;
+
+    let c5 = %rise.o
+                %rise.join
+                c4;
+
+    let mapper =
+      %rise.o %rise.join
+        (%rise.o (%rise.map @n1 (%rise.map @32 %rise.join))
+          (%rise.o (%rise.map @n1 %rise.transpose)
+            (%rise.o (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
+              (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.split 32)))
+                (%rise.split 32)))));
+
     return (mapper arg);
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
-        %eqsat.reaches (tile2d, tile2d_expected, 200),
-        %eqsat.select (),
-    );
+// lam extern _config() =
+//     %eqsat.config (
+//         %eqsat.slotted,
+//         %eqsat.rulesets (%eqsat.normalize),
+//         %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
+//         %eqsat.reaches (tile2d, tile2d_expected, 200),
+//         %eqsat.select (),
+//     );
 
