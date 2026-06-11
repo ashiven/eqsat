@@ -240,14 +240,17 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
             case MimKind::Arr: res = init_arr(id, node); break;
             case MimKind::Pack: res = init_pack(id, node); break;
             default:
-                auto saved_ctx   = ctx();
-                auto saved_state = state_copy();
+                auto saved_loc          = loc();
+                auto saved_depth_visits = depth_visits();
 
                 init(id);
-                restore(saved_state, saved_ctx, true);
+                set_loc(saved_loc);
+                set_depth_visits(saved_depth_visits);
 
                 res = convert(id);
-                restore(saved_state, saved_ctx, true);
+                set_loc(saved_loc);
+                set_depth_visits(saved_depth_visits);
+
                 break;
         }
     }
