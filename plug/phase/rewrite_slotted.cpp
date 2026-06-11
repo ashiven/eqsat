@@ -439,7 +439,6 @@ void RewriteSlotted::convert(rust::Vec<RecExprFFI> rec_exprs) {
         dbg("\nConverting RecExpr: ", id);
         auto rec_expr = rec_exprs[id];
         switch_context(id);
-        reset_depth_visits();
 
         auto root_node = root();
         convert(root_node);
