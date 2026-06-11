@@ -212,8 +212,8 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
-    size_t id() { return ctx_.id; }
-    void set_id(size_t id) { ctx_.id = id; }
+    size_t id() { return ctx().id; }
+    void set_id(size_t id) { ctx().id = id; }
 
     Nodes& nodes() { return state()->nodes; }
     void set_nodes(size_t id, Nodes nodes) { states_[id].nodes = nodes; }
@@ -320,10 +320,10 @@ private:
     }
 
     /************ State *************/
-    Context ctx() { return ctx_; }
+    Context& ctx() { return ctx_; }
 
-    RecExprState* state() { return ctx_.state; }
-    void set_state(size_t id) { ctx_.state = &states_[id]; }
+    RecExprState* state() { return ctx().state; }
+    void set_state(size_t id) { ctx().state = &states_[id]; }
 
     void init_state(size_t id, RecExprFFI& rec_expr) {
         set_depth_visits(id, {});
@@ -399,8 +399,8 @@ private:
     //
     // The location of scope s5 would be at (2, 1) because it is at
     // at a tree-depth of 2 and at an offset of 1 at that depth.
-    Loc loc() const { return ctx_.loc; }
-    void set_loc(Loc loc) { ctx_.loc = loc; }
+    Loc loc() { return ctx().loc; }
+    void set_loc(Loc loc) { ctx().loc = loc; }
 
     static constexpr int32_t ROOT_SCOPE_DEPTH = -1;
     static constexpr Loc ROOT_LOC             = Loc{ROOT_SCOPE_DEPTH, 0};
