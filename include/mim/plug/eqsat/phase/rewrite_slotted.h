@@ -215,11 +215,11 @@ private:
     size_t id() { return ctx_.id; }
     void set_id(size_t id) { ctx_.id = id; }
 
-    Nodes& nodes() { return ctx_.state->nodes; }
+    Nodes& nodes() { return state()->nodes; }
     void set_nodes(size_t id, Nodes nodes) { states_[id].nodes = nodes; }
     size_t root() { return nodes().size() - 1; }
 
-    Cache& cache() { return ctx_.state->cache; }
+    Cache& cache() { return state()->cache; }
     void set_cache(size_t id, Cache cache) { states_[id].cache = cache; }
 
     const Def* cache_get(uint32_t id) {
@@ -322,11 +322,7 @@ private:
     /************ State *************/
     Context ctx() { return ctx_; }
 
-    RecExprState* state(size_t id) { return &states_[id]; }
-    RecExprState state_copy(size_t id) { return states_[id]; }
     RecExprState* state() { return ctx_.state; }
-    RecExprState state_copy() { return *ctx_.state; }
-    void set_state(RecExprState* state) { ctx_.state = state; }
     void set_state(size_t id) { ctx_.state = &states_[id]; }
 
     void init_state(size_t id, RecExprFFI& rec_expr) {
@@ -382,13 +378,12 @@ private:
     }
 
     /************ Depth Visits*************/
-    const DepthVisits& depth_visits() const { return ctx_.state->depth_visits; }
+    DepthVisits& depth_visits() { return state()->depth_visits; }
     void set_depth_visits(size_t id, DepthVisits depth_visits) { states_[id].depth_visits = depth_visits; }
-    void set_depth_visits(DepthVisits depth_visits) { ctx_.state->depth_visits = depth_visits; }
+    void set_depth_visits(DepthVisits depth_visits) { state()->depth_visits = depth_visits; }
 
     void reset_depth_visits() { set_depth_visits({}); }
-    void reset_depth_visits(size_t id) { set_depth_visits(id, {}); }
-    void inc_visit_count(size_t depth) { ctx_.state->depth_visits[depth] += 1; }
+    void inc_visit_count(size_t depth) { state()->depth_visits[depth] += 1; }
 
     /******************* Loc **************/
     // Loc tracks the current location in the scope tree.
@@ -418,8 +413,8 @@ private:
     }
 
     /******************* Scope **************/
-    Scope* scope() { return &ctx_.state->scope_tree[ctx_.loc]; }
-    Scope* scope(Loc loc) { return &ctx_.state->scope_tree[loc]; }
+    Scope* scope() { return &state()->scope_tree[loc()]; }
+    Scope* scope(Loc loc) { return &state()->scope_tree[loc]; }
 
     void scope_add(Sym name, const Def* def) {
         scope()->var_name = name;
@@ -475,7 +470,7 @@ private:
     }
 
     /************** Scope Tree ************/
-    ScopeTree& scope_tree() { return ctx_.state->scope_tree; }
+    ScopeTree& scope_tree() { return state()->scope_tree; }
     void set_scope_tree(size_t id, ScopeTree scope_tree) { states_[id].scope_tree = scope_tree; }
 
     /************** Root Scope ************/
