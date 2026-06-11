@@ -157,20 +157,25 @@ void RewriteSlotted::assert_reaches(std::string sexpr, RuleSets rulesets, Reache
 
 const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
-    auto outer_state = save_state();
+    dbg("\nCreating Type");
 
-    auto type_state   = temp_state(type_.nodes);
-    auto type_root_id = type_.nodes.size() - 1;
+    auto outer_ctx = ctx();
+
+    // We use SIZE_MAX as a special id for this temporary type-creation context
+    auto type_state = init_state(SIZE_MAX, type_);
+    auto type_ctx   = switch_context(SIZE_MAX);
+
+    auto type_root_id = nodes().size() - 1;
     init(type_root_id);
 
     dbg("Type init stage complete!");
 
-    restore_state(type_state, true);
+    restore(type_state, type_ctx, true);
     auto res = convert(type_root_id);
 
-    dbg("Type convert stage complete!");
+    dbg("Type convert stage complete!\n");
 
-    restore_state(outer_state);
+    switch_context(outer_ctx);
     return res;
 }
 
@@ -179,9 +184,10 @@ void RewriteSlotted::init(rust::Vec<RecExprFFI> rec_exprs) {
         dbg("\nInitializing RecExpr: ", rec_expr_id);
 
         auto rec_expr = rec_exprs[rec_expr_id];
-        set_state(rec_expr_id, rec_expr);
+        init_state(rec_expr_id, rec_expr);
+        switch_context(rec_expr_id);
 
-        auto root_id = nodes()->size() - 1;
+        auto root_id = nodes().size() - 1;
         init(root_id);
     }
 }
@@ -234,13 +240,14 @@ const Def* RewriteSlotted::init_lookahead(uint32_t id) {
             case MimKind::Arr: res = init_arr(id, node); break;
             case MimKind::Pack: res = init_pack(id, node); break;
             default:
-                auto saved_state = save_state();
+                auto saved_ctx   = ctx();
+                auto saved_state = state_copy();
 
                 init(id);
-                restore_state(saved_state, true);
+                restore(saved_state, saved_ctx, true);
 
                 res = convert(id);
-                restore_state(saved_state, true);
+                restore(saved_state, saved_ctx, true);
                 break;
         }
     }
@@ -354,13 +361,14 @@ const Def* RewriteSlotted::init_sigma(uint32_t id, NodeFFI node) {
     var->set(var_name);
     register_var(var_name, var);
 
-    auto saved_state = save_state();
+    auto saved_ctx   = ctx();
+    auto saved_state = state_copy();
     for (size_t i = 0; i < size; i++) {
         auto type = init_lookahead(type_ids[i]);
         mut_sigma->set(i, type);
         inc_visit_count(loc().depth + 1);
     }
-    restore_state(saved_state);
+    restore(saved_state, saved_ctx);
 
     dbg(mut_sigma);
     exit_scope(var_scope);
@@ -426,9 +434,9 @@ void RewriteSlotted::convert(rust::Vec<RecExprFFI> rec_exprs) {
     for (size_t rec_expr_id = 0; rec_expr_id < rec_exprs.size(); rec_expr_id++) {
         dbg("\nConverting RecExpr: ", rec_expr_id);
         auto rec_expr = rec_exprs[rec_expr_id];
-        set_state(rec_expr_id, rec_expr);
+        switch_context(rec_expr_id);
 
-        auto root_id = nodes()->size() - 1;
+        auto root_id = nodes().size() - 1;
         convert(root_id);
     }
 }

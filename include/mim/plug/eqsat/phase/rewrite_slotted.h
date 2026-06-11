@@ -12,8 +12,8 @@
 namespace mim::plug::eqsat {
 
 /****************** DEBUG *********************/
-inline constexpr bool DEBUG       = false;
-inline constexpr bool SCOPES      = false;
+inline constexpr bool DEBUG       = true;
+inline constexpr bool SCOPES      = true;
 inline constexpr bool PERFORMANCE = false;
 
 template<bool DBG_KIND = DEBUG, typename... Args>
@@ -89,11 +89,21 @@ typedef fe::SymMap<const Def*> RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
 typedef absl::flat_hash_map<size_t, Nodes> NodesMap;
 
-typedef struct State {
-    Loc loc;
+typedef struct RecExprState {
     DepthVisits depth_visits;
-    size_t rec_expr_id;
-} State;
+    Cache cache;
+    ScopeTree scope_tree;
+    Nodes nodes;
+} RecExprState;
+
+typedef struct Context {
+    size_t id;
+
+    Loc loc;
+    RecExprState* state;
+} Context;
+
+typedef absl::flat_hash_map<size_t, RecExprState> RecExprStates;
 
 /***************** REWRITER *********************/
 class RewriteSlotted : public Phase, public Rewriter {
@@ -173,8 +183,6 @@ private:
     // in the init phase will be set.
     void convert(rust::Vec<RecExprFFI> rec_exprs);
     const Def* convert(uint32_t id);
-    const Def* convert_mutables(uint32_t id);
-    const Def* convert_immutables(uint32_t id);
     const Def* convert_root(uint32_t id, NodeFFI node);
     const Def* convert_let(uint32_t id, NodeFFI node);
     const Def* convert_lam(uint32_t id, NodeFFI node);
@@ -203,29 +211,24 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
-    size_t rec_expr_id() const { return rec_expr_id_; }
-    void set_rec_expr_id(size_t rec_expr_id) { rec_expr_id_ = rec_expr_id; }
+    size_t id() { return ctx_.id; }
+    void set_id(size_t id) { ctx_.id = id; }
 
-    // The nodes of the RecExprFFI we are currently processing
-    Nodes* nodes() { return nodes_; }
-    Nodes* nodes(size_t rec_expr_id) { return &nodes_map_[rec_expr_id]; }
-    void set_nodes(Nodes* nodes) { nodes_ = nodes; }
-    void set_nodes(size_t rec_expr_id) { set_nodes(nodes(rec_expr_id)); }
+    Nodes& nodes() { return ctx_.state->nodes; }
+    void set_nodes(size_t id, Nodes nodes) { states_[id].nodes = nodes; }
 
     // Stores Defs that were already created for a node via the nodes' id
-    Cache* cache() { return cache_; }
-    Cache* cache(size_t rec_expr_id) { return &cache_map_[rec_expr_id]; }
-    void set_cache(Cache* cache) { cache_ = cache; }
-    void set_cache(size_t rec_expr_id) { set_cache(cache(rec_expr_id)); }
+    Cache& cache() { return ctx_.state->cache; }
+    void set_cache(size_t id, Cache cache) { states_[id].cache = cache; }
 
     const Def* cache_get(uint32_t id) {
-        auto it = cache()->find(id);
-        return it != cache()->end() ? it->second : nullptr;
+        auto it = cache().find(id);
+        return it != cache().end() ? it->second : nullptr;
     }
-    const Def* cache_set(uint32_t id, const Def* def) { return (*cache())[id] = def; }
+    const Def* cache_set(uint32_t id, const Def* def) { return cache()[id] = def; }
     uint32_t get_id(const Def* def) {
-        auto it = std::find_if(cache()->begin(), cache()->end(), [&](const auto& pair) { return pair.second == def; });
-        if (it != cache()->end()) return it->first;
+        auto it = std::find_if(cache().begin(), cache().end(), [&](const auto& pair) { return pair.second == def; });
+        if (it != cache().end()) return it->first;
         error("Could not find the given Def in the cache.");
         return -1;
     }
@@ -286,20 +289,20 @@ private:
     }
 
     NodeFFI& get_node(MimKind expected, uint32_t id) {
-        NodeFFI& node = (*nodes())[id];
+        NodeFFI& node = nodes()[id];
         assert(node.kind == expected && "get_node: mismatch between expected and actual node kind");
         return node;
     }
-    NodeFFI& get_node_unsafe(uint32_t id) { return (*nodes())[id]; }
+    NodeFFI& get_node_unsafe(uint32_t id) { return nodes()[id]; }
 
     Sym get_symbol(uint32_t id) {
-        auto node = (*nodes())[id];
+        auto node = nodes()[id];
         auto sym  = node.symbol.c_str();
         return new_world().sym(sym);
     }
-    uint64_t get_num(uint32_t id) { return (*nodes())[id].num; }
+    uint64_t get_num(uint32_t id) { return nodes()[id].num; }
     Sym get_slot(uint32_t id) {
-        auto node = (*nodes())[id];
+        auto node = nodes()[id];
         auto slot = node.slot.c_str();
         return new_world().sym(slot);
     }
@@ -316,60 +319,55 @@ private:
     }
 
     /************ State *************/
-    void set_state(size_t id, RecExprFFI rec_expr) {
-        set_rec_expr_id(id);
-        nodes_map_[rec_expr_id()] = rec_expr.nodes;
+    Context ctx() { return ctx_; }
 
-        set_cache(rec_expr_id());
-        set_scope_tree(rec_expr_id());
+    RecExprState* state(size_t id) { return &states_[id]; }
+    RecExprState state_copy(size_t id) { return states_[id]; }
+    RecExprState* state() { return ctx_.state; }
+    RecExprState state_copy() { return *ctx_.state; }
+    void set_state(RecExprState* state) { ctx_.state = state; }
+    void set_state(size_t id) { ctx_.state = &states_[id]; }
 
-        reset_loc();
-        reset_depth_visits();
-        set_scope(loc());
-
-        set_nodes(rec_expr_id());
+    RecExprState init_state(size_t id, RecExprFFI& rec_expr) {
+        set_depth_visits(id, {});
+        set_cache(id, {});
+        set_scope_tree(id, {});
+        set_nodes(id, rec_expr.nodes);
+        return state_copy(id);
     }
 
-    State save_state() { return State{loc(), depth_visits(), rec_expr_id()}; }
+    static constexpr int32_t ROOT_SCOPE_DEPTH = -1;
+    static constexpr Loc ROOT_LOC             = Loc{ROOT_SCOPE_DEPTH, 0};
 
-    State temp_state(Nodes nodes) {
-        // Note: It would be better to use something else like -1 as the index
-        // for temporary rec exprs but this is what we use for now.
-        set_rec_expr_id(SIZE_MAX);
-        scope_tree_map_[rec_expr_id()] = {};
-        cache_map_[rec_expr_id()]      = {};
-        nodes_map_[rec_expr_id()]      = nodes;
-
-        set_cache(rec_expr_id());
-        set_scope_tree(rec_expr_id());
-
+    Context switch_context(size_t id) {
+        set_id(id);
+        set_state(id);
         reset_loc();
-        reset_depth_visits();
-        set_scope(loc());
-
-        set_nodes(rec_expr_id());
-        return save_state();
+        return ctx();
     }
 
-    void restore_state(State state, bool keep_cache = false) {
-        set_rec_expr_id(state.rec_expr_id);
+    Context switch_context(Context& other) {
+        set_id(other.id);
+        set_loc(other.loc);
+        set_state(other.id);
+        return ctx();
+    }
 
-        if (!keep_cache) set_cache(state.rec_expr_id);
-        set_scope_tree(state.rec_expr_id);
+    void restore(RecExprState& state, Context& ctx, bool keep_cache = false) {
+        set_depth_visits(ctx.id, state.depth_visits);
+        if (!keep_cache) set_cache(ctx.id, state.cache);
+        set_scope_tree(ctx.id, state.scope_tree);
+        set_nodes(ctx.id, state.nodes);
 
-        set_loc(state.loc);
-        set_depth_visits(state.depth_visits);
-        set_scope(loc());
-
-        set_nodes(state.rec_expr_id);
+        set_loc(ctx.loc);
     }
 
     void dump_cache() {
-        for (auto [id, def] : *cache(rec_expr_id()))
+        for (auto [id, def] : cache())
             std::cout << id << ": " << def << "\n";
     }
     void dump_scope_tree() {
-        for (auto [l, s] : *scope_tree(rec_expr_id()))
+        for (auto [l, s] : scope_tree())
             std::cout << l.to_str() << ": " << s.to_str() << "\n";
     }
     void dump_depth_visits() {
@@ -377,12 +375,12 @@ private:
             std::cout << d << ": " << v << "\n";
     }
     void dump_nodes() {
-        for (auto n : *nodes(rec_expr_id()))
+        for (auto n : nodes())
             std::cout << node_ffi_str(n).c_str() << "\n";
     }
     void dump_state() {
         dbg("----------STATE-----------");
-        dbg("Curr ID: ", rec_expr_id());
+        dbg("Curr ID: ", id());
         dbg("Curr Cache: ");
         dump_cache();
         dbg("Curr Scope Tree: ");
@@ -397,11 +395,11 @@ private:
     }
 
     /************ Depth Visits*************/
-    const DepthVisits& depth_visits() const { return depth_visits_; }
-    void set_depth_visits(DepthVisits depth_visits) { depth_visits_ = depth_visits; }
+    const DepthVisits& depth_visits() const { return ctx_.state->depth_visits; }
+    void set_depth_visits(size_t id, DepthVisits depth_visits) { states_[id].depth_visits = depth_visits; }
 
-    void reset_depth_visits() { set_depth_visits({}); }
-    void inc_visit_count(size_t depth) { depth_visits_[depth] += 1; }
+    void reset_depth_visits(size_t id) { set_depth_visits(id, {}); }
+    void inc_visit_count(size_t depth) { ctx_.state->depth_visits[depth] += 1; }
 
     /******************* Loc **************/
     // Loc tracks the current location in the scope tree.
@@ -417,21 +415,19 @@ private:
     //
     // The location of scope s5 would be at (2, 1) because it is at
     // at a tree-depth of 2 and at an offset of 1 at that depth.
-    Loc loc() const { return loc_; }
-    void set_loc(Loc loc) { loc_ = loc; }
+    Loc loc() const { return ctx_.loc; }
+    void set_loc(Loc loc) { ctx_.loc = loc; }
 
     void reset_loc() {
         // We start at Loc {depth: -1, offset: 0} because
         // enter_scope() increments the depth and we want
         // the first scope to begin at (0,0) rather than (1,0)
-        set_loc({ROOT_SCOPE_DEPTH, 0});
+        set_loc(ROOT_LOC);
     }
 
     /******************* Scope **************/
-    Scope* scope() { return scope_; }
-    Scope* scope(Loc loc) { return &(*scope_tree_)[loc]; }
-    void set_scope(Scope* scope) { scope_ = scope; }
-    void set_scope(Loc loc) { set_scope(scope(loc)); }
+    Scope* scope() { return &ctx_.state->scope_tree[ctx_.loc]; }
+    Scope* scope(Loc loc) { return &ctx_.state->scope_tree[loc]; }
 
     void scope_add(Sym name, const Def* def) {
         scope()->var_name = name;
@@ -441,7 +437,6 @@ private:
     void update_scope() {
         auto curr_scope = scope(loc());
         curr_scope->loc = loc();
-        set_scope(curr_scope);
     }
 
     size_t next_offset(size_t next_depth) {
@@ -459,11 +454,6 @@ private:
             auto next_loc   = Loc{next_depth, nxt_offset};
             set_loc(next_loc);
 
-            // We sometimes need to be able to revisit a scope we just exited
-            // in the convert() bottom-up traverse. Since the last visit coming
-            // from the bottom up was counted, our offset when revisiting needs
-            // to be decremented by one in order to account for the fact that
-            // we are visiting the same scope again.
             if (revisit) {
                 auto curr_depth   = loc().depth;
                 auto prev_offset  = loc().offset - 1;
@@ -493,29 +483,19 @@ private:
     }
 
     /************** Scope Tree ************/
-    ScopeTree* scope_tree() { return scope_tree_; }
-    ScopeTree* scope_tree(size_t rec_expr_id) { return &scope_tree_map_[rec_expr_id]; }
-    void set_scope_tree(ScopeTree* scope_tree) { scope_tree_ = scope_tree; }
-    void set_scope_tree(size_t rec_expr_id) { set_scope_tree(scope_tree(rec_expr_id)); }
+    ScopeTree& scope_tree() { return ctx_.state->scope_tree; }
+    void set_scope_tree(size_t id, ScopeTree scope_tree) { states_[id].scope_tree = scope_tree; }
 
     /************** Root Scope ************/
-    const int32_t ROOT_SCOPE_DEPTH = -1;
     const RootScope& root_scope() const { return root_scope_; }
     void root_scope_add(Sym name, const Def* def) { root_scope_[name] = def; }
 
-    size_t rec_expr_id_;
-    DepthVisits depth_visits_;
-    Loc loc_;
-    Scope* scope_;
-    ScopeTree* scope_tree_;
-    ScopeTreeMap scope_tree_map_;
     RootScope root_scope_;
-    Nodes* nodes_;
-    NodesMap nodes_map_;
-    Cache* cache_;
-    CacheMap cache_map_;
     fe::SymMap<const Def*> axms_;
     fe::SymMap<const Def*> aliases_;
+
+    Context ctx_;
+    RecExprStates states_;
 };
 
 }; // namespace mim::plug::eqsat
