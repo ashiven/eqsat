@@ -1,0 +1,38 @@
+// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+plugin eqsat;
+import _rise;
+
+lam extern _compile(): %compile.Phase =
+    %compile.phases ff (
+        %eqsat.eqsat_phase,
+    );
+
+rule wrap_transpose(T: *, f: T → T, n1 n2: Nat):
+    %rise.map @n1 (%rise.map @n2 f)
+=>  %rise.o (%rise.transpose @(n2, n1) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(n1, n2) @T));
+
+lam f(x: Nat): Nat = %core.nat.add (x, 1);
+
+fun extern inline(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    return ((%rise.map (%rise.map f)) arg);
+
+fun extern inline_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    return ((%rise.o (%rise.transpose @(4, 3) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(3, 4) @Nat))) arg);
+
+fun extern binding(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    let mapper = %rise.map @3 (%rise.map @4 f);
+    return (mapper arg);
+
+fun extern binding_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    let mapper = %rise.o (%rise.transpose @(4, 3) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(3, 4) @Nat));
+    return (mapper arg);
+
+lam extern _config() =
+    %eqsat.config (
+        %eqsat.slotted,
+        %eqsat.rulesets (%eqsat.normalize),
+        %eqsat.rules_kind (wrap_transpose),
+        %eqsat.reaches (inline, inline_expected, 5),
+        %eqsat.reaches (binding, binding_expected, 5),
+        %eqsat.select (),
+    );
