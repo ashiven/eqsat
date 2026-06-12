@@ -26,19 +26,19 @@ lam f(x: Nat): Nat = %core.nat.add (x, 1);
 //     let mapper = %rise.o (%rise.join @(2, 2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @2 @Nat 2));
 //     return (mapper arg);
 
-fun extern inline(n1 n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    return ((%rise.map @(%core.nat.mul (n1, n2)) f) ‹%core.nat.mul (n1, n2); 2›);
+fun extern inline(n1 n2 v: Nat): «%core.nat.mul (n1, n2); Nat» =
+    return ((%rise.map @(%core.nat.mul (n1, n2)) f) ‹%core.nat.mul (n1, n2); v›);
 
-fun extern inline_expected(n1 n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    return ((%rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2))) ‹%core.nat.mul (n1, n2); 2›);
+fun extern inline_expected(n1 n2 v: Nat): «%core.nat.mul (n1, n2); Nat» =
+    return ((%rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2))) ‹%core.nat.mul (n1, n2); v›);
 
-fun extern binding(n1 n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    let arg = ‹%core.nat.mul (n1, n2); 2›;
+fun extern binding(n1 n2 v: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); v›;
     let mapper = %rise.map @(%core.nat.mul (n1, n2)) f;
     return (mapper arg);
 
-fun extern binding_expected(n1 n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    let arg = ‹%core.nat.mul (n1, n2); 2›;
+fun extern binding_expected(n1 n2 v: Nat): «%core.nat.mul (n1, n2); Nat» =
+    let arg = ‹%core.nat.mul (n1, n2); v›;
     let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
     return (mapper arg);
 
