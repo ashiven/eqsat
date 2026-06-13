@@ -4,12 +4,18 @@
 import compile;
 import eqsat;
 
+let mem_opt_passes =
+    %compile.passes (
+        %compile.named_pass "%mem.ssa_pass",
+        %compile.named_pass "%mem.copy_prop_ff_pass",
+    );
+
 lam extern _compile(): %compile.Phase =
     %compile.phases ff (
         %compile.pass2phase %compile.scalarize_pass,
         %compile.pass2phase (%compile.eta_red_pass ff),
         %compile.pass2phase %compile.tail_rec_elim_pass,
-        %compile.pass2phase (cond_pass "regex" %regex.lower_regex),
+        %compile.pass2phase (%compile.named_pass "%regex.lower_regex"),
         %compile.phases tt (
             %compile.beta_red_phase,
             %compile.eta_red_phase,
@@ -29,10 +35,11 @@ lam extern _compile(): %compile.Phase =
         %compile.ret_wrap_phase,
         %compile.repl2phase (
             %compile.repls (
-                %mem.remem_repl,
-                %mem.alloc2malloc_repl,
-                cond_repl "refly" %refly.remove_dbg_repl,
-                cond_repl "gpu" %gpu.malloc2gpualloc_repl,
+                %compile.named_repl "%mem.remem_repl",
+                %compile.named_repl "%mem.alloc2malloc_repl",
+                %compile.named_repl "%refly.remove_dbg_repl",
+                %compile.named_repl "%gpu.malloc2gpualloc_repl",
             )
         ),
+        %compile.named_phase "%ll.emit",
     );

@@ -4,7 +4,7 @@
 #include <mim/plug/eqsat/phase/rewrite_egg.h>
 
 #include "mim/def.h"
-#include "mim/driver.h"
+#include "mim/sexpr.h"
 
 const bool DEBUG = false;
 
@@ -16,7 +16,7 @@ void RewriteEgg::start() {
     // We are assuming that the core plugin and its backends have been loaded at this point
     // because the 'eqsat' plugin declared it as a dependency via 'plugin core;'
     std::ostringstream sexpr;
-    driver().backend("sexpr")(old_world(), sexpr);
+    sexpr::emit_slotted_typed(old_world(), sexpr);
 
     if (DEBUG) std::cout << sexpr.str() << "\n";
 

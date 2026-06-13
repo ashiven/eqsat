@@ -4,7 +4,7 @@
 #include <mim/plug/eqsat/phase/rewrite_slotted.h>
 
 #include "mim/def.h"
-#include "mim/driver.h"
+#include "mim/sexpr.h"
 
 #include "mim/plug/eqsat/autogen.h"
 
@@ -19,7 +19,7 @@ void RewriteSlotted::start() {
 
     START_TIMER(sexpr)
     std::ostringstream sexpr;
-    driver().backend("sexpr-slotted-typed")(old_world(), sexpr);
+    sexpr::emit_slotted_typed(old_world(), sexpr);
     END_TIMER(sexpr)
 
     dbg(sexpr.str());

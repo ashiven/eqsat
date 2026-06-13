@@ -32,8 +32,8 @@ public:
 
 private:
     void register_symbols() {
-        for (auto [flags, annex] : old_world().flags2annex()) {
-            auto new_annex                = new_world().register_annex(flags, rewrite(annex));
+        for (auto [flags, e] : old_world().annexes()) {
+            auto new_annex                = new_world().annexes().attach(flags, e.sym, rewrite(e.def));
             axms_[new_annex->sym().str()] = new_annex;
         }
 
