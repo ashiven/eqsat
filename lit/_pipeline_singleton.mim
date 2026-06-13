@@ -1,3 +1,5 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
 import compile;
 import eqsat;
 

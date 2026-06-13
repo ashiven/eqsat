@@ -1,6 +1,5 @@
 // UNSUPPORTED: always
 // RUN: %mim %s -o -
-
 import compile;
 
 let mem_opt_passes =
