@@ -3,7 +3,8 @@ plugin eqsat;
 import _rise;
 import _pipeline_singleton;
 
-// Another example from the Guided Equality Saturation paper.
+// Tile2D example from "Guided Equality Saturation":
+// https://dl.acm.org/doi/10.1145/3632900
 //
 // map @(n1 * 32) (map @(n2 * 32) f)
 //
@@ -16,6 +17,31 @@ import _pipeline_singleton;
 // o (map @n1 transpose)
 // o (map @n1 (map @32 (split 32)))
 // o (split 32)
+//
+// Explanations for these equalities generated via egg::EGraph::explain_equivalence in:
+// https://github.com/Bastacyclop/egg-sketches/blob/main/examples/bench_tiling.rs
+//
+// TilingSearch::Split explanation:
+//
+// (m (* n1 32) (m (* n2 32) f))
+// (m (* n1 32) (Rewrite=> split-map (o j (o (m n2 (m 32 f)) (s 32)))))
+// (Rewrite=> map-fission (o (m (* n1 32) j) (m (* n1 32) (o (m n2 (m 32 f)) (s 32)))))
+// (o (m (* n1 32) j) (Rewrite=> split-map (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32)))))
+// (o (m (* n1 32) j) (Rewrite=> o-assoc2 (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32))))
+// (Rewrite=> o-assoc2 (o (o (m (* n1 32) j) (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))))) (s 32)))
+// (o (Rewrite<= o-assoc1 (o (o (m (* n1 32) j) j) (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))))) (s 32))
+// (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> map-fission (o (m 32 (m n2 (m 32 f))) (m 32 (s 32)))))) (s 32))
+// (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32)))))) (s 32))
+//
+// TilingSearch::Reorder explanation:
+//
+// (o (o (o (m (* n1 32) j) j) (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32))))) (s 32))
+// (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (m n1 (m 32 (s 32))))) (s 32))
+// (Rewrite=> o-assoc1 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (o (m n1 (m 32 (s 32))) (s 32))))
+// (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> transpose-maps (o T (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 T)) (m n1 (o (m n2 (m 32 (m 32 f))) T)))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (Rewrite=> map-fission (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T)))) (o (m n1 (m 32 (s 32))) (s 32)))
 
 // Unused?
 rule transpose_before_maps(T: *, a: T → T, n1 n2: Nat):
