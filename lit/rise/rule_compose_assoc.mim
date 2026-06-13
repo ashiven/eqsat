@@ -2,10 +2,7 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
-
-rule compose_assoc(A: *, B: *, C: *, D: *, a: C → D, b: B → C, c: A → B):
-    %rise.o a (%rise.o b c)
-=>  %rise.o (%rise.o a b) c;
+import _rules_rise;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
@@ -22,7 +19,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (compose_assoc),
+        %eqsat.rules_kind (compose_assoc_1, compose_assoc_2),
         %eqsat.reaches (binding, binding_expected, 5),
         %eqsat.select (),
     );

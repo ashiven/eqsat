@@ -2,10 +2,7 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
-
-rule join_mm_split(T: *, f: T → T, n1 n2: Nat):
-    %rise.map @(%core.nat.mul (n1, n2)) f
-=>  %rise.o (%rise.join @(n1, n2) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @T n2));
+import _rules_rise;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
@@ -42,7 +39,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (join_mm_split),
+        %eqsat.rules_kind (split_map),
         %eqsat.reaches (binding, binding_expected, 5),
         %eqsat.reaches (inline, inline_expected, 5),
         %eqsat.select (),

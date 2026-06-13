@@ -2,6 +2,7 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
+import _rules_rise;
 
 // Tile2D example from "Guided Equality Saturation":
 // https://dl.acm.org/doi/10.1145/3632900
@@ -42,41 +43,6 @@ import _pipeline_singleton;
 // (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
 // (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 T)) (m n1 (o (m n2 (m 32 (m 32 f))) T)))) (o (m n1 (m 32 (s 32))) (s 32)))
 // (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (Rewrite=> map-fission (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T)))) (o (m n1 (m 32 (s 32))) (s 32)))
-
-// Unused?
-rule transpose_before_maps(T: *, a: T → T, n1 n2: Nat):
-    %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
-=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
-
-// Unused?
-rule transpose_after_maps(T: *, a: T → T, n1 n2: Nat):
-    %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T)
-=>  %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a));
-
-rule compose_assoc_1(A B C D: *, a: C → D, b: B → C, c: A → B):
-    %rise.o a (%rise.o b c)
-=>  %rise.o (%rise.o a b) c;
-
-rule compose_assoc_2(A B C D: *, a: C → D, b: B → C, c: A → B):
-    %rise.o (%rise.o a b) c
-=>  %rise.o a (%rise.o b c);
-
-// Unused?
-rule map_fusion(A B C: *, a: B → C, b: A → B, n: Nat):
-    %rise.o (%rise.map @n a) (%rise.map @n b)
-=>  %rise.map @n (%rise.o a b);
-
-rule map_fission(A B C: *, a: B → C, b: A → B, n: Nat):
-    %rise.map @n (%rise.o a b)
-=>  %rise.o (%rise.map @n a) (%rise.map @n b);
-
-rule transpose_maps(T: *, f: T → T, n1 n2: Nat):
-    %rise.map @n1 (%rise.map @n2 f)
-=>  %rise.o (%rise.transpose @(n2, n1) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(n1, n2) @T));
-
-rule split_map(T: *, f: T → T, n1 n2: Nat):
-    %rise.map @(%core.nat.mul (n1, n2)) f
-=>  %rise.o (%rise.join @(n1, n2) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @T n2));
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 

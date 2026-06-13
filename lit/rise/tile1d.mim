@@ -2,35 +2,10 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
+import _rules_rise;
 
-// From the Guided Equality Saturation paper.
-
-// Uses the following rewrite rules:
-// 1) transpose o map (map a) => map (map a) o transpose
-// 2) a o (b o c)             => (a o b) o c
-// 3) map a o map b           => map (a o b)
-// 4) map @n1 (map @n2 f)     => transpose o (map @n2 (map @n1 f)) o transpose
-// 5) map @(n1 * n2) f        => join o (map @n1 (map @n2 f)) o (split n2)
-
-rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
-    %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
-=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
-
-rule compose_assoc(A B C D: *, a: C → D, b: B → C, c: A → B):
-    %rise.o a (%rise.o b c)
-=>  %rise.o (%rise.o a b) c;
-
-rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
-    %rise.o (%rise.map @n a) (%rise.map @n b)
-=>  %rise.map @n (%rise.o a b);
-
-rule wrap_transpose(T: *, f: T → T, n1 n2: Nat):
-    %rise.map @n1 (%rise.map @n2 f)
-=>  %rise.o (%rise.transpose @(n2, n1) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(n1, n2) @T));
-
-rule join_mm_split(T: *, f: T → T, n1 n2: Nat):
-    %rise.map @(%core.nat.mul (n1, n2)) f
-=>  %rise.o (%rise.join @(n1, n2) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @T n2));
+// Tile1D example from "Guided Equality Saturation":
+// https://dl.acm.org/doi/10.1145/3632900
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
@@ -52,7 +27,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
+        %eqsat.rules_kind (transpose_before_maps, compose_assoc_1, compose_assoc_2, map_fusion, transpose_maps, split_map),
         %eqsat.reaches (tile1d, tile1d_expected, 5),
         %eqsat.select (),
     );

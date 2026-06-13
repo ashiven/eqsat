@@ -2,10 +2,7 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
-
-rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
-    %rise.o (%rise.map @n a) (%rise.map @n b)
-=>  %rise.map @n (%rise.o a b);
+import _rules_rise;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
@@ -26,7 +23,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (map_fuse),
+        %eqsat.rules_kind (map_fusion),
         %eqsat.reaches (guided, guided_expected, 5),
         %eqsat.select (),
     );

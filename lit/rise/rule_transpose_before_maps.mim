@@ -2,10 +2,7 @@
 plugin eqsat;
 import _rise;
 import _pipeline_singleton;
-
-rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
-    %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
-=>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
+import _rules_rise;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);
@@ -28,7 +25,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_mm),
+        %eqsat.rules_kind (transpose_before_maps),
         %eqsat.reaches (inline, inline_expected, 5),
         %eqsat.reaches (binding, binding_expected, 5),
         %eqsat.select (),
