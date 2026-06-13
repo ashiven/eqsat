@@ -1,6 +1,6 @@
 // UNSUPPORTED: always
 // RUN: %mim %s -o -
-import compile;
+plugin compile;
 
 let mem_opt_passes =
     %compile.passes (
