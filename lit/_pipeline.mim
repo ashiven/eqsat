@@ -8,7 +8,6 @@ let mem_opt_passes =
         %compile.named_pass "%mem.copy_prop_ff_pass",
     );
 
-// TODO: This pipeline is broken with the latest opt rework
 lam extern _compile(): %compile.Phase =
     %compile.phases ff (
         %compile.pass2phase %compile.scalarize_pass,
