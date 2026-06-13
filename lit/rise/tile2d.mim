@@ -21,23 +21,38 @@ lam extern _compile(): %compile.Phase =
 // o (map @n1 (map @32 (split 32)))
 // o (split 32)
 
-rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
+// Unused?
+rule transpose_before_maps(T: *, a: T → T, n1 n2: Nat):
     %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
 =>  %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T);
 
-rule compose_assoc(A B C D: *, a: C → D, b: B → C, c: A → B):
+// Unused?
+rule transpose_after_maps(T: *, a: T → T, n1 n2: Nat):
+    %rise.o (%rise.map (%rise.map a)) (%rise.transpose @(n1, n2) @T)
+=>  %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a));
+
+rule compose_assoc_1(A B C D: *, a: C → D, b: B → C, c: A → B):
     %rise.o a (%rise.o b c)
 =>  %rise.o (%rise.o a b) c;
 
-rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
+rule compose_assoc_2(A B C D: *, a: C → D, b: B → C, c: A → B):
+    %rise.o (%rise.o a b) c
+=>  %rise.o a (%rise.o b c);
+
+// Unused?
+rule map_fusion(A B C: *, a: B → C, b: A → B, n: Nat):
     %rise.o (%rise.map @n a) (%rise.map @n b)
 =>  %rise.map @n (%rise.o a b);
 
-rule wrap_transpose(T: *, f: T → T, n1 n2: Nat):
+rule map_fission(A B C: *, a: B → C, b: A → B, n: Nat):
+    %rise.map @n (%rise.o a b)
+=>  %rise.o (%rise.map @n a) (%rise.map @n b);
+
+rule transpose_maps(T: *, f: T → T, n1 n2: Nat):
     %rise.map @n1 (%rise.map @n2 f)
 =>  %rise.o (%rise.transpose @(n2, n1) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(n1, n2) @T));
 
-rule join_mm_split(T: *, f: T → T, n1 n2: Nat):
+rule split_map(T: *, f: T → T, n1 n2: Nat):
     %rise.map @(%core.nat.mul (n1, n2)) f
 =>  %rise.o (%rise.join @(n1, n2) @T) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @T n2));
 
@@ -131,7 +146,15 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
         %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_mm, compose_assoc, map_fuse, wrap_transpose, join_mm_split),
+        %eqsat.rules_kind
+           (transpose_before_maps,
+            transpose_after_maps,
+            compose_assoc_1,
+            compose_assoc_2,
+            map_fusion,
+            map_fission,
+            transpose_maps,
+            split_map),
         // %eqsat.reaches (tile2d, tile2d_subgoal_A, 5),
         %eqsat.reaches (tile2d_subgoal_A, tile2d_subgoal_B, 5),
         // %eqsat.reaches (tile2d, tile2d_expected, 200),
