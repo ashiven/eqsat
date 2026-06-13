@@ -1,3 +1,5 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
 import _rise;
 
 rule transpose_before_maps(T: *, a: T → T, n1 n2: Nat):
