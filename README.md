@@ -49,10 +49,10 @@ using namespace mim::plug;
 
 int main(int, char**) {
     try {
-        Driver driver;
-        auto& w = driver.world();
+        auto driver = Driver("eqsat");
+        auto& w     = driver.world();
         driver.log().set(&std::cerr).set(Log::Level::Debug);
-        ast::load_plugins(w, View<std::string>{"compile", "core", "opt", "eqsat"});
+        ast::load_plugins(w, View<std::string>{"core", "ll", "eqsat"});
 
         // rule foo (x: Nat): %core.nat.add (x, 0) => x;
         auto foo = w.mut_rule(w.type_nat())->set("foo");
@@ -79,19 +79,16 @@ int main(int, char**) {
         main->app(false, ret, x);
         main->externalize();
 
-        // Equality saturation is performed as part of optimization
+        // Equality saturation and code gen are performed here
         optimize(w);
-        std::ofstream ofs("eqsat.ll");
-        driver.backend("ll")(w, ofs);
-        ofs.close();
 
         sys::system("clang eqsat.ll -o eqsat -Wno-override-module");
-        outln("exit code: {}", sys::system("./eqsat"));
+        std::println("exit code: {}", sys::system("./eqsat"));
     } catch (const std::exception& e) {
-        errln("{}", e.what());
+        std::println(std::cerr, "{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        errln("error: unknown exception");
+        std::println(std::cerr, "error: unknown exception");
         return EXIT_FAILURE;
     }
 
