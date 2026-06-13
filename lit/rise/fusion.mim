@@ -1,13 +1,7 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
-
-// There are some phases that substitute lambda var uses with the
-// lambda bodies (beta reduction?) which we don't want in this example.
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %eqsat.eqsat_phase,
-    );
+import _pipeline_singleton;
 
 lam extern _config() =
     %eqsat.config (

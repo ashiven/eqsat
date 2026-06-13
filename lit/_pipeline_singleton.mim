@@ -1,0 +1,7 @@
+import compile;
+import eqsat;
+
+// There are some phases that substitute lambda var uses with the
+// lambda bodies (beta reduction?) which we skip with this pipeline.
+lam extern _compile(): %compile.Phase =
+    %eqsat.eqsat_phase;

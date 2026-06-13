@@ -1,11 +1,7 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
-
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %eqsat.eqsat_phase,
-    );
+import _pipeline_singleton;
 
 rule compose_assoc(A: *, B: *, C: *, D: *, a: C → D, b: B → C, c: A → B):
     %rise.o a (%rise.o b c)

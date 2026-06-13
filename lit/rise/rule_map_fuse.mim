@@ -1,11 +1,7 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
-
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %eqsat.eqsat_phase,
-    );
+import _pipeline_singleton;
 
 rule map_fuse(A B C: *, a: B → C, b: A → B, n: Nat):
     %rise.o (%rise.map @n a) (%rise.map @n b)

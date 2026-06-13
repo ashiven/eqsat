@@ -1,11 +1,7 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
-
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %eqsat.eqsat_phase,
-    );
+import _pipeline_singleton;
 
 rule transpose_mm(T: *, a: T → T, n1 n2: Nat):
     %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))

@@ -1,11 +1,7 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin eqsat;
 import _rise;
-
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %eqsat.eqsat_phase,
-    );
+import _pipeline_singleton;
 
 // Another example from the Guided Equality Saturation paper.
 //
