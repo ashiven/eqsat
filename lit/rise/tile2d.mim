@@ -115,10 +115,18 @@ lam extern _config() =
             map_fission,
             transpose_maps,
             split_map),
+        // Total time without type-analysis: 00:00:36.1441995
+        // Total time with type-analysis:
         %eqsat.reaches (tile2d, tile2d_split, 50),
+
+        // Total time without type-analysis: 00:00:24.3869184
+        // Total time with type-analysis:
         %eqsat.reaches (tile2d_split, tile2d_reorder, 50),
-        // full tiling example:
-        // eqsat.reaches (tile2d, tile2d_reorder, 50),
+
+        // Full tiling example:
+        // Total time without type-analysis: times out
+        // Total time with type-analysis:
+        // %eqsat.reaches (tile2d, tile2d_reorder, 100),
         %eqsat.select (),
     );
 
