@@ -23,21 +23,17 @@ fn combined_make(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let mut combined_data = AnalysisData::default();
 
     // Analyses applied for all rulesets
-    // let type_data = TypeAnalysis::make(eg, enode);
-    // combined_data.combine(type_data);
+    let type_data = TypeAnalysis::make(eg, enode);
+    combined_data.combine(type_data);
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             match *ruleset {
-                RuleSet::Test => {
-                    let data = TypeAnalysis::make(eg, enode);
-                    combined_data.combine(data)
-                }
                 RuleSet::Rise => {
-                    let data = TypeAnalysis::make(eg, enode);
-                    combined_data.combine(data)
+                    // let data = TypeAnalysis::make(eg, enode);
+                    // combined_data.combine(data)
                 }
                 // AUTOGEN START: slotted-analysis-rust-make
                 // AUTOGEN END: slotted-analysis-rust-make
@@ -53,21 +49,17 @@ fn combined_merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     let mut combined_data = AnalysisData::default();
 
     // Analyses applied for all rulesets
-    // let type_data = TypeAnalysis::merge(l.clone(), r.clone());
-    // combined_data.combine(type_data);
+    let type_data = TypeAnalysis::merge(l.clone(), r.clone());
+    combined_data.combine(type_data);
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             match *ruleset {
-                RuleSet::Test => {
-                    let data = TypeAnalysis::merge(l.clone(), r.clone());
-                    combined_data.combine(data)
-                }
                 RuleSet::Rise => {
-                    let data = TypeAnalysis::merge(l.clone(), r.clone());
-                    combined_data.combine(data)
+                    // let data = TypeAnalysis::merge(l.clone(), r.clone());
+                    // combined_data.combine(data)
                 }
                 // AUTOGEN START: slotted-analysis-rust-merge
                 // AUTOGEN END: slotted-analysis-rust-merge

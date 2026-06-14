@@ -15,9 +15,6 @@ use std::fmt;
 pub mod bridge {
     #[derive(Debug)]
     enum RuleSet {
-        // Testing
-        Test,
-
         // Egg
         Core,
         Math,
