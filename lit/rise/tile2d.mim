@@ -61,7 +61,7 @@ fun extern tile2d_subgoal_A(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat
             (%rise.split @n2 @Nat 32)));
     return (mapper arg);
 
-// Failed: (o (m (* n1 32) j) (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32))))
+// Reached: (o (m (* n1 32) j) (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32))))
 fun extern tile2d_subgoal_B(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
     let mapper =
@@ -72,7 +72,7 @@ fun extern tile2d_subgoal_B(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat
               (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32)));
     return (mapper arg);
 
-// Failed: (o (m (* n1 32) j) (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32)))
+// Reached: (o (m (* n1 32) j) (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32)))
 fun extern tile2d_subgoal_C(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
     let mapper =
@@ -156,7 +156,7 @@ lam extern _config() =
             split_map),
         // %eqsat.reaches (tile2d, tile2d_subgoal_A, 5),
         // %eqsat.reaches (tile2d_subgoal_A, tile2d_subgoal_B, 5),
-        // %eqsat.reaches (tile2d_subgoal_B, tile2d_subgoal_C, 5),
+        %eqsat.reaches (tile2d_subgoal_B, tile2d_subgoal_C, 5),
         // %eqsat.reaches (tile2d_subgoal_C, tile2d_subgoal_D, 5),
         // %eqsat.reaches (tile2d, tile2d_expected, 200),
         %eqsat.select (),
