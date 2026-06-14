@@ -599,6 +599,8 @@ fn make_insert_type(
 
 #[cfg(test)]
 mod test {
+    use crate::mim_slotted::{RuleSet, set_rulesets};
+
     use super::*;
 
     fn type_of(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId) -> Option<TypeData> {
@@ -614,7 +616,7 @@ mod test {
         let annotated = "
         (root extern add_lit
             (@ (cn $dummy (scope (cn $dummy (scope I8 nil)) nil))
-            (lam
+            (fun
                 $return_22296
                 (scope
                     (@ Bool
@@ -646,6 +648,7 @@ mod test {
 
     #[test]
     fn make_eta_expansion_hole() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let fun_annotated = "(@ (pi $var (scope Nat Bool)) func)";
@@ -690,6 +693,7 @@ mod test {
 
     #[test]
     fn make_types_var_lit() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let lit = "(lit 10 (idx 3))";
@@ -719,6 +723,7 @@ mod test {
 
     #[test]
     fn make_types_tuple_pack() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let tuple = "(tuple (cons (lit 1 Nat) (cons (lit 2 Nat) (cons (lit 3 Nat) nil))))";
@@ -751,6 +756,7 @@ mod test {
 
     #[test]
     fn make_types_extract_insert() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let insert_tuple = "(insert (tuple (cons (lit 1 Nat) (cons (lit 2 Nat) nil))) (lit tt Bool) (lit ff Bool))";
@@ -798,6 +804,7 @@ mod test {
 
     #[test]
     fn make_var_type_hole() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let var_annotated = "(@ Bool (var $foo))";
@@ -823,6 +830,7 @@ mod test {
 
     #[test]
     fn infer_let_type() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let let_annotated = "(let $foo (scope (@ Bool (lit ff Bool)) (@ Nat (lit 1 Nat))))";
@@ -845,6 +853,7 @@ mod test {
 
     #[test]
     fn implicit_pi_callee() {
+        set_rulesets(vec![RuleSet::Test]);
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let f_annotated = "(@ (pi* $dummy (scope Nat (pi $dummy (scope Nat Nat)))) f)";
