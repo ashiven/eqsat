@@ -27,20 +27,20 @@ import _rules_rise;
 //    (m (* n1 32) (m (* n2 32) f))
 //    (m (* n1 32) (Rewrite=> split-map (o j (o (m n2 (m 32 f)) (s 32)))))
 // A: (Rewrite=> map-fission (o (m (* n1 32) j) (m (* n1 32) (o (m n2 (m 32 f)) (s 32)))))
-//    (o (m (* n1 32) j) (Rewrite=> split-map (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32)))))
-// B: (o (m (* n1 32) j) (Rewrite=> o-assoc2 (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32))))
+// B: (o (m (* n1 32) j) (Rewrite=> split-map (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32)))))
+// C: (o (m (* n1 32) j) (Rewrite=> o-assoc2 (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32))))
 //    (Rewrite=> o-assoc2 (o (o (m (* n1 32) j) (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))))) (s 32)))
 //    (o (Rewrite<= o-assoc1 (o (o (m (* n1 32) j) j) (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))))) (s 32))
 //    (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> map-fission (o (m 32 (m n2 (m 32 f))) (m 32 (s 32)))))) (s 32))
-// C: (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32)))))) (s 32))
+// D: (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32)))))) (s 32))
 //
 // TilingSearch::Reorder explanation:
 //
 //    (o (o (o (m (* n1 32) j) j) (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32))))) (s 32))
-// D: (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (m n1 (m 32 (s 32))))) (s 32))
+// E: (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (m n1 (m 32 (s 32))))) (s 32))
 //    (Rewrite=> o-assoc1 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (o (m n1 (m 32 (s 32))) (s 32))))
 //    (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> transpose-maps (o T (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
-// E: (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
+// F: (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
 //    (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 T)) (m n1 (o (m n2 (m 32 (m 32 f))) T)))) (o (m n1 (m 32 (s 32))) (s 32)))
 //    (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (Rewrite=> map-fission (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T)))) (o (m n1 (m 32 (s 32))) (s 32)))
 
@@ -61,8 +61,19 @@ fun extern tile2d_subgoal_A(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat
             (%rise.split @n2 @Nat 32)));
     return (mapper arg);
 
-// Failed: (o (m (* n1 32) j) (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32)))
+// Failed: (o (m (* n1 32) j) (o j (o (m n1 (m 32 (o (m n2 (m 32 f)) (s 32)))) (s 32))))
 fun extern tile2d_subgoal_B(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
+    let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
+    let mapper =
+      %rise.o (%rise.map @(%core.nat.mul (n1, 32)) (%rise.join @(n2, 32) @Nat))
+        (%rise.o (%rise.join @(n1, 32) @«n2; «32; Nat»») 
+          (%rise.o (%rise.map @n1 (%rise.map @32
+            (%rise.o (%rise.map @n2 (%rise.map @32 f)) (%rise.split @n2 @Nat 32))))
+              (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32)));
+    return (mapper arg);
+
+// Failed: (o (m (* n1 32) j) (o (o j (m n1 (m 32 (o (m n2 (m 32 f)) (s 32))))) (s 32)))
+fun extern tile2d_subgoal_C(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
     let mapper =
       %rise.o (%rise.map @(%core.nat.mul (n1, 32)) (%rise.join @(n2, 32) @Nat))
@@ -73,7 +84,7 @@ fun extern tile2d_subgoal_B(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat
     return (mapper arg);
 
 // Not checked: (o (o (o (m (* n1 32) j) j) (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32))))) (s 32))
-fun extern tile2d_subgoal_C(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
+fun extern tile2d_subgoal_D(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
     let mapper =
       %rise.o (%rise.join @(n1, 32) @«%core.nat.mul (n2, 32); Nat»)
@@ -143,9 +154,10 @@ lam extern _config() =
             map_fission,
             transpose_maps,
             split_map),
-        %eqsat.reaches (tile2d, tile2d_subgoal_A, 5),
+        // %eqsat.reaches (tile2d, tile2d_subgoal_A, 5),
         // %eqsat.reaches (tile2d_subgoal_A, tile2d_subgoal_B, 5),
         // %eqsat.reaches (tile2d_subgoal_B, tile2d_subgoal_C, 5),
+        // %eqsat.reaches (tile2d_subgoal_C, tile2d_subgoal_D, 5),
         // %eqsat.reaches (tile2d, tile2d_expected, 200),
         %eqsat.select (),
     );
