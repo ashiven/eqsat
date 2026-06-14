@@ -36,13 +36,13 @@ import _rules_rise;
 //
 // TilingSearch::Reorder explanation:
 //
-//    (o (o (o (m (* n1 32) j) j) (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32))))) (s 32))
-// E: (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (m n1 (m 32 (s 32))))) (s 32))
-//    (Rewrite=> o-assoc1 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (o (m n1 (m 32 (s 32))) (s 32))))
-//    (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> transpose-maps (o T (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
-// F: (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
-//    (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 T)) (m n1 (o (m n2 (m 32 (m 32 f))) T)))) (o (m n1 (m 32 (s 32))) (s 32)))
-//    (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (Rewrite=> map-fission (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T)))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (o (o (m (* n1 32) j) j) (o (m n1 (m 32 (m n2 (m 32 f)))) (m n1 (m 32 (s 32))))) (s 32))
+// (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (m n1 (m 32 (s 32))))) (s 32))
+// (Rewrite=> o-assoc1 (o (o (o (m (* n1 32) j) j) (m n1 (m 32 (m n2 (m 32 f))))) (o (m n1 (m 32 (s 32))) (s 32))))
+// (o (o (o (m (* n1 32) j) j) (m n1 (Rewrite=> transpose-maps (o T (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (o (o (m (* n1 32) j) j) (Rewrite=> map-fission (o (m n1 T) (m n1 (o (m n2 (m 32 (m 32 f))) T))))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (Rewrite=> o-assoc2 (o (o (o (m (* n1 32) j) j) (m n1 T)) (m n1 (o (m n2 (m 32 (m 32 f))) T)))) (o (m n1 (m 32 (s 32))) (s 32)))
+// (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (Rewrite=> map-fission (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T)))) (o (m n1 (m 32 (s 32))) (s 32)))
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 
@@ -66,51 +66,43 @@ fun extern tile2d_split(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul
           (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32);
     return (mapper arg);
 
-fun extern tile2d_expected(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
+// (o (o (o (o (m (* n1 32) j) j) (m n1 T)) (o (m n1 (m n2 (m 32 (m 32 f)))) (m n1 T))) (o (m n1 (m 32 (s 32))) (s 32)))
+fun extern tile2d_reorder(n1 n2 v: Nat): «%core.nat.mul (n1, 32); «%core.nat.mul (n2, 32); Nat»» = 
     let arg = ‹%core.nat.mul (n1, 32); ‹%core.nat.mul (n2, 32); v››;
 
-    // // Splits the array into n1 arrays of 32 arrays of n2 arrays of length 32
-    // // [n1; [32; [n2; [32; Nat]]]]
-    // let c1 = %rise.o
-    //             (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
-    //             (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32);
+    // A high-level overview of what mapper actually does:
 
-    // // Transposes each array of the n1 outermost arrays from
-    // // [32; [n2; [32; Nat]]] to [n2; [32; [32; Nat]]]
-    // let c2 = %rise.o
-    //             (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))
-    //             c1;
+    // Splits 'arg' into n1 arrays of 32 arrays of n2 arrays of length 32
+    // [n1 * 32; [n2 * 32; Nat]] => [n1; [32; [n2; [32; Nat]]]]
 
-    // // Applies f to each element in each array (4 loops)
-    // let c3 = %rise.o
-    //             (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
-    //             c2;
+    // Transposes each array of the n1 outermost arrays
+    // [32; [n2; [32; Nat]]] => [n2; [32; [32; Nat]]]
 
-    // // Transposes each array of the n1 outermost arrays from
-    // // [n2; [32; [32; Nat]]] to [32; [n2; [32; Nat]]]
-    // let c4 = %rise.o
-    //             (%rise.map @n1 (%rise.transpose @(n2, 32) @«32; Nat»))
-    //             c3;
+    // Applies f to each element in each array (4 loops/4 maps)
 
-    // // Joins all of the [n2; [32; Nat]] arrays together to [n2 * 32; Nat] arrays
-    // let c5 = %rise.o
-    //             (%rise.map @n1 (%rise.map @32 (%rise.join @(n2, 32) @Nat)))
-    //             c4;
+    // Transposes the arrays back again
+    // [n2; [32; [32; Nat]]] => [32; [n2; [32; Nat]]]
 
-    // // Joins all of the [n1; [32; [n2 * 32; Nat]]] arrays together to [n1 * 32; [n2 * 32; Nat]] arrays
-    // let c6 = %rise.o
-    //             (%rise.join @(n1, 32) @«%core.nat.mul (n2, 32); Nat»)
-    //             c5;
+    // Joins the inner arrays back again
+    // [n2; [32; Nat]] => [n2 * 32; Nat]
+
+    // Joins the outer arrays back again
+    // [n1; [32; [n2 * 32; Nat]]] => [n1 * 32; [n2 * 32; Nat]]
 
     let mapper =
-      %rise.o (%rise.join @(n1, 32) @«%core.nat.mul (n2, 32); Nat»)
-        (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.join @(n2, 32) @Nat)))
-          (%rise.o (%rise.map @n1 (%rise.transpose @(n2, 32) @«32; Nat»))
-            (%rise.o (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
-              (%rise.o (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))
-                (%rise.o (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
-                  (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32))))));
-
+        %rise.o
+          (%rise.o
+            (%rise.o
+              (%rise.o
+                (%rise.map @(%core.nat.mul (n1, 32)) (%rise.join @(n2, 32) @Nat))
+                (%rise.join @(n1, 32) @«n2; «32; Nat»»))
+              (%rise.map @n1 (%rise.transpose @(n2, 32) @«32; Nat»)))
+            (%rise.o
+              (%rise.map @n1 (%rise.map @n2 (%rise.map @32 (%rise.map @32 f))))
+              (%rise.map @n1 (%rise.transpose @(32, n2) @«32; Nat»))))
+          (%rise.o
+            (%rise.map @n1 (%rise.map @32 (%rise.split @n2 @Nat 32)))
+            (%rise.split @n1 @«%core.nat.mul (n2, 32); Nat» 32));
     return (mapper arg);
 
 lam extern _config() =
@@ -124,7 +116,9 @@ lam extern _config() =
             transpose_maps,
             split_map),
         %eqsat.reaches (tile2d, tile2d_split, 50),
-        // %eqsat.reaches (tile2d, tile2d_expected, 200),
+        %eqsat.reaches (tile2d_split, tile2d_reorder, 50),
+        // full tiling example:
+        // eqsat.reaches (tile2d, tile2d_reorder, 50),
         %eqsat.select (),
     );
 
