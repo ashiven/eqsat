@@ -1,6 +1,6 @@
 // UNSUPPORTED: always
 // RUN: %mim %s -o -
-import _rise;
+import _axioms;
 
 fun extern test_add(a b: Nat): Nat =
     return (%rise.add a b);

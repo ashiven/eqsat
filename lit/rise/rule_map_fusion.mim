@@ -1,8 +1,8 @@
-// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+// RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _rise;
-import _pipeline_singleton;
-import _rules_rise;
+import _axioms;
+import _pipeline;
+import _rules;
 
 lam f(x: Nat): Nat = %core.nat.add (x, 1);
 lam g(x: Nat): Nat = %core.nat.add (x, 2);

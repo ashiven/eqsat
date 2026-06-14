@@ -1,8 +1,8 @@
-// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+// RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _rise;
-import _pipeline_singleton;
-import _rules_rise;
+import _axioms;
+import _pipeline;
+import _rules;
 
 // First example from "Guided Equality Saturation":
 // https://dl.acm.org/doi/10.1145/3632900

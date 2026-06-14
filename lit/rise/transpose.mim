@@ -1,7 +1,7 @@
-// RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
+// RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _rise;
-import _pipeline_singleton;
+import _axioms;
+import _pipeline;
 
 lam extern _config() =
     %eqsat.config (

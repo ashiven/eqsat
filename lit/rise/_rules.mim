@@ -1,6 +1,6 @@
 // UNSUPPORTED: always
 // RUN: %mim %s -o -
-import _rise;
+import _axioms;
 
 rule transpose_before_maps(T: *, a: T → T, n1 n2: Nat):
     %rise.o (%rise.transpose @(n1, n2) @T) (%rise.map (%rise.map a))
