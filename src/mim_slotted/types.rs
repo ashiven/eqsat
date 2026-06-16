@@ -291,8 +291,8 @@ macro_rules! var {
 // It should have turned into (arr (extract (var $f1) (lit ff Bool)) Nat) to be correct.
 fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     match (&l.node, &r.node) {
-        (_l, MimSlotted::Hole(_)) => l.clone(),
-        (MimSlotted::Hole(_), _r) => r.clone(),
+        (_, MimSlotted::Hole(_)) => l.clone(),
+        (MimSlotted::Hole(_), _) => r.clone(),
 
         // TODO: Bot, Top, Idx, Type, Join, Meet
         // Terms can also represent types: App, Extract, etc.
@@ -970,6 +970,12 @@ mod test {
         // - Remember that $dummy can create problems when e-matching so keep that in mind
         // - In unify we need to add new type expressions to the egraph if we actually end up
         //   creating a new type (for this we need some global egraph var similar to rulesets)
+        // - Before creating a new expr, we need to actually e-match the terms l and r containing
+        //   $bar to get the most up to date version of $bar and only then add the unification of
+        //   that to the egraph
+        // - Also, we might not need a global egraph and can instead use Analysis::modify
+        // - On another note, it might be easier to just store the initial applied ids of types
+        //   as analysis data instead of their entire syntactic representations (Would that even work?)
 
         let b = "(let $bar (scope (tuple nil) (@ (sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (hole (type (lit 0 Univ))) nil)) nil)) b)))";
         let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
