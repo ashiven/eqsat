@@ -116,8 +116,8 @@ trait TypeConstructors {
     fn bot(type_: TypeExpr) -> Self;
     fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
     fn arr(arity: TypeExpr, body: TypeExpr) -> Self;
-    fn sigma(types: Vec<TypeExpr>) -> Self;
-    fn sigma_cons(type_cons: TypeExpr) -> Self;
+    fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self;
+    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self;
     fn pi(dom: TypeExpr, codom: TypeExpr) -> Self;
 }
 
@@ -182,18 +182,20 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn sigma(mut types: Vec<TypeExpr>) -> Self {
+    fn sigma(mut types: Vec<TypeExpr>, var: Option<&str>) -> Self {
         let mut type_cons = TypeExpr::nil();
         while let Some(type_) = types.pop() {
             type_cons = TypeExpr::cons(type_, type_cons);
         }
-        TypeExpr::sigma_cons(type_cons)
+        TypeExpr::sigma_cons(type_cons, var)
     }
 
-    fn sigma_cons(type_cons: TypeExpr) -> Self {
+    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self {
+        let slot = { if let Some(s) = var { s } else { "dummy" } };
+
         TypeExpr {
             node: MimSlotted::Sigma(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(slot),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -321,7 +323,6 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         }
         (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => l.clone(),
         (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
-            // TODO: Union type: [_, Nat, Bool] + [Nat, Nat, _] = [u(_,Nat), u(Nat,Nat), u(Bool,_)] = [Nat, Nat, Bool]
             let l_scope = child!(l, 0);
             let l_cons = child!(l_scope, 0);
             let l_types = cons_to_vec(l_cons);
@@ -329,7 +330,22 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             let r_scope = child!(r, 0);
             let r_cons = child!(r_scope, 0);
             let r_types = cons_to_vec(r_cons);
-            l.clone()
+
+            let types: Vec<TypeExpr> = l_types
+                .into_iter()
+                .zip(r_types)
+                .map(|(l_type, r_type)| unify(&l_type, &r_type))
+                .collect();
+
+            let mut var = l
+                .node
+                .all_slot_occurrences()
+                .first()
+                .expect("Failed to get var")
+                .to_string();
+            var.remove(0);
+
+            TypeExpr::sigma(types, Some(&var))
         }
 
         (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
@@ -439,13 +455,16 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 
     AnalysisData {
         type_: Some(TypeExpr::pi(
-            TypeExpr::sigma(vec![
-                TypeExpr::hole(),
-                TypeExpr::pi(
-                    body_type.unwrap_or(TypeExpr::hole()),
-                    TypeExpr::bot(TypeExpr::type_(0)),
-                ),
-            ]),
+            TypeExpr::sigma(
+                vec![
+                    TypeExpr::hole(),
+                    TypeExpr::pi(
+                        body_type.unwrap_or(TypeExpr::hole()),
+                        TypeExpr::bot(TypeExpr::type_(0)),
+                    ),
+                ],
+                None,
+            ),
             TypeExpr::bot(TypeExpr::type_(0)),
         )),
     }
@@ -524,7 +543,7 @@ fn make_tuple_type(
     }
 
     AnalysisData {
-        type_: Some(TypeExpr::sigma(elem_types)),
+        type_: Some(TypeExpr::sigma(elem_types, None)),
     }
 }
 
@@ -614,7 +633,7 @@ fn make_insert_type(
         let index_literal = get_literal(&index);
         let value_type = value_type.clone().unwrap_or(TypeExpr::hole());
         let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
-        insert_type = TypeExpr::sigma_cons(inserted_cons);
+        insert_type = TypeExpr::sigma_cons(inserted_cons, None);
     }
 
     AnalysisData {
@@ -922,6 +941,39 @@ mod test {
         assert_eq!(
             type_of(&eg, g_typed_id),
             type_("(pi $dummy (scope Nat Nat))")
+        );
+    }
+
+    #[test]
+    fn union_with_vars() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let a = "(@ (sigma $foo (scope (cons (hole (type (lit 0 Univ))) (cons (extract (var $foo) (lit ff Bool)) nil)) nil)) a)";
+        let a: RecExpr<MimSlotted> = RecExpr::parse(a).unwrap();
+        let a = extract_type_annotations(&a);
+        let a_id = add_expr_typed(&mut eg, a);
+
+        let b = "(@ (sigma $foo (scope (cons Nat (cons (hole (type (lit 0 Univ))) nil)) nil)) b)";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        eg.union(&a_id, &b_id);
+
+        let a_id = eg.find_applied_id(&a_id);
+        let b_id = eg.find_applied_id(&b_id);
+
+        assert_eq!(
+            type_of(&eg, a_id),
+            type_(
+                "(sigma $foo (scope (cons Nat (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+            )
+        );
+        assert_eq!(
+            type_of(&eg, b_id),
+            type_(
+                "(sigma $foo (scope (cons Nat (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+            )
         );
     }
 }
