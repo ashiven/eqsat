@@ -492,7 +492,7 @@ fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 }
 
 // We should always give var a hole type because all vars
-// are represented with the same var eclass and therefore we can't
+// are represented in the same eclass and therefore we can't
 // associate the different variables' types with this eclass.
 fn make_var_type(
     _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
@@ -562,33 +562,24 @@ fn make_extract_type(
 
     let mut extract_type = TypeExpr::hole();
 
-    // Extract from pack
     if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
-        children: arr_childs,
+        children,
     }) = tuple_type
     {
-        let arr_var_scope = arr_childs.first().expect("Expected arr var scope");
-        extract_type = arr_var_scope
-            .children
-            .get(1)
-            .expect("Expected array body")
-            .clone();
-    // Extract from tuple with literal index
+        let arr_var_scope = children.first().expect("Expected arr var scope");
+        extract_type = child!(arr_var_scope, 1).clone();
     } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
-        children: sigma_childs,
+        children,
     }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
         } = index
     {
-        let sigma_var_scope = sigma_childs.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = sigma_var_scope
-            .children
-            .first()
-            .expect("Expected sigma elem cons");
+        let sigma_var_scope = children.first().expect("Expected sigma var scope");
+        let sigma_elem_cons = child!(sigma_var_scope, 0);
         let index_literal = get_literal(&index);
         extract_type = cons_elem_at(sigma_elem_cons, index_literal);
     }
@@ -604,7 +595,6 @@ fn make_insert_type(
 ) -> AnalysisData {
     let (tuple, index, value) =
         expect!(enode, MimSlotted::Insert(tuple, index, value) => (tuple, index, value));
-
     let tuple_type = &eg.analysis_data(tuple.id).type_;
     let value_type = &eg.analysis_data(value.id).type_;
     let index_id = eg.find_applied_id(index);
@@ -612,28 +602,23 @@ fn make_insert_type(
 
     let mut insert_type = TypeExpr::hole();
 
-    // Insert into pack
     if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
         ..
     }) = tuple_type
     {
         insert_type = tuple_type.clone().unwrap_or(TypeExpr::hole());
-    // Insert into tuple with literal index
     } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
-        children: sigma_childs,
+        children,
     }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
         } = index
     {
-        let sigma_var_scope = sigma_childs.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = sigma_var_scope
-            .children
-            .first()
-            .expect("Expected sigma elem cons");
+        let sigma_var_scope = children.first().expect("Expected sigma var scope");
+        let sigma_elem_cons = child!(sigma_var_scope, 0);
         let index_literal = get_literal(&index);
         let value_type = value_type.clone().unwrap_or(TypeExpr::hole());
         let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
