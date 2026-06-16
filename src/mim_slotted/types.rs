@@ -1,6 +1,6 @@
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::{AnalysisData, MimSlottedAnalysis};
-use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, get_literal};
+use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
 use slotted_egraphs::*;
 
 /***********************************************************/
@@ -122,15 +122,6 @@ trait TypeConstructors {
 }
 
 impl TypeConstructors for TypeExpr {
-    // This is a placeholder for a type that is as of yet unknown.
-    // The type inference built into the mim compiler is able to later
-    // infer the types of these holes from the context they appear in.
-    //
-    // We could also leave the level of the type as a hole and
-    // then use world.mut_hole_type() which leaves the level as a hole
-    // as well and infers it later on. (not sure if we need this though)
-    //
-    // (hole (type (lit 0 Univ)))  --  Hole(*)
     fn hole() -> Self {
         TypeExpr {
             node: MimSlotted::Hole(AppliedId::null()),
@@ -273,6 +264,12 @@ pub(crate) fn make_type(
     }
 }
 
+macro_rules! child {
+    ($value:expr, $idx:expr) => {
+        $value.children.get($idx).expect("Failed to get child")
+    };
+}
+
 // TODO: What if I have a type that depends on a term i.e. (arr (extract (var $foo) (lit ff Bool)) Nat)
 // where $foo is a slot that was introduced by a lambda. This slot will receive a new name during eqsat i.e. $f1.
 // Since I am not adding this type to the egraph but only maintaining it as analysis data, its slot
@@ -295,12 +292,22 @@ pub(crate) fn make_type(
 // ($foo)[Nat, $foo#0, _] + ($foo)[Nat, $foo#0, Bool] = ($dummy)[Nat, $foo#0, Bool]
 // This would produce an incorrect type because TypeExpr::sigma(...) produces a sigma
 // with a $dummy var by default (maybe need to pass the slot to the constructor)
+//
+// Then again, does it even matter since these expressions are purely syntactic and if I later look
+// them up in the e-graph I would first re_to_pattern to convert them to a pattern and then e-match
+// on this pattern. But maybe that is relevant even then.. not sure yet. I think it is relevant still
+// because slots are also modeled in patterns so having a $dummy slot where a real slot should be
+// isn't good.
 fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     match (&l.node, &r.node) {
         (_l, MimSlotted::Hole(_)) => l.clone(),
         (MimSlotted::Hole(_), _r) => r.clone(),
 
         // TODO: Bot, Top, Arr, Sigma, Idx, Type, (Join, Meet)
+        // Terms can also represent types: App, Extract, etc.
+        // If I unify an App and a Sigma, should I just choose Sigma
+        // since that is the more concrete type and hope if it has holes
+        // that these holes can be inferred later?
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
             // TODO: Union type: <<2; _>> + <<(+ 1 1); Nat>> = <<2; Nat>>
             //                   <<_; _>> + <<2; Bool>> = <<2; Bool>>
@@ -315,30 +322,25 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => l.clone(),
         (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
             // TODO: Union type: [_, Nat, Bool] + [Nat, Nat, _] = [u(_,Nat), u(Nat,Nat), u(Bool,_)] = [Nat, Nat, Bool]
+            let l_scope = child!(l, 0);
+            let l_cons = child!(l_scope, 0);
+            let l_types = cons_to_vec(l_cons);
+
+            let r_scope = child!(r, 0);
+            let r_cons = child!(r_scope, 0);
+            let r_types = cons_to_vec(r_cons);
             l.clone()
         }
 
         (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
-            let l_scope = l.children.first().expect("Union pi expected left scope");
-            let l_dom = l_scope
-                .children
-                .first()
-                .expect("Union pi expected left dom");
-            let l_codom = l_scope
-                .children
-                .get(1)
-                .expect("Union pi expected left codom");
+            let l_scope = child!(l, 0);
+            let l_dom = child!(l_scope, 0);
+            let l_codom = child!(l_scope, 1);
 
-            let r_scope = r.children.first().expect("Union pi expected right scope");
-            let r_dom = r_scope
-                .children
-                .first()
-                .expect("Union pi expected right dom");
-            let r_codom = r_scope
-                .children
-                .get(1)
-                .expect("Union pi expected right codom");
+            let r_scope = child!(r, 0);
+            let r_dom = child!(r_scope, 0);
+            let r_codom = child!(r_scope, 1);
 
             let dom = unify(l_dom, r_dom);
             let codom = unify(l_codom, r_codom);
