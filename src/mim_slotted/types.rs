@@ -289,28 +289,6 @@ macro_rules! var {
 // will not get updated to $f1 when the slot of the lambda gets updated to $f1.
 // Therefore, upon reconstruction this type that depends on a slot from a term in the e-graph, will be incorrect.
 // It should have turned into (arr (extract (var $f1) (lit ff Bool)) Nat) to be correct.
-//
-// What about a type depending on a slot introduced in the same type? i.e. (let $foo (lit 3 Nat) (arr $foo Nat)).
-// In this case, things should be just fine since the slot $foo will not be modified.
-// In conclusion, this means that we can't reconstruct programs whose types depend on variables introduced
-// by terms that are part of the e-graph.
-//
-// Would it be possible to propagate updates of slots in the e-graph to the recexprs in the analysis
-// data as they happen? Do we have to actually add the types to the egraph as well so their slots
-// are updated? Maybe maintain them as analysis data as we do now and then perform e-matching to
-// find the same types in the e-graph but with updated slots? But what about the new types I am creating in union?
-// Do I have to add these to the e-graph after creating a new type in union?
-//
-// Another consideration: What if I unify two types that introduce non-dummy variables?
-// ($foo)[Nat, $foo#0, _] + ($foo)[Nat, $foo#0, Bool] = ($dummy)[Nat, $foo#0, Bool]
-// This would produce an incorrect type because TypeExpr::sigma(...) produces a sigma
-// with a $dummy var by default (maybe need to pass the slot to the constructor)
-//
-// Then again, does it even matter since these expressions are purely syntactic and if I later look
-// them up in the e-graph I would first re_to_pattern to convert them to a pattern and then e-match
-// on this pattern. But maybe that is relevant even then.. not sure yet. I think it is relevant still
-// because slots are also modeled in patterns so having a $dummy slot where a real slot should be
-// isn't good.
 fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     match (&l.node, &r.node) {
         (_l, MimSlotted::Hole(_)) => l.clone(),
@@ -978,6 +956,20 @@ mod test {
         let a: RecExpr<MimSlotted> = RecExpr::parse(a).unwrap();
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
+
+        // TODO: Lets assume that the let node from which sigma derives its reference to $bar, gets
+        // rewritten in the e-graph and gets a new slot $f1, we then need to have this change be reflected
+        // in this type, living on eclasses as analysis data, as well. The way to do this would be
+        // to add all types to the egraph (maybe as part of extract_type_annotations), each one with
+        // a new root. (This way we ensure that the slots in types - in this case, $bar remain updated).
+        // Then when it comes to converting the final rec exprs to ffi, we not only look up the node to get
+        // the type from the analysis data, we also then look up the type that we got by converting it
+        // to a pattern via re_to_pattern and then e-matching it in the e-graph to get the
+        // corresponding type with the correct updated slots.
+        //
+        // - Remember that $dummy can create problems when e-matching so keep that in mind
+        // - In unify we need to add new type expressions to the egraph if we actually end up
+        //   creating a new type (for this we need some global egraph var similar to rulesets)
 
         let b = "(let $bar (scope (tuple nil) (@ (sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (hole (type (lit 0 Univ))) nil)) nil)) b)))";
         let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
