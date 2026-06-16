@@ -115,10 +115,10 @@ trait TypeConstructors {
     fn type_(level: u64) -> Self;
     fn bot(type_: TypeExpr) -> Self;
     fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
-    fn arr(arity: TypeExpr, body: TypeExpr) -> Self;
+    fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self;
     fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self;
     fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self;
-    fn pi(dom: TypeExpr, codom: TypeExpr) -> Self;
+    fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self;
 }
 
 impl TypeConstructors for TypeExpr {
@@ -169,10 +169,10 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn arr(arity: TypeExpr, body: TypeExpr) -> Self {
+    fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self {
         TypeExpr {
             node: MimSlotted::Arr(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -191,11 +191,9 @@ impl TypeConstructors for TypeExpr {
     }
 
     fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self {
-        let slot = { if let Some(s) = var { s } else { "dummy" } };
-
         TypeExpr {
             node: MimSlotted::Sigma(Bind {
-                slot: Slot::named(slot),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -205,10 +203,10 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn pi(dom: TypeExpr, codom: TypeExpr) -> Self {
+    fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self {
         TypeExpr {
             node: MimSlotted::Pi(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -272,6 +270,19 @@ macro_rules! child {
     };
 }
 
+macro_rules! var {
+    ($value:expr) => {{
+        let mut var = $value
+            .node
+            .all_slot_occurrences()
+            .first()
+            .expect("Failed to get var")
+            .to_string();
+        var.remove(0);
+        var
+    }};
+}
+
 // TODO: What if I have a type that depends on a term i.e. (arr (extract (var $foo) (lit ff Bool)) Nat)
 // where $foo is a slot that was introduced by a lambda. This slot will receive a new name during eqsat i.e. $f1.
 // Since I am not adding this type to the egraph but only maintaining it as analysis data, its slot
@@ -305,15 +316,26 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (_l, MimSlotted::Hole(_)) => l.clone(),
         (MimSlotted::Hole(_), _r) => r.clone(),
 
-        // TODO: Bot, Top, Arr, Sigma, Idx, Type, (Join, Meet)
+        // TODO: Bot, Top, Idx, Type, Join, Meet
         // Terms can also represent types: App, Extract, etc.
         // If I unify an App and a Sigma, should I just choose Sigma
         // since that is the more concrete type and hope if it has holes
         // that these holes can be inferred later?
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
-            // TODO: Union type: <<2; _>> + <<(+ 1 1); Nat>> = <<2; Nat>>
-            //                   <<_; _>> + <<2; Bool>> = <<2; Bool>>
-            l.clone()
+            let l_scope = child!(l, 0);
+            let l_arity = child!(l_scope, 0);
+            let l_body = child!(l_scope, 1);
+
+            let r_scope = child!(r, 0);
+            let r_arity = child!(r_scope, 0);
+            let r_body = child!(r_scope, 1);
+
+            let arity = unify(l_arity, r_arity);
+            let body = unify(l_body, r_body);
+
+            let var = var!(l);
+
+            TypeExpr::arr(arity, body, Some(&var))
         }
         (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => {
             // TODO: Union type: [_, Nat] + <<2; _>> = [u(_,_) u(Nat,_)] = <<2; Nat>> (Just choose
@@ -337,13 +359,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
                 .map(|(l_type, r_type)| unify(&l_type, &r_type))
                 .collect();
 
-            let mut var = l
-                .node
-                .all_slot_occurrences()
-                .first()
-                .expect("Failed to get var")
-                .to_string();
-            var.remove(0);
+            let var = var!(l);
 
             TypeExpr::sigma(types, Some(&var))
         }
@@ -361,7 +377,9 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             let dom = unify(l_dom, r_dom);
             let codom = unify(l_codom, r_codom);
 
-            TypeExpr::pi(dom, codom)
+            let var = var!(l);
+
+            TypeExpr::pi(dom, codom, Some(&var))
         }
 
         _ => l.clone(),
@@ -430,6 +448,7 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
         type_: Some(TypeExpr::pi(
             TypeExpr::hole(),
             body_type.unwrap_or(TypeExpr::hole()),
+            None,
         )),
     }
 }
@@ -441,6 +460,7 @@ fn make_con_type(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
         type_: Some(TypeExpr::pi(
             TypeExpr::hole(),
             TypeExpr::bot(TypeExpr::type_(0)),
+            None,
         )),
     }
 }
@@ -461,11 +481,13 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
                     TypeExpr::pi(
                         body_type.unwrap_or(TypeExpr::hole()),
                         TypeExpr::bot(TypeExpr::type_(0)),
+                        None,
                     ),
                 ],
                 None,
             ),
             TypeExpr::bot(TypeExpr::type_(0)),
+            None,
         )),
     }
 }
@@ -522,7 +544,11 @@ fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
     AnalysisData {
-        type_: Some(TypeExpr::arr(arity, body_type.unwrap_or(TypeExpr::hole()))),
+        type_: Some(TypeExpr::arr(
+            arity,
+            body_type.unwrap_or(TypeExpr::hole()),
+            None,
+        )),
     }
 }
 
@@ -945,7 +971,7 @@ mod test {
     }
 
     #[test]
-    fn union_with_vars() {
+    fn union_sigma_with_vars() {
         let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
 
         let a = "(@ (sigma $foo (scope (cons (hole (type (lit 0 Univ))) (cons (extract (var $foo) (lit ff Bool)) nil)) nil)) a)";
@@ -953,7 +979,7 @@ mod test {
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
 
-        let b = "(@ (sigma $foo (scope (cons Nat (cons (hole (type (lit 0 Univ))) nil)) nil)) b)";
+        let b = "(let $bar (scope (tuple nil) (@ (sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (hole (type (lit 0 Univ))) nil)) nil)) b)))";
         let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
@@ -966,13 +992,46 @@ mod test {
         assert_eq!(
             type_of(&eg, a_id),
             type_(
-                "(sigma $foo (scope (cons Nat (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
             )
         );
         assert_eq!(
             type_of(&eg, b_id),
             type_(
-                "(sigma $foo (scope (cons Nat (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+            )
+        );
+    }
+
+    #[test]
+    fn union_arr_with_vars() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let a = "(@ (arr $foo (scope (hole (type (lit 0 Univ))) (extract (var $foo) (lit ff Bool)))) a)";
+        let a: RecExpr<MimSlotted> = RecExpr::parse(a).unwrap();
+        let a = extract_type_annotations(&a);
+        let a_id = add_expr_typed(&mut eg, a);
+
+        let b = "(let $bar (scope (tuple nil) (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (hole (type (lit 0 Univ))))) b)))";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        eg.union(&a_id, &b_id);
+
+        let a_id = eg.find_applied_id(&a_id);
+        let b_id = eg.find_applied_id(&b_id);
+
+        assert_eq!(
+            type_of(&eg, a_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+        assert_eq!(
+            type_of(&eg, b_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
             )
         );
     }
