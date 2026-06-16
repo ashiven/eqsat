@@ -277,12 +277,11 @@ pub(crate) fn make_type(
 // where $foo is a slot that was introduced by a lambda. This slot will receive a new name during eqsat i.e. $f1.
 // Since I am not adding this type to the egraph but only maintaining it as analysis data, its slot
 // will not get updated to $f1 when the slot of the lambda gets updated to $f1.
-// Therefore, upon reconstruction this type that depends on a slot from a term in the e-graph, will
-// be incorrect and reconstruction will fail.
+// Therefore, upon reconstruction this type that depends on a slot from a term in the e-graph, will be incorrect.
 // It should have turned into (arr (extract (var $f1) (lit ff Bool)) Nat) to be correct.
 //
-// What about a type depending on a slot introduced in the same type? i.e. (let $foo (lit 3 Nat)
-// (arr $foo Nat)). In this case, things should be just fine since the slot $foo will not be modified.
+// What about a type depending on a slot introduced in the same type? i.e. (let $foo (lit 3 Nat) (arr $foo Nat)).
+// In this case, things should be just fine since the slot $foo will not be modified.
 // In conclusion, this means that we can't reconstruct programs whose types depend on variables introduced
 // by terms that are part of the e-graph.
 //
@@ -291,14 +290,28 @@ pub(crate) fn make_type(
 // are updated? Maybe maintain them as analysis data as we do now and then perform e-matching to
 // find the same types in the e-graph but with updated slots? But what about the new types I am creating in union?
 // Do I have to add these to the e-graph after creating a new type in union?
-fn union(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
+//
+// Another consideration: What if I unify two types that introduce non-dummy variables?
+// ($foo)[Nat, $foo#0, _] + ($foo)[Nat, $foo#0, Bool] = ($dummy)[Nat, $foo#0, Bool]
+// This would produce an incorrect type because TypeExpr::sigma(...) produces a sigma
+// with a $dummy var by default (maybe need to pass the slot to the constructor)
+fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     match (&l.node, &r.node) {
         (_l, MimSlotted::Hole(_)) => l.clone(),
         (MimSlotted::Hole(_), _r) => r.clone(),
 
         // TODO: Bot, Top, Arr, Sigma, Idx, Type, (Join, Meet)
-        (MimSlotted::Arr(_), MimSlotted::Arr(_)) => l.clone(),
-        (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => l.clone(),
+        (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
+            // TODO: Union type: <<2; _>> + <<(+ 1 1); Nat>> = <<2; Nat>>
+            //                   <<_; _>> + <<2; Bool>> = <<2; Bool>>
+            l.clone()
+        }
+        (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => {
+            // TODO: Union type: [_, Nat] + <<2; _>> = [u(_,_) u(Nat,_)] = <<2; Nat>> (Just choose
+            // any elem in the sigma that isn't a hole because arr==sigma already means all elems in
+            // the sigma are the same)
+            l.clone()
+        }
         (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => l.clone(),
         (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
             // TODO: Union type: [_, Nat, Bool] + [Nat, Nat, _] = [u(_,Nat), u(Nat,Nat), u(Bool,_)] = [Nat, Nat, Bool]
@@ -327,8 +340,8 @@ fn union(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
                 .get(1)
                 .expect("Union pi expected right codom");
 
-            let dom = union(l_dom, r_dom);
-            let codom = union(l_codom, r_codom);
+            let dom = unify(l_dom, r_dom);
+            let codom = unify(l_codom, r_codom);
 
             TypeExpr::pi(dom, codom)
         }
@@ -346,7 +359,7 @@ pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
             type_: Some(r_type),
         },
         (Some(l_type), Some(r_type)) => AnalysisData {
-            type_: Some(union(&l_type, &r_type)),
+            type_: Some(unify(&l_type, &r_type)),
         },
         _ => AnalysisData { type_: None },
     }
