@@ -273,35 +273,70 @@ pub(crate) fn make_type(
     }
 }
 
-// Returns the ast size of a term, useful for comparing type expr sizes in merge
-pub(crate) fn term_size(type_expr: &TypeExpr) -> usize {
-    fn size(type_expr: &TypeExpr) -> usize {
-        1 + type_expr.children.iter().map(size).sum::<usize>()
-    }
-    size(type_expr)
-}
+// TODO: What if I have a type that depends on a term i.e. (arr (extract (var $foo) (lit ff Bool)) Nat)
+// where $foo is a slot that was introduced by a lambda. This slot will receive a new name during eqsat i.e. $f1.
+// Since I am not adding this type to the egraph but only maintaining it as analysis data, its slot
+// will not get updated to $f1 when the slot of the lambda gets updated to $f1.
+// Therefore, upon reconstruction this type that depends on a slot from a term in the e-graph, will
+// be incorrect and reconstruction will fail.
+// It should have turned into (arr (extract (var $f1) (lit ff Bool)) Nat) to be correct.
+//
+// What about a type depending on a slot introduced in the same type? i.e. (let $foo (lit 3 Nat)
+// (arr $foo Nat)). In this case, things should be just fine since the slot $foo will not be modified.
+// In conclusion, this means that we can't reconstruct programs whose types depend on variables introduced
+// by terms that are part of the e-graph.
+//
+// Would it be possible to propagate updates of slots in the e-graph to the recexprs in the analysis
+// data as they happen? Do we have to actually add the types to the egraph as well so their slots
+// are updated? Maybe maintain them as analysis data as we do now and then perform e-matching to
+// find the same types in the e-graph but with updated slots? But what about the new types I am creating in union?
+// Do I have to add these to the e-graph after creating a new type in union?
+fn union(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
+    match (&l.node, &r.node) {
+        (_l, MimSlotted::Hole(_)) => l.clone(),
+        (MimSlotted::Hole(_), _r) => r.clone(),
 
-// Returns the number of holes in a type expr, also useful for comparison in merge
-pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
-    fn holes(type_expr: &TypeExpr) -> usize {
-        if let MimSlotted::Hole(..) = type_expr.node {
-            1 + type_expr.children.iter().map(holes).sum::<usize>()
-        } else {
-            type_expr.children.iter().map(holes).sum::<usize>()
+        // TODO: Bot, Top, Arr, Sigma, Idx, Type, (Join, Meet)
+        (MimSlotted::Arr(_), MimSlotted::Arr(_)) => l.clone(),
+        (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => l.clone(),
+        (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => l.clone(),
+        (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
+            // TODO: Union type: [_, Nat, Bool] + [Nat, Nat, _] = [u(_,Nat), u(Nat,Nat), u(Bool,_)] = [Nat, Nat, Bool]
+            l.clone()
         }
+
+        (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
+        (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
+            let l_scope = l.children.first().expect("Union pi expected left scope");
+            let l_dom = l_scope
+                .children
+                .first()
+                .expect("Union pi expected left dom");
+            let l_codom = l_scope
+                .children
+                .get(1)
+                .expect("Union pi expected left codom");
+
+            let r_scope = r.children.first().expect("Union pi expected right scope");
+            let r_dom = r_scope
+                .children
+                .first()
+                .expect("Union pi expected right dom");
+            let r_codom = r_scope
+                .children
+                .get(1)
+                .expect("Union pi expected right codom");
+
+            let dom = union(l_dom, r_dom);
+            let codom = union(l_codom, r_codom);
+
+            TypeExpr::pi(dom, codom)
+        }
+
+        _ => l.clone(),
     }
-    holes(type_expr)
 }
 
-// TODO: Consider type-union instead of the less-holes approach.
-// This would be even more effective at ending up with the fewest holes.
-
-// We are making the assumption here that terms are already
-// well-typed. (terms emitted from the mim compiler are already well-typed
-// and we do our best to correctly type terms that are newly introduced by
-// rewrite-rules) So whenever we are merging two eclasses associated with type-data,
-// we assume they are equivalent representations of the same type and just
-// merge the type with fewer holes and smaller term-size into the eclass.
 pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     match (l.type_, r.type_) {
         (Some(l_type), None) => AnalysisData {
@@ -310,34 +345,9 @@ pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
         (None, Some(r_type)) => AnalysisData {
             type_: Some(r_type),
         },
-        (Some(l_type), Some(r_type)) => {
-            let l_holes = hole_amount(&l_type);
-            let r_holes = hole_amount(&r_type);
-            let l_size = term_size(&l_type);
-            let r_size = term_size(&r_type);
-
-            if l_holes < r_holes {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            } else if l_holes > r_holes {
-                AnalysisData {
-                    type_: Some(r_type),
-                }
-            } else if l_size < r_size {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            } else if l_size > r_size {
-                AnalysisData {
-                    type_: Some(r_type),
-                }
-            } else {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            }
-        }
+        (Some(l_type), Some(r_type)) => AnalysisData {
+            type_: Some(union(&l_type, &r_type)),
+        },
         _ => AnalysisData { type_: None },
     }
 }
@@ -862,6 +872,40 @@ mod test {
         let implicit_app_id = eg.add_expr(implicit_app);
         assert_eq!(
             type_of(&eg, implicit_app_id),
+            type_("(pi $dummy (scope Nat Nat))")
+        );
+    }
+
+    #[test]
+    fn union_hole_pis() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let f_annotated = "(@ (pi $dummy (scope (hole (type (lit 0 Univ))) Nat)) f)";
+        let f_annotated: RecExpr<MimSlotted> = RecExpr::parse(f_annotated).unwrap();
+        let f_typed = extract_type_annotations(&f_annotated);
+        let f_typed_id = add_expr_typed(&mut eg, f_typed);
+
+        assert_eq!(
+            type_of(&eg, f_typed_id.clone()),
+            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) Nat))")
+        );
+
+        let g_annotated = "(@ (pi $dummy (scope Nat (hole (type (lit 0 Univ))))) g)";
+        let g_annotated: RecExpr<MimSlotted> = RecExpr::parse(g_annotated).unwrap();
+        let g_typed = extract_type_annotations(&g_annotated);
+        let g_typed_id = add_expr_typed(&mut eg, g_typed);
+
+        eg.union(&f_typed_id, &g_typed_id);
+
+        let f_typed_id = eg.find_applied_id(&f_typed_id);
+        let g_typed_id = eg.find_applied_id(&g_typed_id);
+
+        assert_eq!(
+            type_of(&eg, f_typed_id),
+            type_("(pi $dummy (scope Nat Nat))")
+        );
+        assert_eq!(
+            type_of(&eg, g_typed_id),
             type_("(pi $dummy (scope Nat Nat))")
         );
     }
