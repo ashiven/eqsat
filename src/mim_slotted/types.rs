@@ -88,7 +88,11 @@ pub(crate) fn add_expr_typed(
 
     let eclass_id = eclass_applied_id.id;
     let analysis_data = eg.analysis_data_mut(eclass_id);
-    analysis_data.type_ = rec_expr.type_;
+    analysis_data.type_ = rec_expr.type_.clone();
+
+    if let Some(type_) = rec_expr.type_ {
+        eg.add_expr(type_);
+    }
 
     eclass_applied_id
 }

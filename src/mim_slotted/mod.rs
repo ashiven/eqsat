@@ -335,7 +335,7 @@ where
     for (i, is_selected) in selected.iter().enumerate() {
         if *is_selected {
             let best_expr = extractor.extract(&runner.roots[root_idx], &runner.egraph);
-            let best_expr_ffi = best_expr.to_ffi(&runner.egraph);
+            let best_expr_ffi = best_expr.to_ffi(Some(&runner.egraph));
             rewritten_sexprs.push(best_expr_ffi);
             root_idx += 1;
         } else {
@@ -360,11 +360,11 @@ where
             };
 
             let unannotated_rec_expr = remove_type_annotations(&annotated_rec_expr);
-            let mut unannotated_rec_expr_ffi = unannotated_rec_expr.to_ffi(&runner.egraph);
+            let mut unannotated_rec_expr_ffi = unannotated_rec_expr.to_ffi(Some(&runner.egraph));
 
             let lam_idx = unannotated_rec_expr_ffi.nodes.len() - 2;
             unannotated_rec_expr_ffi.nodes[lam_idx].type_ =
-                lam_type.unwrap().to_ffi(&runner.egraph);
+                lam_type.unwrap().to_ffi(Some(&runner.egraph));
 
             rewritten_sexprs.push(unannotated_rec_expr_ffi);
         }

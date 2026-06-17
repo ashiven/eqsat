@@ -200,16 +200,16 @@ impl fmt::Display for NodeFFI {
 pub trait FFI {
     type EG;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI;
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI;
 }
 
 pub trait FFIInner {
     type EG;
 
-    fn to_ffi(&self, _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi(&self, _egraph: Option<&Self::EG>) -> NodeFFI {
         Default::default()
     }
-    fn to_ffi_with_childs(&self, _children: &[usize], _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi_with_childs(&self, _children: &[usize], _egraph: Option<&Self::EG>) -> NodeFFI {
         Default::default()
     }
 }
@@ -217,7 +217,7 @@ pub trait FFIInner {
 impl FFI for RecExpr<Mim> {
     type EG = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
         let nodes = self.iter().map(|n| n.to_ffi(egraph)).collect();
         RecExprFFI { nodes }
     }
@@ -226,7 +226,7 @@ impl FFI for RecExpr<Mim> {
 impl FFIInner for Mim {
     type EG = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi(&self, _egraph: Option<&Self::EG>) -> NodeFFI {
         fn new_node_ffi(
             kind: MimKind,
             children: &[Id],
@@ -286,12 +286,12 @@ impl FFIInner for Mim {
 impl FFI for RecExprSlotted<MimSlotted> {
     type EG = EGraphSlotted<MimSlotted, MimSlottedAnalysis>;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
         fn to_ffi_internal(
             rec_expr: &RecExprSlotted<MimSlotted>,
             nodes: &mut Vec<NodeFFI>,
             added: &mut HashMap<NodeFFI, usize>,
-            egraph: &EGraphSlotted<MimSlotted, MimSlottedAnalysis>,
+            egraph: Option<&EGraphSlotted<MimSlotted, MimSlottedAnalysis>>,
         ) -> usize {
             let child_ids: Vec<usize> = rec_expr
                 .children
@@ -320,7 +320,7 @@ impl FFI for RecExprSlotted<MimSlotted> {
 impl FFIInner for MimSlotted {
     type EG = EGraphSlotted<MimSlotted, MimSlottedAnalysis>;
 
-    fn to_ffi_with_childs(&self, children: &[usize], egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi_with_childs(&self, children: &[usize], egraph: Option<&Self::EG>) -> NodeFFI {
         fn new_node_ffi(
             kind: MimKind,
             children: &[usize],
@@ -341,13 +341,17 @@ impl FFIInner for MimSlotted {
             }
         }
 
-        let eclass_id = egraph.lookup(self);
-        let type_ = if let Some(eclass_id) = eclass_id {
-            let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
-            type_.map(|type_| type_.to_ffi(egraph))
-        } else {
-            None
-        };
+        let mut type_ = None;
+
+        if let Some(egraph) = egraph {
+            let eclass_id = egraph.lookup(self);
+            type_ = if let Some(eclass_id) = eclass_id {
+                let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
+                type_.map(|type_| type_.to_ffi(None))
+            } else {
+                None
+            };
+        }
 
         match &self {
             MimSlotted::Let(bind) => new_node_ffi(

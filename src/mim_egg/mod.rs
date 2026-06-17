@@ -92,7 +92,7 @@ pub(crate) fn equality_saturate(
 ) -> Vec<RecExprFFI> {
     equality_saturate_internal(sexpr, rulesets, cost_fn)
         .iter()
-        .map(|rec_expr: &RecExpr<Mim>| rec_expr.to_ffi(&EGraph::<Mim, MimAnalysis>::default()))
+        .map(|rec_expr: &RecExpr<Mim>| rec_expr.to_ffi(None))
         .collect()
 }
 
