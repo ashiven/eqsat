@@ -347,6 +347,22 @@ impl FFIInner for MimSlotted {
             let eclass_id = egraph.lookup(self);
             type_ = if let Some(eclass_id) = eclass_id {
                 let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
+
+                // TODO:
+                // 1) Use code below to find the e-class id the semantic rexpr of type_
+                // 2) Perform e-graph extraction that extracts from the id of 1) the exact
+                //    term that matches the syntactic structure of type_ but also contains
+                //    updated slots etc.
+                //
+                // use slotted_egraphs::lookup_rec_expr;
+                // if let Some(type_) = &type_ {
+                //     let res = lookup_rec_expr(type_, egraph);
+                //     println!("{}", type_);
+                //     if let Some(id) = res {
+                //         println!("Found {}", id.id.0)
+                //     };
+                // }
+
                 type_.map(|type_| type_.to_ffi(None))
             } else {
                 None
