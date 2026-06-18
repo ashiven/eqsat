@@ -7,7 +7,10 @@ use crate::{
 };
 use bridge::{MimKind, NodeFFI, OptionSelected, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
-use slotted_egraphs::{EGraph as EGraphSlotted, RecExpr as RecExprSlotted};
+#[allow(unused_imports)]
+use slotted_egraphs::{
+    AstSize, EGraph as EGraphSlotted, Extractor, RecExpr as RecExprSlotted, lookup_rec_expr,
+};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -349,17 +352,23 @@ impl FFIInner for MimSlotted {
                 let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
 
                 // TODO:
-                // 1) Use code below to find the e-class id the semantic rexpr of type_
-                // 2) Perform e-graph extraction that extracts from the id of 1) the exact
-                //    term that matches the syntactic structure of type_ but also contains
-                //    updated slots etc.
+                // - The code below was meant to fix the issue of types that depend on slots
+                //   of other terms in the e-graph (see types::type_depending_on_outer_slot)
+                // - It was meant to work by having the type of the analysis data be represented
+                //   in the e-graph as well to ensure that the external slots it contains get
+                //   updated when the external terms that bind these slots are
+                // - This doesn't happen, however, which I believe is because the types that
+                //   we add to the e-graph (In the test case above, a type containing $bar
+                //   which was bound by the surrounding let) aren't subterms of the terms
+                //   introducing the external slots
+                // - In our example, the extracted type below will still only contain $bar
+                //   instead of the updated slot of the let, which would be something like $f13
                 //
-                // use slotted_egraphs::lookup_rec_expr;
-                // if let Some(type_) = &type_ {
-                //     let res = lookup_rec_expr(type_, egraph);
-                //     println!("{}", type_);
-                //     if let Some(id) = res {
-                //         println!("Found {}", id.id.0)
+                // if let Some(t) = &type_ {
+                //     let t_id = lookup_rec_expr(t, egraph);
+                //     if let Some(id) = t_id {
+                //         let extractor = Extractor::new(egraph, AstSize);
+                //         type_ = Some(extractor.extract(&id, egraph));
                 //     };
                 // }
 
