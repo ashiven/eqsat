@@ -460,6 +460,7 @@ private:
     /************** Scope Tree ************/
     ScopeTree& scope_tree() { return state()->scope_tree; }
     void set_scope_tree(size_t id, ScopeTree scope_tree) { states_[id].scope_tree = scope_tree; }
+    void set_scope_tree(ScopeTree scope_tree) { state()->scope_tree = scope_tree; }
 
     /************** Root Scope ************/
     const RootScope& root_scope() const { return root_scope_; }
