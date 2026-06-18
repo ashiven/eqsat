@@ -637,6 +637,7 @@ fn make_insert_type(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ffi::FFI;
 
     fn type_of(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId) -> Option<TypeData> {
         eg.analysis_data(id.id).type_.clone()
@@ -1017,6 +1018,54 @@ mod test {
         );
         assert_eq!(
             type_of(&eg, b_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+    }
+
+    #[test]
+    fn type_depending_on_outer_slot() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let b = "(let $bar (scope
+                            (lit ff Bool)
+                            (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))
+                            b)))";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        assert_eq!(
+            type_of(&eg, b_id.clone()),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+
+        let lam_rewrite: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("lam-rewrite";
+            "(let $bar (scope (lit ff Bool) ?e))"
+            => "(let $baz (scope Nat ?e))" );
+
+        let mut runner = Runner::<MimSlotted, MimSlottedAnalysis>::default().with_egraph(eg);
+        runner.run(&[lam_rewrite]);
+
+        let extractor = Extractor::new(&runner.egraph, AstSize);
+        let b = extractor.extract(&b_id, &runner.egraph);
+
+        assert_eq!(format!("{}", b), "(let $f13 (scope Nat b))",);
+
+        let b_ffi = b.to_ffi(Some(&runner.egraph));
+        let b_ffi_type = &b_ffi.nodes.last().unwrap().type_;
+
+        assert_eq!(
+            format!("{}", b_ffi_type.pretty(80)),
+            "(arr\n  $foo\n  (scope (extract (var $f13) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+        );
+
+        let b_id = runner.egraph.find_applied_id(&b_id);
+        assert_eq!(
+            type_of(&runner.egraph, b_id),
             type_(
                 "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
             )
