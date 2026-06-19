@@ -1171,7 +1171,6 @@ mod test {
 
         assert_eq!(type_of(&eg, g_id), type_("(pi $dummy (scope Bool Nat))"));
 
-        // Should infer the domain of lam as Nat (dom of f) since f: Nat -> Bool is applied to (var $x)
         let lam = "(lam $x (scope
                             (lit ff Bool)
                             (lam $y (scope
@@ -1186,7 +1185,16 @@ mod test {
         let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
         let _lam_id = eg.add_expr(lam);
 
-        // TODO: Inference of lam domain doesn't work yet - should also assert correct dom for inner lam
-        // assert_eq!(type_of(&eg, lam_id), type_("(pi $dummy (scope Nat Bool))"));
+        // TODO: Inference of lam domain doesn't work yet
+        // assert_eq!(
+        //     type_of(&eg, lam_id),
+        //     type_(
+        //         "(pi $dummy (scope
+        //             Nat
+        //             (pi $dummy (scope
+        //                 Bool
+        //                 (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
+        //     )
+        // );
     }
 }
