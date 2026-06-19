@@ -1164,6 +1164,13 @@ mod test {
 
         assert_eq!(type_of(&eg, f_id), type_("(pi $dummy (scope Nat Bool))"));
 
+        let g = "(@ (pi $dummy (scope Bool Nat)) g)";
+        let g = RecExpr::<MimSlotted>::parse(g).unwrap();
+        let g = extract_type_annotations(&g);
+        let g_id = add_expr_typed(&mut eg, g);
+
+        assert_eq!(type_of(&eg, g_id), type_("(pi $dummy (scope Bool Nat))"));
+
         // Should infer the domain of lam as Nat (dom of f) since f: Nat -> Bool is applied to (var $x)
         let lam = "(lam $x (scope
                             (lit ff Bool)
@@ -1171,7 +1178,7 @@ mod test {
                                 (lit ff Bool)
                                 (tuple
                                     (cons
-                                        (app f (var $y))
+                                        (app g (var $y))
                                     (cons
                                         (app f (var $x))
                                     nil))))))) ";
