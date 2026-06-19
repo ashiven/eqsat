@@ -459,6 +459,35 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     AnalysisData { type_: expr_type }
 }
 
+fn infer_dom(
+    eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    var_bind: &Bind<AppliedId>,
+    body_id: &AppliedId,
+) -> TypeExpr {
+    // We need to recurse over the entire sub-tree of the lambda body and find applications
+    let lam_slot = var_bind.slot;
+
+    // We then need to ensure that 1) the arg eclass contains a Var enode and 2) its slot map contains the lam_slot
+    // let app = find!(eg, body_id, MimSlotted::App(..));
+    // let app_ids = app.applied_id_occurrences();
+    // let arg_id = app_ids.get(1).unwrap();
+    // assert!(arg_id.slots().contains(&lam_slot));
+
+    // // Then we can infer that the domain of our lambda is equal to the domain of the callee
+    // let callee_id = app_ids.first().unwrap();
+    // let callee_type = eg.analysis_data(callee_id.id).type_.clone();
+    // if let Some(TypeExpr {
+    //     node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
+    //     children,
+    // }) = callee_type
+    // {
+    //     let pi_scope = children.first().unwrap();
+    //     let pi_dom = pi_scope.children.first().unwrap();
+    // }
+
+    TypeExpr::hole()
+}
+
 fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let var_bind = expect!(enode, MimSlotted::Lam(var_bind) => var_bind );
     let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
@@ -467,26 +496,26 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
-    // TODO: Technically the type of the lambdas' domain could be inferred by searching the body
-    // for applications to the var introduced by this lambda and then looking at the callees' domain.
+    let dom = infer_dom(eg, var_bind, body_id);
+    let codom = body_type.unwrap_or(TypeExpr::hole());
+
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::hole(),
-            body_type.unwrap_or(TypeExpr::hole()),
-            None,
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
-fn make_con_type(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let _var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
+fn make_con_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+    let var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
+    let var_scope_childs = var_scope.applied_id_occurrences();
+
+    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
+
+    let dom = infer_dom(eg, var_bind, body_id);
+    let codom = TypeExpr::bot(TypeExpr::type_(0));
 
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::hole(),
-            TypeExpr::bot(TypeExpr::type_(0)),
-            None,
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
@@ -498,22 +527,17 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
+    let ret_dom = body_type.unwrap_or(TypeExpr::hole());
+    let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
+    let ret_pi = TypeExpr::pi(ret_dom, ret_codom, None);
+
+    // TODO: Domain inference is a bit more complicated than for lam - need app to var#0
+    let dom_inner = TypeExpr::hole();
+    let dom = TypeExpr::sigma(vec![dom_inner, ret_pi], None);
+    let codom = TypeExpr::bot(TypeExpr::type_(0));
+
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::sigma(
-                vec![
-                    TypeExpr::hole(),
-                    TypeExpr::pi(
-                        body_type.unwrap_or(TypeExpr::hole()),
-                        TypeExpr::bot(TypeExpr::type_(0)),
-                        None,
-                    ),
-                ],
-                None,
-            ),
-            TypeExpr::bot(TypeExpr::type_(0)),
-            None,
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
@@ -1130,7 +1154,7 @@ mod test {
         // Should infer the domain of lam as Nat (dom of f) since f: Nat -> Bool is applied to (var $x)
         let lam = "(lam $x (scope (lit ff Bool) (app f (var $x))))";
         let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
-        let lam_id = eg.add_expr(lam);
+        let _lam_id = eg.add_expr(lam);
 
         // TODO: Inference of lam domain doesn't work yet
         // assert_eq!(type_of(&eg, lam_id), type_("(pi $dummy (scope Nat Bool))"));
