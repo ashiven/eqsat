@@ -33,10 +33,16 @@ pub mod bridge {
     enum CostFn {
         // Egg/Slotted
         AstSize,
+
         // Egg
         AstDepth,
+        // AUTOGEN START: egg-cost-rust-ffi
+        // AUTOGEN END: egg-cost-rust-ffi
+
         // Slotted
         MaxAstSize,
+        // AUTOGEN START: slotted-cost-rust-ffi
+        // AUTOGEN END: slotted-cost-rust-ffi
     }
 
     #[derive(Debug, Hash, Default)]

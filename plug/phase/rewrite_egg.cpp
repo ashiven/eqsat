@@ -71,6 +71,8 @@ std::pair<rust::Vec<RuleSet>, CostFn> RewriteEgg::import_config() {
                 cost_fn = CostFn::AstSize;
             } else if (Axm::isa<eqsat::AstDepth>(config_val)) {
                 cost_fn = CostFn::AstDepth;
+                // AUTOGEN START: egg-cost-cpp
+                // AUTOGEN END: egg-cost-cpp
 
             } else if (auto select = Axm::isa<eqsat::select>(config_val)) {
                 continue;

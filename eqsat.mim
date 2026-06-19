@@ -85,11 +85,16 @@ axm %eqsat.normalize: %eqsat.Ruleset;
 axm %eqsat.AstSize: %eqsat.Config;
 ///
 /// ### Egg
+///
 axm %eqsat.AstDepth: %eqsat.Config;
+/// AUTOGEN START: egg-cost-mim
+/// AUTOGEN END: egg-cost-mim
 ///
 /// ### Slotted
 ///
 axm %eqsat.MaxAstSize: %eqsat.Config;
+/// AUTOGEN START: slotted-cost-mim
+/// AUTOGEN END: slotted-cost-mim
 ///
 ///
 /// ## Operations

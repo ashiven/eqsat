@@ -116,6 +116,8 @@ ConfigValues RewriteSlotted::import_config() {
                 cost_fn = CostFn::AstSize;
             } else if (Axm::isa<eqsat::MaxAstSize>(config_val)) {
                 cost_fn = CostFn::MaxAstSize;
+                // AUTOGEN START: slotted-cost-cpp
+                // AUTOGEN END: slotted-cost-cpp
 
             } else if (auto select = Axm::isa<eqsat::select>(config_val)) {
                 // Selections

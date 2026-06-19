@@ -1,5 +1,7 @@
 use crate::ffi::FFI;
 use crate::ffi::bridge::{CostFn, RecExprFFI, RuleSet};
+// AUTOGEN START: egg-cost-rust-import
+// AUTOGEN END: egg-cost-rust-import
 use crate::mim_egg::analysis::MimAnalysis;
 use crate::mim_egg::rulesets::get_rules;
 use egg::*;
@@ -131,6 +133,8 @@ fn equality_saturate_internal(
     match cost_fn {
         CostFn::AstSize => rewrite_sexprs(sexprs, rules, || AstSize),
         CostFn::AstDepth => rewrite_sexprs(sexprs, rules, || AstDepth),
+        // AUTOGEN START: egg-cost-rust-match
+        // AUTOGEN END: egg-cost-rust-match
         _ => panic!("Unknown cost function provided."),
     }
 }

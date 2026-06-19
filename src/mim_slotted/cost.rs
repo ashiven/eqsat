@@ -18,3 +18,6 @@ impl CostFunction<MimSlotted> for MaxAstSize {
         s
     }
 }
+
+// AUTOGEN START: slotted-cost-rust-impl
+// AUTOGEN END: slotted-cost-rust-impl
