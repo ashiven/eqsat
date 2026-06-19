@@ -64,9 +64,7 @@ def replace_cost_rust_import(implementation: str, cost_name: str):
 use crate::mim_{implementation}::cost::{cost_name};
 """
 
-    file_path = (
-        Path(__file__).parent.parent / f"src/mim_{implementation}/rulesets/mod.rs"
-    )
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -137,7 +135,7 @@ pub struct {cost_name};
 impl CostFunction<MimSlotted> for {cost_name} {{
     type Cost = u64;
 
-    fn cost<C>(&self, enode: &L, costs: C) -> u64
+    fn cost<C>(&self, enode: &MimSlotted, costs: C) -> u64
     where
         C: Fn(Id) -> u64,
     {{
@@ -148,12 +146,11 @@ impl CostFunction<MimSlotted> for {cost_name} {{
         s
     }}
 }}
-
-""".lstrip()
+"""
 
     # TODO: Implement
     generated_egg = """
-""".lstrip()
+"""
 
     generated = generated_egg if implementation == "egg" else generated_slotted
 
