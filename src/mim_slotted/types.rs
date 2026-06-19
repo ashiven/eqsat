@@ -287,6 +287,17 @@ macro_rules! var {
     }};
 }
 
+fn hole_amount(type_expr: &TypeExpr) -> usize {
+    fn holes(type_expr: &TypeExpr) -> usize {
+        if let MimSlotted::Hole(..) = type_expr.node {
+            1 + type_expr.children.iter().map(holes).sum::<usize>()
+        } else {
+            type_expr.children.iter().map(holes).sum::<usize>()
+        }
+    }
+    holes(type_expr)
+}
+
 fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     match (&l.node, &r.node) {
         (_, MimSlotted::Hole(_)) => l.clone(),
@@ -297,6 +308,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         // If I unify an App and a Sigma, should I just choose Sigma
         // since that is the more concrete type and hope if it has holes
         // that these holes can be inferred later?
+        (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
             let l_scope = child!(l, 0);
             let l_arity = child!(l_scope, 0);
@@ -314,12 +326,43 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             TypeExpr::arr(arity, body, Some(&var))
         }
         (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => {
-            // TODO: Union type: [_, Nat] + <<2; _>> = [u(_,_) u(Nat,_)] = <<2; Nat>> (Just choose
-            // any elem in the sigma that isn't a hole because arr==sigma already means all elems in
-            // the sigma are the same)
-            l.clone()
+            let l_scope = child!(l, 0);
+            let l_arity = child!(l_scope, 0);
+            let l_body = child!(l_scope, 1);
+
+            let r_scope = child!(r, 0);
+            let r_cons = child!(r_scope, 0);
+            let r_types = cons_to_vec(r_cons);
+
+            let body = r_types
+                .iter()
+                .map(|r_type| unify(l_body, r_type))
+                .find(|type_| !matches!(type_.node, MimSlotted::Hole(_)))
+                .unwrap_or(TypeExpr::hole());
+
+            let var = var!(l);
+
+            TypeExpr::arr(l_arity.clone(), body, Some(&var))
         }
-        (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => l.clone(),
+        (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => {
+            let l_scope = child!(l, 0);
+            let l_cons = child!(l_scope, 0);
+            let l_types = cons_to_vec(l_cons);
+
+            let r_scope = child!(r, 0);
+            let r_arity = child!(r_scope, 0);
+            let r_body = child!(r_scope, 1);
+
+            let body = l_types
+                .iter()
+                .map(|l_type| unify(r_body, l_type))
+                .find(|type_| !matches!(type_.node, MimSlotted::Hole(_)))
+                .unwrap_or(TypeExpr::hole());
+
+            let var = var!(l);
+
+            TypeExpr::arr(r_arity.clone(), body, Some(&var))
+        }
         (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
             let l_scope = child!(l, 0);
             let l_cons = child!(l_scope, 0);
@@ -339,8 +382,6 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             TypeExpr::sigma(types, Some(&var))
         }
-
-        (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
             let l_scope = child!(l, 0);
             let l_dom = child!(l_scope, 0);
@@ -358,7 +399,13 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             TypeExpr::pi(dom, codom, Some(&var))
         }
 
-        _ => l.clone(),
+        _ => {
+            if hole_amount(l) <= hole_amount(r) {
+                l.clone()
+            } else {
+                r.clone()
+            }
+        }
     }
 }
 
