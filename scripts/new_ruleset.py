@@ -200,6 +200,52 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
     file_path.write_text(content)
 
 
+def replace_analysis_rust_data(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-data\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-data\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+    pub {ruleset_name}: Option<{ruleset_name.capitalize()}Data>,
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
+def replace_analysis_rust_combine(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-combine\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-combine\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+        self.{ruleset_name} = self.{ruleset_name}.take().or(other.{ruleset_name});
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
 def create_new_ruleset_file(implementation: str, ruleset_name: str):
     file_path = (
         Path(__file__).parent.parent
@@ -277,6 +323,8 @@ def main():
     replace_analysis_rust_import(args.implementation, args.ruleset_name)
     replace_analysis_rust_make(args.implementation, args.ruleset_name)
     replace_analysis_rust_merge(args.implementation, args.ruleset_name)
+    replace_analysis_rust_data(args.implementation, args.ruleset_name)
+    replace_analysis_rust_combine(args.implementation, args.ruleset_name)
 
     create_new_ruleset_file(args.implementation, args.ruleset_name)
 

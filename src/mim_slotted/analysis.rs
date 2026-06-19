@@ -11,11 +11,15 @@ pub struct MimSlottedAnalysis;
 #[derive(Clone, Eq, PartialEq, Default)]
 pub struct AnalysisData {
     pub type_: Option<TypeData>,
+    // AUTOGEN START: slotted-analysis-rust-data
+    // AUTOGEN END: slotted-analysis-rust-data
 }
 
 impl AnalysisData {
     fn combine(&mut self, other: AnalysisData) {
         self.type_ = self.type_.take().or(other.type_);
+        // AUTOGEN START: slotted-analysis-rust-combine
+        // AUTOGEN END: slotted-analysis-rust-combine
     }
 }
 
