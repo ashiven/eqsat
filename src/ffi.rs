@@ -7,7 +7,10 @@ use crate::{
 };
 use bridge::{MimKind, NodeFFI, OptionSelected, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
-use slotted_egraphs::{EGraph as EGraphSlotted, RecExpr as RecExprSlotted};
+#[allow(unused_imports)]
+use slotted_egraphs::{
+    AstSize, EGraph as EGraphSlotted, Extractor, RecExpr as RecExprSlotted, lookup_rec_expr,
+};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -206,16 +209,16 @@ impl fmt::Display for NodeFFI {
 pub trait FFI {
     type EG;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI;
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI;
 }
 
 pub trait FFIInner {
     type EG;
 
-    fn to_ffi(&self, _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi(&self, _egraph: Option<&Self::EG>) -> NodeFFI {
         Default::default()
     }
-    fn to_ffi_with_childs(&self, _children: &[usize], _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi_with_childs(&self, _children: &[usize], _egraph: Option<&Self::EG>) -> NodeFFI {
         Default::default()
     }
 }
@@ -223,7 +226,7 @@ pub trait FFIInner {
 impl FFI for RecExpr<Mim> {
     type EG = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
         let nodes = self.iter().map(|n| n.to_ffi(egraph)).collect();
         RecExprFFI { nodes }
     }
@@ -232,7 +235,7 @@ impl FFI for RecExpr<Mim> {
 impl FFIInner for Mim {
     type EG = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, _egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi(&self, _egraph: Option<&Self::EG>) -> NodeFFI {
         fn new_node_ffi(
             kind: MimKind,
             children: &[Id],
@@ -292,12 +295,12 @@ impl FFIInner for Mim {
 impl FFI for RecExprSlotted<MimSlotted> {
     type EG = EGraphSlotted<MimSlotted, MimSlottedAnalysis>;
 
-    fn to_ffi(&self, egraph: &Self::EG) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
         fn to_ffi_internal(
             rec_expr: &RecExprSlotted<MimSlotted>,
             nodes: &mut Vec<NodeFFI>,
             added: &mut HashMap<NodeFFI, usize>,
-            egraph: &EGraphSlotted<MimSlotted, MimSlottedAnalysis>,
+            egraph: Option<&EGraphSlotted<MimSlotted, MimSlottedAnalysis>>,
         ) -> usize {
             let child_ids: Vec<usize> = rec_expr
                 .children
@@ -326,7 +329,7 @@ impl FFI for RecExprSlotted<MimSlotted> {
 impl FFIInner for MimSlotted {
     type EG = EGraphSlotted<MimSlotted, MimSlottedAnalysis>;
 
-    fn to_ffi_with_childs(&self, children: &[usize], egraph: &Self::EG) -> NodeFFI {
+    fn to_ffi_with_childs(&self, children: &[usize], egraph: Option<&Self::EG>) -> NodeFFI {
         fn new_node_ffi(
             kind: MimKind,
             children: &[usize],
@@ -347,13 +350,39 @@ impl FFIInner for MimSlotted {
             }
         }
 
-        let eclass_id = egraph.lookup(self);
-        let type_ = if let Some(eclass_id) = eclass_id {
-            let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
-            type_.map(|type_| type_.to_ffi(egraph))
-        } else {
-            None
-        };
+        let mut type_ = None;
+
+        if let Some(egraph) = egraph {
+            let eclass_id = egraph.lookup(self);
+            type_ = if let Some(eclass_id) = eclass_id {
+                let type_ = egraph.analysis_data(eclass_id.id).type_.clone();
+
+                // TODO:
+                // - The code below was meant to fix the issue of types that depend on slots
+                //   of other terms in the e-graph (see types::type_depending_on_outer_slot)
+                // - It was meant to work by having the type of the analysis data be represented
+                //   in the e-graph as well to ensure that the external slots it contains get
+                //   updated when the external terms that bind these slots are
+                // - This doesn't happen, however, which I believe is because the types that
+                //   we add to the e-graph (In the test case above, a type containing $bar
+                //   which was bound by the surrounding let) aren't subterms of the terms
+                //   introducing the external slots
+                // - In our example, the extracted type below will still only contain $bar
+                //   instead of the updated slot of the let, which would be something like $f13
+                //
+                // if let Some(t) = &type_ {
+                //     let t_id = lookup_rec_expr(t, egraph);
+                //     if let Some(id) = t_id {
+                //         let extractor = Extractor::new(egraph, AstSize);
+                //         type_ = Some(extractor.extract(&id, egraph));
+                //     };
+                // }
+
+                type_.map(|type_| type_.to_ffi(None))
+            } else {
+                None
+            };
+        }
 
         match &self {
             MimSlotted::Let(bind) => new_node_ffi(

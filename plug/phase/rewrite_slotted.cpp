@@ -161,19 +161,27 @@ const Def* RewriteSlotted::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
     dbg("\nCreating Type");
 
-    auto outer_ctx = ctx();
+    auto outer_ctx          = ctx();
+    auto outer_scope_tree   = scope_tree();
+    auto outer_loc          = loc();
+    auto outer_depth_visits = depth_visits();
 
     // We use SIZE_MAX as a special id for this temporary type-creation context
     init_state(SIZE_MAX, type_);
     switch_context(SIZE_MAX);
+
+    // We reuse the outer scope-tree/loc so types can access previously defined variables
+    set_scope_tree(outer_scope_tree);
+    set_loc(outer_loc);
+    set_depth_visits(outer_depth_visits);
 
     auto type_root = root();
     init(type_root);
 
     dbg("Type init stage complete!");
 
-    reset_loc();
-    reset_depth_visits();
+    set_loc(outer_loc);
+    set_depth_visits(outer_depth_visits);
     auto res = convert(type_root);
 
     dbg("Type convert stage complete!\n");

@@ -1,0 +1,17 @@
+// RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
+
+plugin core;
+plugin eqsat;
+import _pipeline;
+import _config___IMPL__;
+
+// TODO: Partial eval still substitutes the body of bar here
+// which destroys my example (need nested lam bar whose type
+// depends on the variable T of foo)
+fun extern foo(T: *, x: T): T =
+    return (bar (x, x, x) 0_3)
+    where
+        lam bar(a: «3; T») (i: Idx 3)@ff: T =
+            a#i
+    end;
+

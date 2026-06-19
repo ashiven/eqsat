@@ -1,6 +1,6 @@
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::{AnalysisData, MimSlottedAnalysis};
-use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, get_literal};
+use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
 use slotted_egraphs::*;
 
 /***********************************************************/
@@ -88,7 +88,11 @@ pub(crate) fn add_expr_typed(
 
     let eclass_id = eclass_applied_id.id;
     let analysis_data = eg.analysis_data_mut(eclass_id);
-    analysis_data.type_ = rec_expr.type_;
+    analysis_data.type_ = rec_expr.type_.clone();
+
+    if let Some(type_) = rec_expr.type_ {
+        eg.add_expr(type_);
+    }
 
     eclass_applied_id
 }
@@ -115,22 +119,13 @@ trait TypeConstructors {
     fn type_(level: u64) -> Self;
     fn bot(type_: TypeExpr) -> Self;
     fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
-    fn arr(arity: TypeExpr, body: TypeExpr) -> Self;
-    fn sigma(types: Vec<TypeExpr>) -> Self;
-    fn sigma_cons(type_cons: TypeExpr) -> Self;
-    fn pi(dom: TypeExpr, codom: TypeExpr) -> Self;
+    fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self;
+    fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self;
+    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self;
+    fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self;
 }
 
 impl TypeConstructors for TypeExpr {
-    // This is a placeholder for a type that is as of yet unknown.
-    // The type inference built into the mim compiler is able to later
-    // infer the types of these holes from the context they appear in.
-    //
-    // We could also leave the level of the type as a hole and
-    // then use world.mut_hole_type() which leaves the level as a hole
-    // as well and infers it later on. (not sure if we need this though)
-    //
-    // (hole (type (lit 0 Univ)))  --  Hole(*)
     fn hole() -> Self {
         TypeExpr {
             node: MimSlotted::Hole(AppliedId::null()),
@@ -178,10 +173,10 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn arr(arity: TypeExpr, body: TypeExpr) -> Self {
+    fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self {
         TypeExpr {
             node: MimSlotted::Arr(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -191,18 +186,18 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn sigma(mut types: Vec<TypeExpr>) -> Self {
+    fn sigma(mut types: Vec<TypeExpr>, var: Option<&str>) -> Self {
         let mut type_cons = TypeExpr::nil();
         while let Some(type_) = types.pop() {
             type_cons = TypeExpr::cons(type_, type_cons);
         }
-        TypeExpr::sigma_cons(type_cons)
+        TypeExpr::sigma_cons(type_cons, var)
     }
 
-    fn sigma_cons(type_cons: TypeExpr) -> Self {
+    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self {
         TypeExpr {
             node: MimSlotted::Sigma(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -212,10 +207,10 @@ impl TypeConstructors for TypeExpr {
         }
     }
 
-    fn pi(dom: TypeExpr, codom: TypeExpr) -> Self {
+    fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self {
         TypeExpr {
             node: MimSlotted::Pi(Bind {
-                slot: Slot::named("dummy"),
+                slot: Slot::named(var.unwrap_or("dummy")),
                 elem: AppliedId::null(),
             }),
             children: vec![TypeExpr {
@@ -273,16 +268,26 @@ pub(crate) fn make_type(
     }
 }
 
-// Returns the ast size of a term, useful for comparing type expr sizes in merge
-pub(crate) fn term_size(type_expr: &TypeExpr) -> usize {
-    fn size(type_expr: &TypeExpr) -> usize {
-        1 + type_expr.children.iter().map(size).sum::<usize>()
-    }
-    size(type_expr)
+macro_rules! child {
+    ($value:expr, $idx:expr) => {
+        $value.children.get($idx).expect("Failed to get child")
+    };
 }
 
-// Returns the number of holes in a type expr, also useful for comparison in merge
-pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
+macro_rules! var {
+    ($value:expr) => {{
+        let mut var = $value
+            .node
+            .all_slot_occurrences()
+            .first()
+            .expect("Failed to get var")
+            .to_string();
+        var.remove(0);
+        var
+    }};
+}
+
+fn hole_amount(type_expr: &TypeExpr) -> usize {
     fn holes(type_expr: &TypeExpr) -> usize {
         if let MimSlotted::Hole(..) = type_expr.node {
             1 + type_expr.children.iter().map(holes).sum::<usize>()
@@ -293,15 +298,119 @@ pub(crate) fn hole_amount(type_expr: &TypeExpr) -> usize {
     holes(type_expr)
 }
 
-// TODO: Consider type-union instead of the less-holes approach.
-// This would be even more effective at ending up with the fewest holes.
+fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
+    match (&l.node, &r.node) {
+        (_, MimSlotted::Hole(_)) => l.clone(),
+        (MimSlotted::Hole(_), _) => r.clone(),
 
-// We are making the assumption here that terms are already
-// well-typed. (terms emitted from the mim compiler are already well-typed
-// and we do our best to correctly type terms that are newly introduced by
-// rewrite-rules) So whenever we are merging two eclasses associated with type-data,
-// we assume they are equivalent representations of the same type and just
-// merge the type with fewer holes and smaller term-size into the eclass.
+        (_, MimSlotted::Bot(_)) => l.clone(),
+        (MimSlotted::Bot(_), _) => r.clone(),
+
+        (_, MimSlotted::Top(_)) => r.clone(),
+        (MimSlotted::Top(_), _) => l.clone(),
+
+        // TODO: Idx, Join, Meet
+        (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
+        (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
+            let l_scope = child!(l, 0);
+            let l_arity = child!(l_scope, 0);
+            let l_body = child!(l_scope, 1);
+
+            let r_scope = child!(r, 0);
+            let r_arity = child!(r_scope, 0);
+            let r_body = child!(r_scope, 1);
+
+            let arity = unify(l_arity, r_arity);
+            let body = unify(l_body, r_body);
+
+            let var = var!(l);
+
+            TypeExpr::arr(arity, body, Some(&var))
+        }
+        (MimSlotted::Arr(_), MimSlotted::Sigma(_)) => {
+            let l_scope = child!(l, 0);
+            let l_arity = child!(l_scope, 0);
+            let l_body = child!(l_scope, 1);
+
+            let r_scope = child!(r, 0);
+            let r_cons = child!(r_scope, 0);
+            let r_types = cons_to_vec(r_cons);
+
+            let body = r_types
+                .iter()
+                .map(|r_type| unify(l_body, r_type))
+                .find(|type_| !matches!(type_.node, MimSlotted::Hole(_)))
+                .unwrap_or(TypeExpr::hole());
+
+            let var = var!(l);
+
+            TypeExpr::arr(l_arity.clone(), body, Some(&var))
+        }
+        (MimSlotted::Sigma(_), MimSlotted::Arr(_)) => {
+            let l_scope = child!(l, 0);
+            let l_cons = child!(l_scope, 0);
+            let l_types = cons_to_vec(l_cons);
+
+            let r_scope = child!(r, 0);
+            let r_arity = child!(r_scope, 0);
+            let r_body = child!(r_scope, 1);
+
+            let body = l_types
+                .iter()
+                .map(|l_type| unify(r_body, l_type))
+                .find(|type_| !matches!(type_.node, MimSlotted::Hole(_)))
+                .unwrap_or(TypeExpr::hole());
+
+            let var = var!(l);
+
+            TypeExpr::arr(r_arity.clone(), body, Some(&var))
+        }
+        (MimSlotted::Sigma(_), MimSlotted::Sigma(_)) => {
+            let l_scope = child!(l, 0);
+            let l_cons = child!(l_scope, 0);
+            let l_types = cons_to_vec(l_cons);
+
+            let r_scope = child!(r, 0);
+            let r_cons = child!(r_scope, 0);
+            let r_types = cons_to_vec(r_cons);
+
+            let types: Vec<TypeExpr> = l_types
+                .into_iter()
+                .zip(r_types)
+                .map(|(l_type, r_type)| unify(&l_type, &r_type))
+                .collect();
+
+            let var = var!(l);
+
+            TypeExpr::sigma(types, Some(&var))
+        }
+        (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
+            let l_scope = child!(l, 0);
+            let l_dom = child!(l_scope, 0);
+            let l_codom = child!(l_scope, 1);
+
+            let r_scope = child!(r, 0);
+            let r_dom = child!(r_scope, 0);
+            let r_codom = child!(r_scope, 1);
+
+            let dom = unify(l_dom, r_dom);
+            let codom = unify(l_codom, r_codom);
+
+            let var = var!(l);
+
+            TypeExpr::pi(dom, codom, Some(&var))
+        }
+
+        _ => {
+            if hole_amount(l) <= hole_amount(r) {
+                l.clone()
+            } else {
+                r.clone()
+            }
+        }
+    }
+}
+
 pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     match (l.type_, r.type_) {
         (Some(l_type), None) => AnalysisData {
@@ -310,34 +419,9 @@ pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
         (None, Some(r_type)) => AnalysisData {
             type_: Some(r_type),
         },
-        (Some(l_type), Some(r_type)) => {
-            let l_holes = hole_amount(&l_type);
-            let r_holes = hole_amount(&r_type);
-            let l_size = term_size(&l_type);
-            let r_size = term_size(&r_type);
-
-            if l_holes < r_holes {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            } else if l_holes > r_holes {
-                AnalysisData {
-                    type_: Some(r_type),
-                }
-            } else if l_size < r_size {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            } else if l_size > r_size {
-                AnalysisData {
-                    type_: Some(r_type),
-                }
-            } else {
-                AnalysisData {
-                    type_: Some(l_type),
-                }
-            }
-        }
+        (Some(l_type), Some(r_type)) => AnalysisData {
+            type_: Some(unify(&l_type, &r_type)),
+        },
         _ => AnalysisData { type_: None },
     }
 }
@@ -375,6 +459,48 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     AnalysisData { type_: expr_type }
 }
 
+fn _find_apps(
+    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    _body_id: &AppliedId,
+    _apps: &mut [MimSlotted],
+) {
+}
+
+fn infer_dom(
+    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    _var_bind: &Bind<AppliedId>,
+    _body_id: &AppliedId,
+) -> TypeExpr {
+    /*
+    let _lam_slot = var_bind.slot;
+
+    // We need to recurse over the entire sub-tree of the lambda body and find applications
+    let mut candidate_apps: Vec<MimSlotted> = vec![];
+    find_apps(eg, body_id, &mut candidate_apps);
+
+    // We then need to ensure that 1) the arg eclass contains a Var enode and 2) its slot map contains the lam_slot
+    let app = find!(eg, body_id, MimSlotted::App(..));
+    let app_ids = app.applied_id_occurrences();
+    let arg_id = app_ids.get(1).unwrap();
+    assert!(arg_id.slots().contains(&lam_slot));
+
+    // Then we can infer that the domain of our lambda is equal to the domain of the callee
+    let callee_id = app_ids.first().unwrap();
+    let callee_type = eg.analysis_data(callee_id.id).type_.clone();
+    if let Some(TypeExpr {
+        node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
+        children,
+    }) = callee_type
+    {
+        let pi_scope = children.first().unwrap();
+        let pi_dom = pi_scope.children.first().unwrap();
+    }
+
+    */
+
+    TypeExpr::hole()
+}
+
 fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
     let var_bind = expect!(enode, MimSlotted::Lam(var_bind) => var_bind );
     let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
@@ -383,24 +509,26 @@ fn make_lam_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
-    // TODO: Technically the type of the lambdas' domain could be inferred by searching the body
-    // for applications to the var introduced by this lambda and then looking at the callees' domain.
+    let dom = infer_dom(eg, var_bind, body_id);
+    let codom = body_type.unwrap_or(TypeExpr::hole());
+
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::hole(),
-            body_type.unwrap_or(TypeExpr::hole()),
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
-fn make_con_type(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
-    let _var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
+fn make_con_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+    let var_bind = expect!(enode, MimSlotted::Con(var_bind) => var_bind );
+    let var_scope = find!(eg, var_bind.elem, MimSlotted::Scope(..));
+    let var_scope_childs = var_scope.applied_id_occurrences();
+
+    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
+
+    let dom = infer_dom(eg, var_bind, body_id);
+    let codom = TypeExpr::bot(TypeExpr::type_(0));
 
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::hole(),
-            TypeExpr::bot(TypeExpr::type_(0)),
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
@@ -412,17 +540,17 @@ fn make_fun_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     let body_id = var_scope_childs.get(1).expect("Expected lam body id");
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
+    let ret_dom = body_type.unwrap_or(TypeExpr::hole());
+    let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
+    let ret_pi = TypeExpr::pi(ret_dom, ret_codom, None);
+
+    // TODO: Domain inference is a bit more complicated than for lam - need app to var#0
+    let dom_inner = TypeExpr::hole();
+    let dom = TypeExpr::sigma(vec![dom_inner, ret_pi], None);
+    let codom = TypeExpr::bot(TypeExpr::type_(0));
+
     AnalysisData {
-        type_: Some(TypeExpr::pi(
-            TypeExpr::sigma(vec![
-                TypeExpr::hole(),
-                TypeExpr::pi(
-                    body_type.unwrap_or(TypeExpr::hole()),
-                    TypeExpr::bot(TypeExpr::type_(0)),
-                ),
-            ]),
-            TypeExpr::bot(TypeExpr::type_(0)),
-        )),
+        type_: Some(TypeExpr::pi(dom, codom, None)),
     }
 }
 
@@ -448,7 +576,7 @@ fn make_app_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
 }
 
 // We should always give var a hole type because all vars
-// are represented with the same var eclass and therefore we can't
+// are represented in the same eclass and therefore we can't
 // associate the different variables' types with this eclass.
 fn make_var_type(
     _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
@@ -478,7 +606,11 @@ fn make_pack_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotte
     let body_type = eg.analysis_data(body_id.id).type_.clone();
 
     AnalysisData {
-        type_: Some(TypeExpr::arr(arity, body_type.unwrap_or(TypeExpr::hole()))),
+        type_: Some(TypeExpr::arr(
+            arity,
+            body_type.unwrap_or(TypeExpr::hole()),
+            None,
+        )),
     }
 }
 
@@ -499,7 +631,7 @@ fn make_tuple_type(
     }
 
     AnalysisData {
-        type_: Some(TypeExpr::sigma(elem_types)),
+        type_: Some(TypeExpr::sigma(elem_types, None)),
     }
 }
 
@@ -514,33 +646,24 @@ fn make_extract_type(
 
     let mut extract_type = TypeExpr::hole();
 
-    // Extract from pack
     if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
-        children: arr_childs,
+        children,
     }) = tuple_type
     {
-        let arr_var_scope = arr_childs.first().expect("Expected arr var scope");
-        extract_type = arr_var_scope
-            .children
-            .get(1)
-            .expect("Expected array body")
-            .clone();
-    // Extract from tuple with literal index
+        let arr_var_scope = children.first().expect("Expected arr var scope");
+        extract_type = child!(arr_var_scope, 1).clone();
     } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
-        children: sigma_childs,
+        children,
     }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
         } = index
     {
-        let sigma_var_scope = sigma_childs.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = sigma_var_scope
-            .children
-            .first()
-            .expect("Expected sigma elem cons");
+        let sigma_var_scope = children.first().expect("Expected sigma var scope");
+        let sigma_elem_cons = child!(sigma_var_scope, 0);
         let index_literal = get_literal(&index);
         extract_type = cons_elem_at(sigma_elem_cons, index_literal);
     }
@@ -556,7 +679,6 @@ fn make_insert_type(
 ) -> AnalysisData {
     let (tuple, index, value) =
         expect!(enode, MimSlotted::Insert(tuple, index, value) => (tuple, index, value));
-
     let tuple_type = &eg.analysis_data(tuple.id).type_;
     let value_type = &eg.analysis_data(value.id).type_;
     let index_id = eg.find_applied_id(index);
@@ -564,32 +686,27 @@ fn make_insert_type(
 
     let mut insert_type = TypeExpr::hole();
 
-    // Insert into pack
     if let Some(TypeExpr {
         node: MimSlotted::Arr(..),
         ..
     }) = tuple_type
     {
         insert_type = tuple_type.clone().unwrap_or(TypeExpr::hole());
-    // Insert into tuple with literal index
     } else if let Some(TypeExpr {
         node: MimSlotted::Sigma(..),
-        children: sigma_childs,
+        children,
     }) = tuple_type
         && let RecExpr {
             node: MimSlotted::Lit(..),
             ..
         } = index
     {
-        let sigma_var_scope = sigma_childs.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = sigma_var_scope
-            .children
-            .first()
-            .expect("Expected sigma elem cons");
+        let sigma_var_scope = children.first().expect("Expected sigma var scope");
+        let sigma_elem_cons = child!(sigma_var_scope, 0);
         let index_literal = get_literal(&index);
         let value_type = value_type.clone().unwrap_or(TypeExpr::hole());
         let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
-        insert_type = TypeExpr::sigma_cons(inserted_cons);
+        insert_type = TypeExpr::sigma_cons(inserted_cons, None);
     }
 
     AnalysisData {
@@ -600,6 +717,7 @@ fn make_insert_type(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ffi::FFI;
 
     fn type_of(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, id: AppliedId) -> Option<TypeData> {
         eg.analysis_data(id.id).type_.clone()
@@ -864,5 +982,228 @@ mod test {
             type_of(&eg, implicit_app_id),
             type_("(pi $dummy (scope Nat Nat))")
         );
+    }
+
+    #[test]
+    fn union_hole_pis() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let f_annotated = "(@ (pi $dummy (scope (hole (type (lit 0 Univ))) Nat)) f)";
+        let f_annotated: RecExpr<MimSlotted> = RecExpr::parse(f_annotated).unwrap();
+        let f_typed = extract_type_annotations(&f_annotated);
+        let f_typed_id = add_expr_typed(&mut eg, f_typed);
+
+        assert_eq!(
+            type_of(&eg, f_typed_id.clone()),
+            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) Nat))")
+        );
+
+        let g_annotated = "(@ (pi $dummy (scope Nat (hole (type (lit 0 Univ))))) g)";
+        let g_annotated: RecExpr<MimSlotted> = RecExpr::parse(g_annotated).unwrap();
+        let g_typed = extract_type_annotations(&g_annotated);
+        let g_typed_id = add_expr_typed(&mut eg, g_typed);
+
+        eg.union(&f_typed_id, &g_typed_id);
+
+        let f_typed_id = eg.find_applied_id(&f_typed_id);
+        let g_typed_id = eg.find_applied_id(&g_typed_id);
+
+        assert_eq!(
+            type_of(&eg, f_typed_id),
+            type_("(pi $dummy (scope Nat Nat))")
+        );
+        assert_eq!(
+            type_of(&eg, g_typed_id),
+            type_("(pi $dummy (scope Nat Nat))")
+        );
+    }
+
+    #[test]
+    fn union_sigma_with_vars() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let a = "(@ (sigma $foo (scope (cons (hole (type (lit 0 Univ))) (cons (extract (var $foo) (lit ff Bool)) nil)) nil)) a)";
+        let a: RecExpr<MimSlotted> = RecExpr::parse(a).unwrap();
+        let a = extract_type_annotations(&a);
+        let a_id = add_expr_typed(&mut eg, a);
+
+        // TODO: Lets assume that the let node from which sigma derives its reference to $bar, gets
+        // rewritten in the e-graph and gets a new slot $f1, we then need to have this change be reflected
+        // in this type, living on eclasses as analysis data, as well. The way to do this would be
+        // to add all types to the egraph (maybe as part of extract_type_annotations), each one with
+        // a new root. (This way we ensure that the slots in types - in this case, $bar remain updated).
+        // Then when it comes to converting the final rec exprs to ffi, we not only look up the node to get
+        // the type from the analysis data, we also then look up the type that we got by converting it
+        // to a pattern via re_to_pattern and then e-matching it in the e-graph to get the
+        // corresponding type with the correct updated slots.
+        //
+        // - Remember that $dummy can create problems when e-matching so keep that in mind
+        // - In unify we need to add new type expressions to the egraph if we actually end up
+        //   creating a new type (for this we need some global egraph var similar to rulesets)
+        // - Before creating a new expr, we need to actually e-match the terms l and r containing
+        //   $bar to get the most up to date version of $bar and only then add the unification of
+        //   that to the egraph
+        // - Also, we might not need a global egraph and can instead use Analysis::modify
+        // - On another note, it might be easier to just store the initial applied ids of types
+        //   as analysis data instead of their entire syntactic representations (Would that even work?)
+
+        let b = "(let $bar (scope (tuple nil) (@ (sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (hole (type (lit 0 Univ))) nil)) nil)) b)))";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        eg.union(&a_id, &b_id);
+
+        let a_id = eg.find_applied_id(&a_id);
+        let b_id = eg.find_applied_id(&b_id);
+
+        assert_eq!(
+            type_of(&eg, a_id),
+            type_(
+                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+            )
+        );
+        assert_eq!(
+            type_of(&eg, b_id),
+            type_(
+                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
+            )
+        );
+    }
+
+    #[test]
+    fn union_arr_with_vars() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let a = "(@ (arr $foo (scope (hole (type (lit 0 Univ))) (extract (var $foo) (lit ff Bool)))) a)";
+        let a: RecExpr<MimSlotted> = RecExpr::parse(a).unwrap();
+        let a = extract_type_annotations(&a);
+        let a_id = add_expr_typed(&mut eg, a);
+
+        let b = "(let $bar (scope (tuple nil) (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (hole (type (lit 0 Univ))))) b)))";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        eg.union(&a_id, &b_id);
+
+        let a_id = eg.find_applied_id(&a_id);
+        let b_id = eg.find_applied_id(&b_id);
+
+        assert_eq!(
+            type_of(&eg, a_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+        assert_eq!(
+            type_of(&eg, b_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+    }
+
+    #[test]
+    fn type_depending_on_outer_slot() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let b = "(let $bar (scope
+                            (lit ff Bool)
+                            (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))
+                            b)))";
+        let b: RecExpr<MimSlotted> = RecExpr::parse(b).unwrap();
+        let b = extract_type_annotations(&b);
+        let b_id = add_expr_typed(&mut eg, b);
+
+        assert_eq!(
+            type_of(&eg, b_id.clone()),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+
+        let lam_rewrite: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("lam-rewrite";
+            "(let $bar (scope (lit ff Bool) ?e))"
+            => "(let $baz (scope Nat ?e))" );
+
+        let mut runner = Runner::<MimSlotted, MimSlottedAnalysis>::default().with_egraph(eg);
+        runner.run(&[lam_rewrite]);
+
+        let extractor = Extractor::new(&runner.egraph, AstSize);
+        let b = extractor.extract(&b_id, &runner.egraph);
+
+        assert_eq!(format!("{}", b), "(let $f13 (scope Nat b))",);
+
+        let b_ffi = b.to_ffi(Some(&runner.egraph));
+        let _b_ffi_type = &b_ffi.nodes.last().unwrap().type_;
+
+        // TODO: This should work but doesn't - see TODO in ffi.rs line 353
+        // assert_eq!(
+        //     format!("{}", b_ffi_type.pretty(80)),
+        //     "(arr\n  $foo\n  (scope (extract (var $f13) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+        // );
+
+        let b_id = runner.egraph.find_applied_id(&b_id);
+        assert_eq!(
+            type_of(&runner.egraph, b_id),
+            type_(
+                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+            )
+        );
+    }
+
+    #[test]
+    fn infer_lam_domain() {
+        let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+
+        let f = "(@ (pi $dummy (scope Nat Bool)) f)";
+        let f = RecExpr::<MimSlotted>::parse(f).unwrap();
+        let f = extract_type_annotations(&f);
+        let f_id = add_expr_typed(&mut eg, f);
+
+        assert_eq!(type_of(&eg, f_id), type_("(pi $dummy (scope Nat Bool))"));
+
+        let g = "(@ (pi $dummy (scope Bool Nat)) g)";
+        let g = RecExpr::<MimSlotted>::parse(g).unwrap();
+        let g = extract_type_annotations(&g);
+        let g_id = add_expr_typed(&mut eg, g);
+
+        assert_eq!(type_of(&eg, g_id), type_("(pi $dummy (scope Bool Nat))"));
+
+        let lam = "(lam $x (scope
+                            (lit ff Bool)
+                            (lam $y (scope
+                                (lit ff Bool)
+                                (tuple
+                                    (cons
+                                        (app g (var $y))
+                                    (cons
+                                        (app f (var $x))
+                                    nil))))))) ";
+
+        let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
+        let _lam_id = eg.add_expr(lam);
+
+        // TODO: Inference of lam domain doesn't work yet
+        // assert_eq!(
+        //     type_of(&eg, lam_id),
+        //     type_(
+        //         "(pi $dummy (scope
+        //             Nat
+        //             (pi $dummy (scope
+        //                 Bool
+        //                 (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
+        //     )
+        // );
+        //
+        // - I think we won't be able to get infer_dom to work and this example demonstrates
+        //   why our current approach doesn't work.
+        // - We try to look for applications whose arg are a variable use of the slot that
+        //   a lambda binds (in this case the applications to $x and $y)
+        // - However, we will be unable to distinguish whether f or g were initially applied
+        //   to $x or $y because both var uses are represented with the same e-class whose
+        //   slot map will contain both $x and $y and so we are unable to say whether
+        //   the lambda should receive the domain of f or g as its domain
     }
 }

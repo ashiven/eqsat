@@ -20,6 +20,23 @@ pub(crate) fn get_literal(lit_expr: &RecExpr<MimSlotted>) -> u64 {
     }
 }
 
+pub(crate) fn cons_to_vec(cons_expr: &RecExpr<MimSlotted>) -> Vec<RecExpr<MimSlotted>> {
+    let mut res = vec![];
+
+    let mut curr_cons = cons_expr;
+    while let RecExpr {
+        node: MimSlotted::Cons(..),
+        children,
+    } = curr_cons
+    {
+        let curr_elem = children.first().expect("Expected cons elem");
+        curr_cons = children.get(1).expect("Expected next cons");
+        res.push(curr_elem.clone());
+    }
+
+    res
+}
+
 pub(crate) fn cons_elem_at(cons_expr: &RecExpr<MimSlotted>, index: u64) -> RecExpr<MimSlotted> {
     let mut i = 0;
     let mut curr_cons = cons_expr;
