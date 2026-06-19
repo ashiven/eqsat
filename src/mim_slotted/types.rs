@@ -468,11 +468,11 @@ fn _find_apps(
 
 fn infer_dom(
     _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
-    var_bind: &Bind<AppliedId>,
+    _var_bind: &Bind<AppliedId>,
     _body_id: &AppliedId,
 ) -> TypeExpr {
-    let _lam_slot = var_bind.slot;
     /*
+    let _lam_slot = var_bind.slot;
 
     // We need to recurse over the entire sub-tree of the lambda body and find applications
     let mut candidate_apps: Vec<MimSlotted> = vec![];
@@ -1196,5 +1196,14 @@ mod test {
         //                 (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
         //     )
         // );
+        //
+        // - I think we won't be able to get infer_dom to work and this example demonstrates
+        //   why our current approach doesn't work.
+        // - We try to look for applications whose arg are a variable use of the slot that
+        //   a lambda binds (in this case the applications to $x and $y)
+        // - However, we will be unable to distinguish whether f or g were initially applied
+        //   to $x or $y because both var uses are represented with the same e-class whose
+        //   slot map will contain both $x and $y and so we are unable to say whether
+        //   the lambda should receive the domain of f or g as its domain
     }
 }
