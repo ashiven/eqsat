@@ -459,31 +459,44 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     AnalysisData { type_: expr_type }
 }
 
+fn _find_apps(
+    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    _body_id: &AppliedId,
+    _apps: &mut [MimSlotted],
+) {
+}
+
 fn infer_dom(
-    eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     var_bind: &Bind<AppliedId>,
-    body_id: &AppliedId,
+    _body_id: &AppliedId,
 ) -> TypeExpr {
+    let _lam_slot = var_bind.slot;
+    /*
+
     // We need to recurse over the entire sub-tree of the lambda body and find applications
-    let lam_slot = var_bind.slot;
+    let mut candidate_apps: Vec<MimSlotted> = vec![];
+    find_apps(eg, body_id, &mut candidate_apps);
 
     // We then need to ensure that 1) the arg eclass contains a Var enode and 2) its slot map contains the lam_slot
-    // let app = find!(eg, body_id, MimSlotted::App(..));
-    // let app_ids = app.applied_id_occurrences();
-    // let arg_id = app_ids.get(1).unwrap();
-    // assert!(arg_id.slots().contains(&lam_slot));
+    let app = find!(eg, body_id, MimSlotted::App(..));
+    let app_ids = app.applied_id_occurrences();
+    let arg_id = app_ids.get(1).unwrap();
+    assert!(arg_id.slots().contains(&lam_slot));
 
-    // // Then we can infer that the domain of our lambda is equal to the domain of the callee
-    // let callee_id = app_ids.first().unwrap();
-    // let callee_type = eg.analysis_data(callee_id.id).type_.clone();
-    // if let Some(TypeExpr {
-    //     node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
-    //     children,
-    // }) = callee_type
-    // {
-    //     let pi_scope = children.first().unwrap();
-    //     let pi_dom = pi_scope.children.first().unwrap();
-    // }
+    // Then we can infer that the domain of our lambda is equal to the domain of the callee
+    let callee_id = app_ids.first().unwrap();
+    let callee_type = eg.analysis_data(callee_id.id).type_.clone();
+    if let Some(TypeExpr {
+        node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
+        children,
+    }) = callee_type
+    {
+        let pi_scope = children.first().unwrap();
+        let pi_dom = pi_scope.children.first().unwrap();
+    }
+
+    */
 
     TypeExpr::hole()
 }
@@ -1152,11 +1165,21 @@ mod test {
         assert_eq!(type_of(&eg, f_id), type_("(pi $dummy (scope Nat Bool))"));
 
         // Should infer the domain of lam as Nat (dom of f) since f: Nat -> Bool is applied to (var $x)
-        let lam = "(lam $x (scope (lit ff Bool) (app f (var $x))))";
+        let lam = "(lam $x (scope
+                            (lit ff Bool)
+                            (lam $y (scope
+                                (lit ff Bool)
+                                (tuple
+                                    (cons
+                                        (app f (var $y))
+                                    (cons
+                                        (app f (var $x))
+                                    nil))))))) ";
+
         let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
         let _lam_id = eg.add_expr(lam);
 
-        // TODO: Inference of lam domain doesn't work yet
+        // TODO: Inference of lam domain doesn't work yet - should also assert correct dom for inner lam
         // assert_eq!(type_of(&eg, lam_id), type_("(pi $dummy (scope Nat Bool))"));
     }
 }
