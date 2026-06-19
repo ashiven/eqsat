@@ -124,7 +124,12 @@ def replace_cost_rust_ffi(implementation: str, cost_name: str):
 
 
 def replace_cost_rust_impl(implementation: str, cost_name: str):
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/cost.rs"
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-cost-rust-impl\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-cost-rust-impl\s*$)",
+        DOTALL | MULTILINE,
+    )
 
     generated_slotted = f"""
 pub struct {cost_name};
@@ -150,9 +155,17 @@ impl CostFunction<MimSlotted> for {cost_name} {{
     generated_egg = """
 """.lstrip()
 
-    file_path.write_text(
-        generated_egg if implementation == "egg" else generated_slotted
+    generated = generated_egg if implementation == "egg" else generated_slotted
+
+    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/cost.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
     )
+
+    file_path.write_text(content)
 
 
 def main():
