@@ -303,11 +303,13 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (_, MimSlotted::Hole(_)) => l.clone(),
         (MimSlotted::Hole(_), _) => r.clone(),
 
-        // TODO: Bot, Top, Idx, Type, Join, Meet
-        // Terms can also represent types: App, Extract, etc.
-        // If I unify an App and a Sigma, should I just choose Sigma
-        // since that is the more concrete type and hope if it has holes
-        // that these holes can be inferred later?
+        (_, MimSlotted::Bot(_)) => l.clone(),
+        (MimSlotted::Bot(_), _) => r.clone(),
+
+        (_, MimSlotted::Top(_)) => r.clone(),
+        (MimSlotted::Top(_), _) => l.clone(),
+
+        // TODO: Idx, Join, Meet
         (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
             let l_scope = child!(l, 0);
