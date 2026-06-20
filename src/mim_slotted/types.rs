@@ -483,8 +483,6 @@ fn find_apps(
                 arg_nodes
                     .iter()
                     .any(|n| matches!(n, MimSlotted::Var(..)) && n.slots().contains(lam_slot))
-                // TODO: && !callee_node.slots contains lam_slot to ensure lam slot only applied
-                // to arg and not callee?
             } else {
                 false
             }
@@ -503,8 +501,6 @@ fn infer_dom(
 
     // Finds all applications in the lambda body that fulfill two conditions:
     // 1) The application takes the slot of the lambda as input (applies it either to the callee or arg)
-    //     - Ideally we need to ensure that the slot is applied only to the arg of the app because otherwise
-    //       we would also match stuff like: (app (var $lam_slot) (var $y)) or (app (app f (var $lam_slot)) (var $y))
     // 2) The applications' arg eclass contains a variable use (var $lam_slot)
     let mut body_apps: Vec<MimSlotted> = vec![];
     find_apps(eg, body_id, &lam_slot, &mut body_apps);
@@ -1213,8 +1209,6 @@ mod test {
         let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
         let lam_id = eg.add_expr(lam);
 
-        // TODO:
-        // What about (app (var $x) (var $y)) or (app (app f (var $x)) (var $y)))
         assert_eq!(
             type_of(&eg, lam_id),
             type_(
