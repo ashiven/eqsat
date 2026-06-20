@@ -507,7 +507,7 @@ fn infer_dom(
     // 1) The application takes the slot of the lambda as input (applies it either to the callee or arg)
     // 2) The applications' arg eclass contains a variable use (var $lam_slot)
     // Unfortunately, finding these apps performs expensive recursive searches through the e-graph
-    // for each invokation of make_lam_type which leads to stack overflows on any more complex ecamples.
+    // for each invokation of make_lam_type which leads to stack overflows on any more complex examples.
     // We therefore only use it during testing for now.
     #[cfg(test)]
     find_apps(eg, body_id, &lam_slot, &mut body_apps);
