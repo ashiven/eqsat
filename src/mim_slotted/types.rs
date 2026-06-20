@@ -459,44 +459,72 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     AnalysisData { type_: expr_type }
 }
 
-fn _find_apps(
-    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
-    _body_id: &AppliedId,
-    _apps: &mut [MimSlotted],
+fn find_apps(
+    eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    id: &AppliedId,
+    lam_slot: &Slot,
+    apps: &mut Vec<MimSlotted>,
 ) {
+    let curr_enodes = eg.enodes_applied(id);
+    curr_enodes.iter().for_each(|n| {
+        n.applied_id_occurrences()
+            .iter()
+            .for_each(|id| find_apps(eg, id, lam_slot, apps))
+    });
+
+    let curr_apps: Vec<MimSlotted> = curr_enodes
+        .into_iter()
+        .filter(|n| {
+            if matches!(n, MimSlotted::App(..)) && n.slots().contains(lam_slot) {
+                let app_childs = n.applied_id_occurrences();
+                let arg_id = app_childs.get(1).unwrap();
+                let arg_id = eg.find_applied_id(arg_id);
+                let arg_nodes = eg.enodes_applied(&arg_id);
+                arg_nodes
+                    .iter()
+                    .any(|n| matches!(n, MimSlotted::Var(..)) && n.slots().contains(lam_slot))
+                // TODO: && !callee_node.slots contains lam_slot to ensure lam slot only applied
+                // to arg and not callee?
+            } else {
+                false
+            }
+        })
+        .collect();
+
+    apps.extend(curr_apps);
 }
 
 fn infer_dom(
-    _eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
-    _var_bind: &Bind<AppliedId>,
-    _body_id: &AppliedId,
+    eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
+    var_bind: &Bind<AppliedId>,
+    body_id: &AppliedId,
 ) -> TypeExpr {
-    /*
-    let _lam_slot = var_bind.slot;
+    let lam_slot = var_bind.slot;
 
-    // We need to recurse over the entire sub-tree of the lambda body and find applications
-    let mut candidate_apps: Vec<MimSlotted> = vec![];
-    find_apps(eg, body_id, &mut candidate_apps);
+    // Finds all applications in the lambda body that fulfill two conditions:
+    // 1) The application takes the slot of the lambda as input (applies it either to the callee or arg)
+    //     - Ideally we need to ensure that the slot is applied only to the arg of the app because otherwise
+    //       we would also match stuff like: (app (var $lam_slot) (var $y)) or (app (app f (var $lam_slot)) (var $y))
+    // 2) The applications' arg eclass contains a variable use (var $lam_slot)
+    let mut body_apps: Vec<MimSlotted> = vec![];
+    find_apps(eg, body_id, &lam_slot, &mut body_apps);
 
-    // We then need to ensure that 1) the arg eclass contains a Var enode and 2) its slot map contains the lam_slot
-    let app = find!(eg, body_id, MimSlotted::App(..));
-    let app_ids = app.applied_id_occurrences();
-    let arg_id = app_ids.get(1).unwrap();
-    assert!(arg_id.slots().contains(&lam_slot));
-
-    // Then we can infer that the domain of our lambda is equal to the domain of the callee
-    let callee_id = app_ids.first().unwrap();
-    let callee_type = eg.analysis_data(callee_id.id).type_.clone();
-    if let Some(TypeExpr {
-        node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
-        children,
-    }) = callee_type
-    {
-        let pi_scope = children.first().unwrap();
-        let pi_dom = pi_scope.children.first().unwrap();
+    // We go through all of the found applications and look for such applications
+    // where the left hand side is a proper pi type from which we can infer the dom of the lambda
+    for app in body_apps.iter() {
+        let app_childs = app.applied_id_occurrences();
+        let callee_id = app_childs.first().unwrap();
+        let callee_type = &eg.analysis_data(callee_id.id).type_;
+        if let Some(TypeExpr {
+            node: MimSlotted::Pi(..) | MimSlotted::ImplicitPi(..),
+            children,
+        }) = callee_type
+        {
+            let pi_scope = children.first().unwrap();
+            let pi_dom = pi_scope.children.first().unwrap();
+            return pi_dom.clone();
+        }
     }
-
-    */
 
     TypeExpr::hole()
 }
@@ -782,7 +810,7 @@ mod test {
 
         assert_eq!(
             type_of(&eg, eta_exp_lam_id),
-            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) Bool))")
+            type_("(pi $dummy (scope Nat Bool))")
         );
 
         let eta_exp_con = "(con $x (scope (lit ff Bool) (app func (var $x))))";
@@ -791,7 +819,7 @@ mod test {
 
         assert_eq!(
             type_of(&eg, eta_exp_con_id),
-            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) (bot (type (lit 0 Univ)))))")
+            type_("(pi $dummy (scope Nat (bot (type (lit 0 Univ)))))")
         );
 
         let eta_exp_fun = "(fun $x (scope (lit ff Bool) (app func (var $x))))";
@@ -1183,27 +1211,19 @@ mod test {
                                     nil))))))) ";
 
         let lam = RecExpr::<MimSlotted>::parse(lam).unwrap();
-        let _lam_id = eg.add_expr(lam);
+        let lam_id = eg.add_expr(lam);
 
-        // TODO: Inference of lam domain doesn't work yet
-        // assert_eq!(
-        //     type_of(&eg, lam_id),
-        //     type_(
-        //         "(pi $dummy (scope
-        //             Nat
-        //             (pi $dummy (scope
-        //                 Bool
-        //                 (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
-        //     )
-        // );
-        //
-        // - I think we won't be able to get infer_dom to work and this example demonstrates
-        //   why our current approach doesn't work.
-        // - We try to look for applications whose arg are a variable use of the slot that
-        //   a lambda binds (in this case the applications to $x and $y)
-        // - However, we will be unable to distinguish whether f or g were initially applied
-        //   to $x or $y because both var uses are represented with the same e-class whose
-        //   slot map will contain both $x and $y and so we are unable to say whether
-        //   the lambda should receive the domain of f or g as its domain
+        // TODO:
+        // What about (app (var $x) (var $y)) or (app (app f (var $x)) (var $y)))
+        assert_eq!(
+            type_of(&eg, lam_id),
+            type_(
+                "(pi $dummy (scope
+                    Nat
+                    (pi $dummy (scope
+                        Bool
+                        (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
+            )
+        );
     }
 }
