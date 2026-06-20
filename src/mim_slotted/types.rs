@@ -459,6 +459,7 @@ fn make_let_type(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted
     AnalysisData { type_: expr_type }
 }
 
+#[allow(dead_code)]
 fn find_apps(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     id: &AppliedId,
@@ -492,6 +493,8 @@ fn find_apps(
     apps.extend(curr_apps);
 }
 
+#[allow(unused_variables)]
+#[allow(unused_mut)]
 fn infer_dom(
     eg: &EGraph<MimSlotted, MimSlottedAnalysis>,
     var_bind: &Bind<AppliedId>,
@@ -499,10 +502,14 @@ fn infer_dom(
 ) -> TypeExpr {
     let lam_slot = var_bind.slot;
 
+    let mut body_apps: Vec<MimSlotted> = vec![];
     // Finds all applications in the lambda body that fulfill two conditions:
     // 1) The application takes the slot of the lambda as input (applies it either to the callee or arg)
     // 2) The applications' arg eclass contains a variable use (var $lam_slot)
-    let mut body_apps: Vec<MimSlotted> = vec![];
+    // Unfortunately, finding these apps performs expensive recursive searches through the e-graph
+    // for each invokation of make_lam_type which leads to stack overflows on any more complex ecamples.
+    // We therefore only use it during testing for now.
+    #[cfg(test)]
     find_apps(eg, body_id, &lam_slot, &mut body_apps);
 
     // We go through all of the found applications and look for such applications
