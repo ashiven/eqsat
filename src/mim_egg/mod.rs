@@ -16,13 +16,13 @@ define_language! {
     pub enum Mim {
         // TERMS
 
-        // (let <name> <definition> <expression>)
+        // (let <var> <definition> <expression>)
         "let" = Let([Id; 3]),
-        // (lam <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
+        // (lam <var> [<filter> <body>])
         "lam" = Lam(Box<[Id]>),
-        // (con <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
+        // (con <var> [<filter> <body>])
         "con" = Con(Box<[Id]>),
-        // (fun <extern> <name> <var> <domain> <codomain> [<filter>] [<body>])
+        // (fun <var> [<filter> <body>])
         "fun" = Fun(Box<[Id]>),
         // (app <callee> <arg>)
         "app" = App([Id; 2]),
@@ -32,31 +32,31 @@ define_language! {
         "lit" = Lit([Id; 2]),
         // (pack <var> <arity> <body>)
         "pack" = Pack([Id; 3]),
-        // (tuple <value1> <value2> ...)
+        // (tuple <elems>...)
         "tuple" = Tuple(Box<[Id]>),
         // (extract <tuple> <index>)
         "extract" = Extract([Id; 2]),
         // (ins <tuple> <index> <value>)
         "insert" = Insert([Id; 3]),
-        // (rule <name> <meta_var> <lhs> <rhs> <guard>)
+        // (rule <name> <meta-var> <lhs> <rhs> <guard>)
         "rule" = Rule([Id; 5]),
         // (inj <type> <value>)
         "inj" = Inj([Id; 2]),
-        // (merge <type> <value1> <value2> ...)
+        // (merge <type> <values>...)
         "merge" = Merge(Box<[Id]>),
         // (axm <name> <type>)
         "axm" = Axm([Id; 2]),
-        // (match <scrutinee> <arm1> <arm2> ...)
+        // (match <scrutinee> <arms>...)
         "match" = Match(Box<[Id]>),
-        // (proxy <type> <pass> <tag> <op1> <op2> ...)
+        // (proxy <type> <pass> <tag> <ops>...)
         "proxy" = Proxy(Box<[Id]>),
 
 
         // TYPES
 
-        // (join <type1> <type2> ...)
+        // (join <types>...)
         "join" = Join(Box<[Id]>),
-        // (meet <type1> <type2> ...)
+        // (meet <types>...)
         "meet" = Meet(Box<[Id]>),
         // (bot <type>)
         "bot" = Bot(Id),
@@ -64,7 +64,7 @@ define_language! {
         "top" = Top(Id),
         // (arr <var> <arity> <body>)
         "arr" = Arr([Id; 3]),
-        // (sigma <var> <type1> <type2> ...)
+        // (sigma <var> <types>...)
         "sigma" = Sigma(Box<[Id]>),
         // (fn <var> <domain> <codomain>)
         "fn" = Fn_([Id; 3]),
@@ -76,12 +76,17 @@ define_language! {
         "pi*" = ImplicitPi([Id; 3]),
         // (idx <size>)
         "idx" = Idx(Id),
-        // (hole <type>) - does it even make sense to have this?
+        // (hole <type>)
         "hole" = Hole(Id),
         // (type <level>)
         "type" = Type(Id),
         // (reform <meta_type>)
         "reform" = Reform(Id),
+
+        // (@ <type> <value>)
+        "@" = TypeWrap([Id; 2]),
+        // (root <extern> <name> <definition>)
+        "root" = Root([Id; 3]),
 
         Num(u64), Symbol(String),
     }

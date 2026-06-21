@@ -1,6 +1,6 @@
+use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::{AnalysisData, MimSlottedAnalysis};
 use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
-use crate::mim_slotted::MimSlotted;
 use slotted_egraphs::*;
 
 /***********************************************************/
@@ -309,7 +309,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (_, MimSlotted::Top(_)) => r.clone(),
         (MimSlotted::Top(_), _) => l.clone(),
 
-        // TODO: Idx, Join, Meet
+        // TODO: Idx, Join, Meet, ImplicitPi
         (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
             let l_scope = child!(l, 0);

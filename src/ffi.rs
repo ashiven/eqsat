@@ -299,6 +299,8 @@ impl FFIInner for Mim {
             Mim::Hole(child) => new_node_ffi(MimKind::Hole, &[*child], None, None),
             Mim::Type(child) => new_node_ffi(MimKind::Type, &[*child], None, None),
             Mim::Reform(child) => new_node_ffi(MimKind::Type, &[*child], None, None),
+            Mim::TypeWrap(children) => new_node_ffi(MimKind::TypeWrap, children, None, None),
+            Mim::Root(children) => new_node_ffi(MimKind::Root, children, None, None),
             Mim::Num(n) => new_node_ffi(MimKind::Num, &[], Some(*n), None),
             Mim::Symbol(s) => new_node_ffi(MimKind::Symbol, &[], None, Some(s.clone())),
         }
