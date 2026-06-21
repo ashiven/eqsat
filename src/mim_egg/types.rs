@@ -41,6 +41,47 @@ pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
 
 pub type TypeData = TypeExpr;
 
+pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
+    let root = rec_expr.root();
+    extract_types(rec_expr, root)
+}
+
+fn extract_types(rec_expr: &RecExpr<Mim>, id: Id) -> TypedRecExpr {
+    let node = &rec_expr[id];
+
+    match node {
+        Mim::TypeWrap([type_, expr]) => {
+            let type_ = RecExpr::<Mim>::default(); // TODO: build_type_expr(rec_expr, type_);
+
+            let mut stripped = extract_types(rec_expr, *expr);
+            stripped.type_ = Some(type_);
+
+            stripped
+        }
+
+        _ => {
+            let children = node
+                .children()
+                .iter()
+                .map(|id| extract_types(rec_expr, *id))
+                .collect();
+
+            let mut res = TypedRecExpr {
+                node: node.clone(),
+                children,
+                type_: None,
+            };
+
+            if matches!(node, Mim::Let(..)) {
+                let expr = &res.children[2];
+                res.type_ = expr.type_.clone();
+            }
+
+            res
+        }
+    }
+}
+
 /*
 pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
     if let Mim::TypeWrap(..) = rec_expr.node {
@@ -739,7 +780,7 @@ mod test {
     }
 
     #[test]
-    fn remove_type_info() {
+    fn extract_type_info() {
         let annotated = "
         (root extern add_lit
             (@ (cn dummy (cn dummy I8 nil) nil)
@@ -761,5 +802,7 @@ mod test {
             untyped.pretty(80),
             "(root\n  extern\n  add_lit\n  (fun return_22296 (lit ff Bool) (app return_22296 (lit 6 I8))))"
         );
+
+        let typed = extract_type_annotations(&annotated);
     }
 }
