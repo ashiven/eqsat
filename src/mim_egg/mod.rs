@@ -8,6 +8,8 @@ use egg::*;
 
 pub mod analysis;
 pub mod rulesets;
+pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod test;
