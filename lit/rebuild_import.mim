@@ -2,9 +2,9 @@
 // RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin core;
-// plugin eqsat;
-// import _pipeline;
-// import _config___IMPL__;
+plugin eqsat;
+import _pipeline;
+import _config_egg;
 
 ccon atoi[%mem.M 0, %mem.Ptr («⊤:Nat; I8», 0), Cn [%mem.M 0, I32]];
 

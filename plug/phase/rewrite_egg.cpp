@@ -31,7 +31,7 @@ void RewriteEgg::start() {
     if (swap_world_unchanged(selected)) return;
 
     START_TIMER(eqsat)
-    auto rec_exprs = eqsat_slotted(sexpr.str(), selected, rulesets, cost_fn);
+    auto rec_exprs = eqsat_egg(sexpr.str(), selected, rulesets, cost_fn);
     END_TIMER(eqsat)
 
     // Heap-allocated pointer needs manual dealloc and the reason we even use pointers

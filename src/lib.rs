@@ -6,7 +6,12 @@ pub mod ffi;
 mod mim_egg;
 mod mim_slotted;
 
-pub fn eqsat_egg(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI> {
+pub fn eqsat_egg(
+    sexpr: &str,
+    _selected: OptionSelected,
+    rulesets: Vec<RuleSet>,
+    cost_fn: CostFn,
+) -> Vec<RecExprFFI> {
     mim_egg::equality_saturate(sexpr, rulesets, cost_fn)
 }
 

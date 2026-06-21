@@ -113,7 +113,12 @@ pub mod bridge {
     }
 
     extern "Rust" {
-        fn eqsat_egg(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI>;
+        fn eqsat_egg(
+            sexpr: &str,
+            selected: OptionSelected,
+            rulesets: Vec<RuleSet>,
+            cost_fn: CostFn,
+        ) -> Vec<RecExprFFI>;
         fn reaches_egg(
             sexpr: &str,
             rulesets: Vec<RuleSet>,
