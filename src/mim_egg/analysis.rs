@@ -1,5 +1,6 @@
 use crate::mim_egg::Mim;
 use crate::mim_egg::rulesets::core::{CoreData, core_make, core_merge, core_modify};
+use crate::mim_egg::types::TypeData;
 use egg::*;
 
 #[macro_export]
@@ -16,6 +17,7 @@ macro_rules! find_node {
 pub struct MimAnalysis;
 #[derive(Debug)]
 pub struct AnalysisData {
+    pub type_: Option<TypeData>,
     pub core_data: CoreData,
 }
 

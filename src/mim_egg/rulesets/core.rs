@@ -419,6 +419,7 @@ pub fn core_merge(a: &mut AnalysisData, b: AnalysisData) -> DidMerge {
 
 pub fn core_make(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
     AnalysisData {
+        type_: None,
         core_data: fold_core(egraph, enode),
     }
 }

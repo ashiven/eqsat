@@ -39,8 +39,6 @@ pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
     out
 }
 
-pub type TypeData = TypeExpr;
-
 pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
     let root = rec_expr.root();
     extract_types(rec_expr, root)
@@ -50,8 +48,9 @@ fn extract_types(rec_expr: &RecExpr<Mim>, id: Id) -> TypedRecExpr {
     let node = &rec_expr[id];
 
     match node {
-        Mim::TypeWrap([type_, expr]) => {
-            let type_ = RecExpr::<Mim>::default(); // TODO: build_type_expr(rec_expr, type_);
+        Mim::TypeWrap([type_id, expr]) => {
+            let mut type_ = RecExpr::<Mim>::default();
+            build_type_expr(rec_expr, type_id, &mut type_);
 
             let mut stripped = extract_types(rec_expr, *expr);
             stripped.type_ = Some(type_);
@@ -82,68 +81,38 @@ fn extract_types(rec_expr: &RecExpr<Mim>, id: Id) -> TypedRecExpr {
     }
 }
 
-/*
-pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
-    if let Mim::TypeWrap(..) = rec_expr.node {
-        let type_expr = rec_expr.children[0].clone();
-        let expr = &rec_expr.children[1];
-        let mut stripped = extract_type_annotations(expr);
-        stripped.type_ = Some(type_expr);
-
-        if let Mim::Var(_slot) = expr.node {
-            stripped.type_ = Some(TypeExpr::hole());
-        }
-
-        return stripped;
-    }
-
-    let mut res = TypedRecExpr {
-        node: rec_expr.node.clone(),
-        children: rec_expr
-            .children
-            .iter()
-            .map(extract_type_annotations)
-            .collect(),
-        type_: None,
-    };
-
-    if let Mim::Let(..) = rec_expr.node {
-        let let_scope = &res.children[0];
-        let let_expr = &let_scope.children[1];
-        res.type_ = let_expr.type_.clone();
-    }
-
-    res
+fn build_type_expr(rec_expr: &RecExpr<Mim>, id: &Id, type_expr: &mut RecExpr<Mim>) -> Id {
+    let mut node = rec_expr[*id].clone();
+    node.update_children(|c| build_type_expr(rec_expr, &c, type_expr));
+    type_expr.add(node)
 }
 
-pub(crate) fn add_expr_typed(
-    eg: &mut EGraph<Mim, MimAnalysis>,
-    rec_expr: TypedRecExpr,
-) -> AppliedId {
+pub(crate) fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> Id {
     let mut node = rec_expr.node;
-    let mut child_ids = node.applied_id_occurrences_mut();
+    let child_ids = node.children_mut();
 
     for (i, child) in rec_expr.children.into_iter().enumerate() {
-        *(child_ids[i]) = add_expr_typed(eg, child);
+        child_ids[i] = add_expr_typed(eg, child);
     }
 
-    let eclass_applied_id = eg.add(node);
+    let eclass_id = eg.add(node);
 
-    let eclass_id = eclass_applied_id.id;
-    let analysis_data = eg.analysis_data_mut(eclass_id);
+    let analysis_data = &mut eg[eclass_id].data;
     analysis_data.type_ = rec_expr.type_.clone();
 
     if let Some(type_) = rec_expr.type_ {
-        eg.add_expr(type_);
+        eg.add_expr(&type_);
     }
 
-    eclass_applied_id
+    eclass_id
 }
 
 /***********************************************************/
 /*  Analysis maintaining type information on eclasses      */
 /***********************************************************/
 
+pub type TypeData = TypeExpr;
+/*
 
 pub struct TypeAnalysis;
 impl TypeAnalysis {
@@ -770,9 +739,7 @@ mod test {
     use super::*;
 
     fn type_of(eg: &EGraph<Mim, MimAnalysis>, id: &Id) -> Option<TypeData> {
-        let data = eg.classes().nth(usize::from(*id)).unwrap();
-        // data.type_.clone()
-        None
+        eg[*id].data.type_.clone()
     }
 
     fn type_(s: &str) -> Option<TypeData> {
@@ -804,5 +771,19 @@ mod test {
         );
 
         let typed = extract_type_annotations(&annotated);
+
+        let mut eg = EGraph::<Mim, MimAnalysis>::default();
+        let typed_id = add_expr_typed(&mut eg, typed);
+
+        let enodes = &eg[typed_id].nodes;
+        let typed = enodes
+            .first()
+            .expect("Failed to find typed rec expr in egraph");
+        let lam_id = typed.children()[2];
+
+        assert_eq!(
+            type_of(&eg, &lam_id),
+            type_("(cn dummy (cn dummy I8 nil) nil)")
+        );
     }
 }
