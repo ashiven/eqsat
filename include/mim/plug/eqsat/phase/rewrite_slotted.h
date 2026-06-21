@@ -82,13 +82,10 @@ typedef struct Scope {
 
 typedef fe::SymMap<const Def*> Sym2Def;
 typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
-typedef absl::flat_hash_map<size_t, Cache> CacheMap;
 typedef absl::flat_hash_map<size_t, size_t> DepthVisits;
 typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
-typedef absl::flat_hash_map<size_t, ScopeTree> ScopeTreeMap;
 typedef Sym2Def RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
-typedef absl::flat_hash_map<size_t, Nodes> NodesMap;
 
 typedef struct RecExprState {
     DepthVisits depth_visits;

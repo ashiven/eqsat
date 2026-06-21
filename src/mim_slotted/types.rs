@@ -1,6 +1,6 @@
-use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::{AnalysisData, MimSlottedAnalysis};
 use crate::mim_slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
+use crate::mim_slotted::MimSlotted;
 use slotted_egraphs::*;
 
 /***********************************************************/
