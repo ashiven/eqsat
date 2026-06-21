@@ -3,7 +3,8 @@ use crate::mim_egg::analysis::MimAnalysis;
 use crate::mim_slotted::MimSlotted;
 use crate::mim_slotted::analysis::MimSlottedAnalysis;
 use crate::{
-    eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, reaches_slotted, type_str,
+    eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, reaches_egg,
+    reaches_slotted, type_str,
 };
 use bridge::{MimKind, NodeFFI, OptionSelected, RecExprFFI};
 use egg::{EGraph, Id, RecExpr};
@@ -113,6 +114,13 @@ pub mod bridge {
 
     extern "Rust" {
         fn eqsat_egg(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI>;
+        fn reaches_egg(
+            sexpr: &str,
+            rulesets: Vec<RuleSet>,
+            start_name: &str,
+            end_name: &str,
+            max_steps: usize,
+        ) -> bool;
         fn pretty_egg(sexpr: &str, line_len: usize) -> String;
 
         fn eqsat_slotted(

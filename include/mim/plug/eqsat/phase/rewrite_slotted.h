@@ -4,38 +4,14 @@
 
 #include <mim/phase.h>
 
+#include <mim/plug/eqsat/phase/util.h>
+
 #include "mim/def.h"
 #include "mim/rewrite.h"
 
 #include "rust/eqsat_rs.h"
 
 namespace mim::plug::eqsat {
-
-/****************** DEBUG *********************/
-inline constexpr bool DEBUG       = false;
-inline constexpr bool SCOPES      = false;
-inline constexpr bool PERFORMANCE = false;
-
-template<bool DBG_KIND = DEBUG, typename... Args>
-void dbg(Args&&... args) {
-    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args)) << "\n";
-}
-
-template<bool DBG_KIND = DEBUG, typename... Args>
-void dbg_(Args&&... args) {
-    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args));
-}
-
-#define START_TIMER(name) auto _start_##name = std::chrono::steady_clock::now();
-#define END_TIMER(name)                                                                                             \
-    {                                                                                                               \
-        auto _end_##name = std::chrono::steady_clock::now();                                                        \
-        if constexpr (PERFORMANCE) {                                                                                \
-            std::cout << #name << " took: "                                                                         \
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(_end_##name - _start_##name).count() \
-                      << "ms\n";                                                                                    \
-        }                                                                                                           \
-    }
 
 /***************** TYPES **********************/
 typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;
@@ -87,6 +63,7 @@ typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
 typedef Sym2Def RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
 
+namespace scoped {
 typedef struct RecExprState {
     DepthVisits depth_visits;
     Cache cache;
@@ -96,12 +73,17 @@ typedef struct RecExprState {
 
 typedef struct Context {
     size_t id;
-
     Loc loc;
     RecExprState* state;
 } Context;
 
 typedef absl::flat_hash_map<size_t, RecExprState> RecExprStates;
+
+} // namespace scoped
+
+using ScopedState   = scoped::RecExprState;
+using ScopedStates  = scoped::RecExprStates;
+using ScopedContext = scoped::Context;
 
 /***************** REWRITER *********************/
 class RewriteSlotted : public Phase, public Rewriter {
@@ -305,9 +287,9 @@ private:
     }
 
     /************ State *************/
-    Context& ctx() { return ctx_; }
+    ScopedContext& ctx() { return ctx_; }
 
-    RecExprState* state() { return ctx().state; }
+    ScopedState* state() { return ctx().state; }
     void set_state(size_t id) { ctx().state = &states_[id]; }
 
     void init_state(size_t id, RecExprFFI& rec_expr) {
@@ -324,7 +306,7 @@ private:
         reset_depth_visits();
     }
 
-    void switch_context(Context& other) {
+    void switch_context(ScopedContext& other) {
         set_id(other.id);
         set_state(other.id);
         set_loc(other.loc);
@@ -465,8 +447,8 @@ private:
 
     Sym2Def axms_;
     Sym2Def aliases_;
-    Context ctx_;
-    RecExprStates states_;
+    ScopedContext ctx_;
+    ScopedStates states_;
     RootScope root_scope_;
 };
 

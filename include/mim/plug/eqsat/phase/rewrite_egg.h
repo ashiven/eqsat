@@ -2,37 +2,14 @@
 
 #include <mim/phase.h>
 
+#include <mim/plug/eqsat/phase/util.h>
+
 #include "mim/def.h"
 #include "mim/rewrite.h"
 
 #include "rust/eqsat_rs.h"
 
 namespace mim::plug::eqsat {
-
-/****************** DEBUG *********************/
-inline constexpr bool DEBUG       = false;
-inline constexpr bool PERFORMANCE = false;
-
-template<bool DBG_KIND = DEBUG, typename... Args>
-void dbg(Args&&... args) {
-    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args)) << "\n";
-}
-
-template<bool DBG_KIND = DEBUG, typename... Args>
-void dbg_(Args&&... args) {
-    if constexpr (DBG_KIND) (std::cout << ... << std::forward<Args>(args));
-}
-
-#define START_TIMER(name) auto _start_##name = std::chrono::steady_clock::now();
-#define END_TIMER(name)                                                                                             \
-    {                                                                                                               \
-        auto _end_##name = std::chrono::steady_clock::now();                                                        \
-        if constexpr (PERFORMANCE) {                                                                                \
-            std::cout << #name << " took: "                                                                         \
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(_end_##name - _start_##name).count() \
-                      << "ms\n";                                                                                    \
-        }                                                                                                           \
-    }
 
 /***************** TYPES **********************/
 typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;

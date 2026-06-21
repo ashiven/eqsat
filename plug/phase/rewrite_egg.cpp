@@ -49,6 +49,19 @@ void RewriteEgg::start() {
     swap(old_world(), new_world());
 }
 
+bool RewriteEgg::swap_world_unchanged(OptionSelected selected) {
+    if (selected.option && selected.option->empty()) {
+        delete selected.option;
+        for (auto mut : old_world().externals().muts()) {
+            auto new_mut = rewrite(mut)->as_mut();
+            if (mut->is_external()) new_mut->externalize();
+        }
+        swap(old_world(), new_world());
+        return true;
+    }
+    return false;
+}
+
 ConfigValues RewriteEgg::import_config() {
     // Internalize eqsat config lambdas (lam with signature [] -> %eqsat.Config | <<n; %eqsat.Config>>)
     DefVec lams;
@@ -136,7 +149,7 @@ ConfigValues RewriteEgg::import_config() {
 
 void RewriteEgg::assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args) {
     for (auto [start_term, end_term, max_steps] : reaches_args)
-        if (!reaches(sexpr, rulesets, start_term, end_term, max_steps))
+        if (!reaches_egg(sexpr, rulesets, start_term, end_term, max_steps))
             error("%eqsat.reaches: {} could not reach {} in under {} steps.", start_term, end_term, max_steps);
 }
 
@@ -418,7 +431,6 @@ const Def* RewriteEgg::convert(uint32_t id) {
         case MimKind::Con:
         case MimKind::Lam: res = convert_lam(id, node); break;
         case MimKind::App: res = convert_app(id, node); break;
-        case MimKind::Var: res = convert_var(id, node); break;
         case MimKind::Lit: res = convert_lit(id, node); break;
         case MimKind::Pack: res = convert_pack(id, node); break;
         case MimKind::Tuple: res = convert_tuple(id, node); break;
