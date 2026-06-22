@@ -191,8 +191,6 @@ pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisD
         Mim::Fun(..) => make_fun_type(eg, enode),
         // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
         Mim::App(..) => make_app_type(eg, enode),
-        // typeof[(var $x)]                                 = Hole(*)
-        Mim::Var(..) => make_var_type(eg, enode),
         // typeof[(lit <val> <type>)]                       = <type>
         Mim::Lit(..) => make_lit_type(eg, enode),
         // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
@@ -525,12 +523,10 @@ fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 }
 
 fn make_fun_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let var_bind = expect!(enode, Mim::Fun(var_bind) => var_bind );
-    let var_scope = find!(eg, var_bind.elem, Mim::Scope(..));
-    let var_scope_childs = var_scope.applied_id_occurrences();
+    let childs = expect!(enode, Mim::Fun(childs) => childs );
 
-    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
-    let body_type = eg.analysis_data(body_id.id).type_.clone();
+    let body_id = childs.get(2).expect("Expected fun body id");
+    let body_type = eg[*body_id].data.type_.clone();
 
     let ret_dom = body_type.unwrap_or(TypeExpr::hole());
     let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
@@ -543,56 +539,51 @@ fn make_fun_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
 fn make_app_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let (callee, _arg) = expect!(enode, Mim::App(callee, arg) => (callee, arg));
-    let callee_type = &eg.analysis_data(callee.id).type_;
+    let [callee, _arg] = expect!(enode, Mim::App([callee, arg]) => [callee, arg]);
+    let callee_type = &eg[*callee].data.type_;
 
     match callee_type {
-        Some(TypeExpr {
-            node: Mim::Pi(..) | Mim::ImplicitPi(..),
-            children,
-        }) => {
-            let scope = children.first().expect("Expected pi var scope");
-            let codomain = scope.children.get(1).expect("Expected pi codom");
-            AnalysisData {
-                type_: Some(codomain.clone()),
+        Some(type_expr) => {
+            if matches!(type_expr.last(), Some(Mim::Pi(..) | Mim::ImplicitPi(..))) {
+                let codom = child!(type_expr, 1);
+                AnalysisData {
+                    type_: Some(codom),
+                    ..Default::default()
+                }
+            } else {
+                AnalysisData {
+                    type_: Some(TypeExpr::hole()),
+                    ..Default::default()
+                }
             }
         }
         _ => AnalysisData {
             type_: Some(TypeExpr::hole()),
+            ..Default::default()
         },
     }
 }
 
-// We should always give var a hole type because all vars
-// are represented in the same eclass and therefore we can't
-// associate the different variables' types with this eclass.
-fn make_var_type(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {
+fn make_lit_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+    let [_val, type_] = expect!(enode, Mim::Lit([val, type_]) => [val, type_]);
+
+    let type_ = eg.id_to_expr(*type_);
     AnalysisData {
-        type_: Some(TypeExpr::hole()),
+        type_: Some(type_),
+        ..Default::default()
     }
 }
 
-fn make_lit_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let (_val, type_) = expect!(enode, Mim::Lit(val, type_) => (val, type_));
-
-    let type_id = eg.find_applied_id(type_);
-    let type_ = eg.get_syn_expr(&type_id);
-    AnalysisData { type_: Some(type_) }
-}
-
 fn make_pack_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let var_bind = expect!(enode, Mim::Pack(var_bind) => var_bind);
-    let var_scope = find!(eg, var_bind.elem, Mim::Scope(..));
-    let var_scope_childs = var_scope.applied_id_occurrences();
+    let [_var, arity, body] = expect!(enode, Mim::Pack([var, arity, body]) => [var, arity, body]);
 
-    let arity_id = var_scope_childs.first().expect("Expected pack arity");
-    let body_id = var_scope_childs.get(1).expect("Expected pack body");
-    let arity = eg.get_syn_expr(arity_id);
-    let body_type = eg.analysis_data(body_id.id).type_.clone();
+    let arity = eg.id_to_expr(*arity);
+    let body_type = eg[*body].data.type_.clone();
 
     AnalysisData {
         type_: Some(TypeExpr::arr(
@@ -600,94 +591,79 @@ fn make_pack_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
             body_type.unwrap_or(TypeExpr::hole()),
             None,
         )),
+        ..Default::default()
     }
 }
 
 fn make_tuple_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let elem_cons = expect!(enode, Mim::Tuple(elem_cons)=> elem_cons);
-    let elem_cons = find!(eg, elem_cons, Mim::Cons(..) | Mim::Nil());
+    let childs = expect!(enode, Mim::Tuple(childs)=> childs);
 
-    let mut elem_types: Vec<TypeExpr> = Vec::new();
-    let mut curr_cons = elem_cons;
-    while let Mim::Cons(elem, next) = curr_cons {
-        let curr_elem_id = eg.find_applied_id(&elem);
-        let curr_elem_type = eg.analysis_data(curr_elem_id.id).type_.clone();
-        elem_types.push(curr_elem_type.unwrap_or(TypeExpr::hole()));
-        curr_cons = find!(eg, next, Mim::Cons(..) | Mim::Nil());
+    let mut types: Vec<TypeExpr> = Vec::new();
+
+    for child in childs.iter().skip(1) {
+        let type_ = eg[*child].data.type_.clone();
+        types.push(type_.unwrap_or(TypeExpr::hole()));
     }
 
     AnalysisData {
-        type_: Some(TypeExpr::sigma(elem_types, None)),
+        type_: Some(TypeExpr::sigma(types, None)),
+        ..Default::default()
     }
 }
 
 fn make_extract_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let (tuple, index) = expect!(enode, Mim::Extract(tuple, index) => (tuple, index));
-    let tuple_type = &eg.analysis_data(tuple.id).type_;
-    let index_id = eg.find_applied_id(index);
-    let index = eg.get_syn_expr(&index_id);
+    let [tuple, index] = expect!(enode, Mim::Extract([tuple, index]) => [tuple, index]);
+    let tuple_type = &eg[*tuple].data.type_;
+    let index = eg.id_to_expr(*index);
 
     let mut extract_type = TypeExpr::hole();
 
-    if let Some(TypeExpr {
-        node: Mim::Arr(..),
-        children,
-    }) = tuple_type
+    if let Some(type_expr) = tuple_type
+        && matches!(type_expr.last(), Some(Mim::Arr(..)))
     {
-        let arr_var_scope = children.first().expect("Expected arr var scope");
-        extract_type = child!(arr_var_scope, 1).clone();
-    } else if let Some(TypeExpr {
-        node: Mim::Sigma(..),
-        children,
-    }) = tuple_type
-        && let RecExpr {
-            node: Mim::Lit(..), ..
-        } = index
+        extract_type = child!(type_expr, 2).clone();
+    } else if let Some(type_expr) = tuple_type
+        && matches!(type_expr.last(), Some(Mim::Sigma(..)))
+        && matches!(index.last(), Some(Mim::Lit(..)))
     {
-        let sigma_var_scope = children.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = child!(sigma_var_scope, 0);
+        let sigma_types = childs!(type_expr, 1);
         let index_literal = get_literal(&index);
-        extract_type = cons_elem_at(sigma_elem_cons, index_literal);
+        extract_type = sigma_types[index_literal as usize].clone();
     }
 
     AnalysisData {
         type_: Some(extract_type),
+        ..Default::default()
     }
 }
 
 fn make_insert_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let (tuple, index, value) =
-        expect!(enode, Mim::Insert(tuple, index, value) => (tuple, index, value));
-    let tuple_type = &eg.analysis_data(tuple.id).type_;
-    let value_type = &eg.analysis_data(value.id).type_;
-    let index_id = eg.find_applied_id(index);
-    let index = eg.get_syn_expr(&index_id);
+    let [tuple, index, value] =
+        expect!(enode, Mim::Insert([tuple, index, value]) => [tuple, index, value]);
+    let tuple_type = &eg[*tuple].data.type_;
+    let value_type = &eg[*value].data.type_;
+    let index = eg.id_to_expr(*index);
 
     let mut insert_type = TypeExpr::hole();
 
-    if let Some(TypeExpr {
-        node: Mim::Arr(..), ..
-    }) = tuple_type
+    if let Some(type_expr) = tuple_type
+        && matches!(type_expr.last(), Some(Mim::Arr(..)))
     {
-        insert_type = tuple_type.clone().unwrap_or(TypeExpr::hole());
-    } else if let Some(TypeExpr {
-        node: Mim::Sigma(..),
-        children,
-    }) = tuple_type
-        && let RecExpr {
-            node: Mim::Lit(..), ..
-        } = index
+        insert_type = type_expr.clone();
+    } else if let Some(type_expr) = tuple_type
+        && matches!(type_expr.last(), Some(Mim::Sigma(..)))
+        && matches!(index.last(), Some(Mim::Lit(..)))
     {
-        let sigma_var_scope = children.first().expect("Expected sigma var scope");
-        let sigma_elem_cons = child!(sigma_var_scope, 0);
+        let mut sigma_types = childs!(type_expr, 1);
         let index_literal = get_literal(&index);
         let value_type = value_type.clone().unwrap_or(TypeExpr::hole());
-        let inserted_cons = cons_insert_at(sigma_elem_cons, &value_type, index_literal);
-        insert_type = TypeExpr::sigma_cons(inserted_cons, None);
+        sigma_types[index_literal as usize] = value_type;
+        insert_type = TypeExpr::sigma(sigma_types, None);
     }
 
     AnalysisData {
         type_: Some(insert_type),
+        ..Default::default()
     }
 }
 
