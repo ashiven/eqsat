@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::find_node;
 use crate::mim_egg::Mim;
 use crate::mim_egg::Mim::*;

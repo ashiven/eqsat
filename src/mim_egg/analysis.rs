@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 use crate::ffi::bridge::RuleSet;
 use crate::mim_egg::Mim;
+use crate::mim_egg::RULESETS;
 use crate::mim_egg::rulesets::core::{CoreData, core_make, core_merge, core_modify};
 // AUTOGEN START: egg-analysis-rust-import
 // AUTOGEN END: egg-analysis-rust-import
@@ -46,6 +47,7 @@ fn combined_make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
+            #[allow(clippy::match_single_binding)]
             match *ruleset {
                 // AUTOGEN START: slotted-analysis-rust-make
                 // AUTOGEN END: slotted-analysis-rust-make
@@ -68,6 +70,7 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
+            #[allow(clippy::match_single_binding)]
             match *ruleset {
                 // AUTOGEN START: slotted-analysis-rust-merge
                 // AUTOGEN END: slotted-analysis-rust-merge

@@ -4,7 +4,7 @@ use egg::*;
 pub(crate) fn get_literal(lit_expr: &RecExpr<Mim>) -> u64 {
     let node = lit_expr.iter().last().unwrap();
     let lit_val_id = usize::from(*node.children().first().unwrap());
-    let lit_val = lit_expr.iter().nth(lit_val_id).unwrap();
+    let lit_val = lit_expr.get(lit_val_id).unwrap();
 
     if let Mim::Symbol(s) = lit_val {
         match s.as_str() {

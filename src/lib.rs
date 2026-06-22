@@ -8,11 +8,11 @@ mod mim_slotted;
 
 pub fn eqsat_egg(
     sexpr: &str,
-    _selected: OptionSelected,
+    selected: OptionSelected,
     rulesets: Vec<RuleSet>,
     cost_fn: CostFn,
 ) -> Vec<RecExprFFI> {
-    mim_egg::equality_saturate(sexpr, rulesets, cost_fn)
+    mim_egg::equality_saturate(sexpr, selected, rulesets, cost_fn)
 }
 
 pub fn reaches_egg(

@@ -159,11 +159,11 @@ impl TypeConstructors for TypeExpr {
     }
 
     fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self {
-        let mut sigma = String::from(format!("(sigma {}", var.unwrap_or("dummy")));
+        let mut sigma = format!("(sigma {}", var.unwrap_or("dummy"));
         for type_ in types {
             sigma.push_str(format!(" {}", type_.pretty(MAX_LINE)).as_str());
         }
-        sigma.push_str(")");
+        sigma.push(')');
         sigma.parse().unwrap()
     }
 
@@ -297,7 +297,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::arr(arity, body, Some(&var))
+            TypeExpr::arr(arity, body, Some(var))
         }
         (Mim::Arr(_), Mim::Sigma(_)) => {
             let l_arity = child!(l, 1);
@@ -313,7 +313,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::arr(l_arity.clone(), body, Some(&var))
+            TypeExpr::arr(l_arity.clone(), body, Some(var))
         }
         (Mim::Sigma(_), Mim::Arr(_)) => {
             let l_types = childs!(l, 1);
@@ -329,7 +329,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::arr(r_arity.clone(), body, Some(&var))
+            TypeExpr::arr(r_arity.clone(), body, Some(var))
         }
         (Mim::Sigma(_), Mim::Sigma(_)) => {
             let l_types = childs!(l, 1);
@@ -338,12 +338,12 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             let types: Vec<TypeExpr> = l_types
                 .iter()
                 .zip(r_types)
-                .map(|(l_type, r_type)| unify(&l_type, &r_type))
+                .map(|(l_type, r_type)| unify(l_type, &r_type))
                 .collect();
 
             let var = var!(l);
 
-            TypeExpr::sigma(types, Some(&var))
+            TypeExpr::sigma(types, Some(var))
         }
         (Mim::Pi(_), Mim::Pi(_)) | (Mim::ImplicitPi(_), Mim::ImplicitPi(_)) => {
             let l_dom = child!(l, 1);
@@ -357,7 +357,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::pi(dom, codom, Some(&var))
+            TypeExpr::pi(dom, codom, Some(var))
         }
 
         _ => {
@@ -378,13 +378,14 @@ pub(crate) fn merge_type(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
             DidMerge(true, true)
         }
         (Some(l_type), Some(r_type)) => {
-            l.type_ = Some(unify(&l_type, &r_type));
+            l.type_ = Some(unify(l_type, &r_type));
             DidMerge(true, true)
         }
         _ => DidMerge(false, false),
     }
 }
 
+#[macro_export]
 macro_rules! expect {
     ($value:expr, $pat:pat => $result:expr) => {
         match $value {
@@ -457,17 +458,17 @@ fn find_apps(eg: &EGraph<Mim, MimAnalysis>, id: &Id, lam_var: &str, apps: &mut V
 fn infer_dom(eg: &EGraph<Mim, MimAnalysis>, lam_var: &str, body_id: &Id) -> TypeExpr {
     let mut body_apps: Vec<Mim> = vec![];
     #[cfg(test)]
-    find_apps(eg, body_id, &lam_var, &mut body_apps);
+    find_apps(eg, body_id, lam_var, &mut body_apps);
 
     for app in body_apps.iter() {
         let app_childs = app.children();
         let callee_id = app_childs.first().unwrap();
         let callee_type = &eg[*callee_id].data.type_;
-        if let Some(type_expr) = callee_type {
-            if matches!(type_expr.last(), Some(Mim::Pi(..) | Mim::ImplicitPi(..))) {
-                let pi_dom = child!(callee_type.clone().unwrap(), 0);
-                return pi_dom;
-            }
+        if let Some(type_expr) = callee_type
+            && matches!(type_expr.last(), Some(Mim::Pi(..) | Mim::ImplicitPi(..)))
+        {
+            let pi_dom = child!(callee_type.clone().unwrap(), 0);
+            return pi_dom;
         }
     }
 
@@ -490,7 +491,7 @@ fn make_lam_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
         }
     };
 
-    let dom = infer_dom(eg, &lam_var, body_id);
+    let dom = infer_dom(eg, lam_var, body_id);
     let codom = body_type.unwrap_or(TypeExpr::hole());
 
     AnalysisData {
