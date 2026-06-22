@@ -384,7 +384,8 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             TypeExpr::sigma(types, Some(&var))
         }
-        (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
+        (MimSlotted::Pi(_), MimSlotted::Pi(_))
+        | (MimSlotted::ImplicitPi(_), MimSlotted::ImplicitPi(_)) => {
             let l_scope = child!(l, 0);
             let l_dom = child!(l_scope, 0);
             let l_codom = child!(l_scope, 1);

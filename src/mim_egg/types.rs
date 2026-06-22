@@ -112,123 +112,70 @@ pub(crate) fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedR
 /***********************************************************/
 
 pub type TypeData = TypeExpr;
-/*
 
 pub struct TypeAnalysis;
 impl TypeAnalysis {
     pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
         make_type(eg, enode)
     }
-    pub fn merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
+    pub fn merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
         merge_type(l, r)
     }
 }
 
 trait TypeConstructors {
     fn hole() -> Self;
-    fn nil() -> Self;
     fn type_(level: u64) -> Self;
     fn bot(type_: TypeExpr) -> Self;
-    fn cons(elem: TypeExpr, next: TypeExpr) -> Self;
     fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self;
     fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self;
-    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self;
     fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self;
 }
 
+const MAX_LINE: usize = 80;
+
 impl TypeConstructors for TypeExpr {
     fn hole() -> Self {
-        TypeExpr {
-            node: Mim::Hole(AppliedId::null()),
-            children: vec![TypeExpr::type_(0)],
-        }
-    }
-
-    fn nil() -> Self {
-        TypeExpr {
-            node: Mim::Nil(),
-            children: vec![],
-        }
+        "(hole (type (lit 0 Univ)))".parse().unwrap()
     }
 
     fn type_(level: u64) -> Self {
-        TypeExpr {
-            node: Mim::Type(AppliedId::null()),
-            children: vec![TypeExpr {
-                node: Mim::Lit(AppliedId::null(), AppliedId::null()),
-                children: vec![
-                    TypeExpr {
-                        node: Mim::Num(level),
-                        children: vec![],
-                    },
-                    TypeExpr {
-                        node: Mim::Symbol("Univ".into()),
-                        children: vec![],
-                    },
-                ],
-            }],
-        }
+        format!("(type (lit {} Univ))", level).parse().unwrap()
     }
 
     fn bot(type_: TypeExpr) -> Self {
-        TypeExpr {
-            node: Mim::Bot(AppliedId::null()),
-            children: vec![type_],
-        }
-    }
-
-    fn cons(elem: TypeExpr, next: TypeExpr) -> Self {
-        TypeExpr {
-            node: Mim::Cons(AppliedId::null(), AppliedId::null()),
-            children: vec![elem, next],
-        }
+        format!("(bot {})", type_.pretty(MAX_LINE)).parse().unwrap()
     }
 
     fn arr(arity: TypeExpr, body: TypeExpr, var: Option<&str>) -> Self {
-        TypeExpr {
-            node: Mim::Arr(Bind {
-                slot: Slot::named(var.unwrap_or("dummy")),
-                elem: AppliedId::null(),
-            }),
-            children: vec![TypeExpr {
-                node: Mim::Scope(AppliedId::null(), AppliedId::null()),
-                children: vec![arity, body],
-            }],
-        }
+        format!(
+            "(arr {} {} {})",
+            var.unwrap_or("dummy"),
+            arity.pretty(MAX_LINE),
+            body.pretty(MAX_LINE)
+        )
+        .parse()
+        .unwrap()
     }
 
-    fn sigma(mut types: Vec<TypeExpr>, var: Option<&str>) -> Self {
-        let mut type_cons = TypeExpr::nil();
-        while let Some(type_) = types.pop() {
-            type_cons = TypeExpr::cons(type_, type_cons);
+    fn sigma(types: Vec<TypeExpr>, var: Option<&str>) -> Self {
+        let mut sigma = String::from(format!("(sigma {}", var.unwrap_or("dummy")));
+        for type_ in types {
+            sigma.push_str(format!(" {}", type_.pretty(MAX_LINE)).as_str());
         }
-        TypeExpr::sigma_cons(type_cons, var)
-    }
-
-    fn sigma_cons(type_cons: TypeExpr, var: Option<&str>) -> Self {
-        TypeExpr {
-            node: Mim::Sigma(Bind {
-                slot: Slot::named(var.unwrap_or("dummy")),
-                elem: AppliedId::null(),
-            }),
-            children: vec![TypeExpr {
-                node: Mim::Scope(AppliedId::null(), AppliedId::null()),
-                children: vec![type_cons, TypeExpr::nil()],
-            }],
-        }
+        sigma.push_str(")");
+        sigma.parse().unwrap()
     }
 
     fn pi(dom: TypeExpr, codom: TypeExpr, var: Option<&str>) -> Self {
-        TypeExpr {
-            node: Mim::Pi(Bind {
-                slot: Slot::named(var.unwrap_or("dummy")),
-                elem: AppliedId::null(),
-            }),
-            children: vec![TypeExpr {
-                node: Mim::Scope(AppliedId::null(), AppliedId::null()),
-                children: vec![dom, codom],
-            }],
-        }
+        format!(
+            "(pi {} {} {})",
+            var.unwrap_or("dummy"),
+            dom.pretty(MAX_LINE),
+            codom.pretty(MAX_LINE),
+        )
+        .parse()
+        .unwrap()
     }
 }
 
@@ -262,52 +209,73 @@ pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisD
         // Mim::Merge(..) = make_merge_type(eg, enode),
 
         // Num terminals and structural nodes should not get a type at all
-        Mim::Num(..) => AnalysisData { type_: None },
-        Mim::MetaVar(..) => AnalysisData { type_: None },
-        Mim::Scope(..) => AnalysisData { type_: None },
-        Mim::Root(..) => AnalysisData { type_: None },
-        Mim::Cons(..) => AnalysisData { type_: None },
-        Mim::Nil(..) => AnalysisData { type_: None },
-        Mim::TypeWrap(..) => AnalysisData { type_: None },
+        Mim::Num(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Root(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::TypeWrap(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
 
         _ => AnalysisData {
             type_: Some(TypeExpr::hole()),
+            ..Default::default()
         },
     }
 }
 
 macro_rules! child {
-    ($value:expr, $idx:expr) => {
-        $value.children.get($idx).expect("Failed to get child")
-    };
+    ($type_expr:expr, $idx:expr) => {{
+        let child_id = $type_expr[$type_expr.root()].children()[$idx];
+        let mut child_type_expr = TypeExpr::default();
+        build_type_expr(&$type_expr, &child_id, &mut child_type_expr);
+        child_type_expr
+    }};
+}
+
+macro_rules! childs {
+    ($type_expr:expr, $idx:expr) => {{
+        let mut res: Vec<TypeExpr> = vec![];
+        for (i, child_id) in $type_expr[$type_expr.root()].children().iter().enumerate() {
+            if i >= $idx {
+                let mut child_type_expr = TypeExpr::default();
+                build_type_expr(&$type_expr, &child_id, &mut child_type_expr);
+                res.push(child_type_expr);
+            }
+        }
+        res
+    }};
 }
 
 macro_rules! var {
-    ($value:expr) => {{
-        let mut var = $value
-            .node
-            .all_slot_occurrences()
-            .first()
-            .expect("Failed to get var")
-            .to_string();
-        var.remove(0);
-        var
+    ($type_expr:expr) => {{
+        let var_id = $type_expr[$type_expr.root()].children()[0];
+        let var = &$type_expr[var_id];
+        if let Mim::Symbol(s) = var {
+            s
+        } else {
+            panic!("Expected var symbol");
+        }
     }};
 }
 
 fn hole_amount(type_expr: &TypeExpr) -> usize {
-    fn holes(type_expr: &TypeExpr) -> usize {
-        if let Mim::Hole(..) = type_expr.node {
-            1 + type_expr.children.iter().map(holes).sum::<usize>()
-        } else {
-            type_expr.children.iter().map(holes).sum::<usize>()
+    let mut holes = 0;
+    for node in type_expr {
+        if let Mim::Hole(_) = node {
+            holes += 1;
         }
     }
-    holes(type_expr)
+    holes
 }
 
 fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
-    match (&l.node, &r.node) {
+    match (&l[l.root()], &r[r.root()]) {
         (_, Mim::Hole(_)) => l.clone(),
         (Mim::Hole(_), _) => r.clone(),
 
@@ -320,34 +288,29 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         // TODO: Idx, Join, Meet, ImplicitPi
         (Mim::Symbol(_), Mim::Symbol(_)) => l.clone(),
         (Mim::Arr(_), Mim::Arr(_)) => {
-            let l_scope = child!(l, 0);
-            let l_arity = child!(l_scope, 0);
-            let l_body = child!(l_scope, 1);
+            let l_arity = child!(l, 1);
+            let l_body = child!(l, 2);
 
-            let r_scope = child!(r, 0);
-            let r_arity = child!(r_scope, 0);
-            let r_body = child!(r_scope, 1);
+            let r_arity = child!(r, 1);
+            let r_body = child!(r, 2);
 
-            let arity = unify(l_arity, r_arity);
-            let body = unify(l_body, r_body);
+            let arity = unify(&l_arity, &r_arity);
+            let body = unify(&l_body, &r_body);
 
             let var = var!(l);
 
             TypeExpr::arr(arity, body, Some(&var))
         }
         (Mim::Arr(_), Mim::Sigma(_)) => {
-            let l_scope = child!(l, 0);
-            let l_arity = child!(l_scope, 0);
-            let l_body = child!(l_scope, 1);
+            let l_arity = child!(l, 1);
+            let l_body = child!(l, 2);
 
-            let r_scope = child!(r, 0);
-            let r_cons = child!(r_scope, 0);
-            let r_types = cons_to_vec(r_cons);
+            let r_types = childs!(r, 1);
 
             let body = r_types
                 .iter()
-                .map(|r_type| unify(l_body, r_type))
-                .find(|type_| !matches!(type_.node, Mim::Hole(_)))
+                .map(|r_type| unify(&l_body, r_type))
+                .find(|type_| !matches!(type_[type_.root()], Mim::Hole(_)))
                 .unwrap_or(TypeExpr::hole());
 
             let var = var!(l);
@@ -355,18 +318,15 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             TypeExpr::arr(l_arity.clone(), body, Some(&var))
         }
         (Mim::Sigma(_), Mim::Arr(_)) => {
-            let l_scope = child!(l, 0);
-            let l_cons = child!(l_scope, 0);
-            let l_types = cons_to_vec(l_cons);
+            let l_types = childs!(l, 1);
 
-            let r_scope = child!(r, 0);
-            let r_arity = child!(r_scope, 0);
-            let r_body = child!(r_scope, 1);
+            let r_arity = child!(r, 1);
+            let r_body = child!(r, 2);
 
             let body = l_types
                 .iter()
-                .map(|l_type| unify(r_body, l_type))
-                .find(|type_| !matches!(type_.node, Mim::Hole(_)))
+                .map(|l_type| unify(&r_body, l_type))
+                .find(|type_| !matches!(type_[type_.root()], Mim::Hole(_)))
                 .unwrap_or(TypeExpr::hole());
 
             let var = var!(l);
@@ -374,16 +334,11 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
             TypeExpr::arr(r_arity.clone(), body, Some(&var))
         }
         (Mim::Sigma(_), Mim::Sigma(_)) => {
-            let l_scope = child!(l, 0);
-            let l_cons = child!(l_scope, 0);
-            let l_types = cons_to_vec(l_cons);
-
-            let r_scope = child!(r, 0);
-            let r_cons = child!(r_scope, 0);
-            let r_types = cons_to_vec(r_cons);
+            let l_types = childs!(l, 1);
+            let r_types = childs!(r, 1);
 
             let types: Vec<TypeExpr> = l_types
-                .into_iter()
+                .iter()
                 .zip(r_types)
                 .map(|(l_type, r_type)| unify(&l_type, &r_type))
                 .collect();
@@ -392,17 +347,15 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             TypeExpr::sigma(types, Some(&var))
         }
-        (Mim::Pi(_), Mim::Pi(_)) => {
-            let l_scope = child!(l, 0);
-            let l_dom = child!(l_scope, 0);
-            let l_codom = child!(l_scope, 1);
+        (Mim::Pi(_), Mim::Pi(_)) | (Mim::ImplicitPi(_), Mim::ImplicitPi(_)) => {
+            let l_dom = child!(l, 1);
+            let l_codom = child!(l, 2);
 
-            let r_scope = child!(r, 0);
-            let r_dom = child!(r_scope, 0);
-            let r_codom = child!(r_scope, 1);
+            let r_dom = child!(r, 1);
+            let r_codom = child!(r, 2);
 
-            let dom = unify(l_dom, r_dom);
-            let codom = unify(l_codom, r_codom);
+            let dom = unify(&l_dom, &r_dom);
+            let codom = unify(&l_codom, &r_codom);
 
             let var = var!(l);
 
@@ -419,18 +372,18 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     }
 }
 
-pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
-    match (l.type_, r.type_) {
-        (Some(l_type), None) => AnalysisData {
-            type_: Some(l_type),
-        },
-        (None, Some(r_type)) => AnalysisData {
-            type_: Some(r_type),
-        },
-        (Some(l_type), Some(r_type)) => AnalysisData {
-            type_: Some(unify(&l_type, &r_type)),
-        },
-        _ => AnalysisData { type_: None },
+pub(crate) fn merge_type(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
+    match (&l.type_, r.type_) {
+        (Some(_), None) => DidMerge(false, false),
+        (None, Some(r_type)) => {
+            l.type_ = Some(r_type);
+            DidMerge(true, true)
+        }
+        (Some(l_type), Some(r_type)) => {
+            l.type_ = Some(unify(&l_type, &r_type));
+            DidMerge(true, true)
+        }
+        _ => DidMerge(false, false),
     }
 }
 
@@ -455,6 +408,7 @@ macro_rules! find {
         node
     }};
 }
+/*
 
 fn make_let_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let var_bind = expect!(enode, Mim::Let(var_bind) => var_bind );
