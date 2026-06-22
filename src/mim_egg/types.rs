@@ -398,8 +398,7 @@ macro_rules! expect {
 
 macro_rules! find {
     ($eg:expr, $id:expr, $pat:pat) => {{
-        let found_id = $eg.find_applied_id(&$id);
-        let enodes = $eg.enodes_applied(&found_id);
+        let enodes = $eg[$id].nodes;
         let node = enodes
             .iter()
             .find(|n| matches!(n, $pat))
@@ -408,39 +407,43 @@ macro_rules! find {
         node
     }};
 }
-/*
 
 fn make_let_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let var_bind = expect!(enode, Mim::Let(var_bind) => var_bind );
-    let var_scope = find!(eg, var_bind.elem, Mim::Scope(..));
-    let var_scope_childs = var_scope.applied_id_occurrences();
+    let [_var, _def, expr] = expect!(enode, Mim::Let([var, def, expr]) => [var,def,expr] );
+    let expr_type = eg[*expr].data.type_.clone();
 
-    let expr_id = var_scope_childs.get(1).expect("Expected let expr id");
-    let expr_type = eg.analysis_data(expr_id.id).type_.clone();
-
-    AnalysisData { type_: expr_type }
+    AnalysisData {
+        type_: expr_type,
+        ..Default::default()
+    }
 }
 
 #[allow(dead_code)]
-fn find_apps(eg: &EGraph<Mim, MimAnalysis>, id: &AppliedId, lam_slot: &Slot, apps: &mut Vec<Mim>) {
-    let curr_enodes = eg.enodes_applied(id);
+fn find_apps(eg: &EGraph<Mim, MimAnalysis>, id: &Id, lam_var: &str, apps: &mut Vec<Mim>) {
+    let curr_enodes = &eg[*id].nodes;
     curr_enodes.iter().for_each(|n| {
-        n.applied_id_occurrences()
+        n.children()
             .iter()
-            .for_each(|id| find_apps(eg, id, lam_slot, apps))
+            .for_each(|id| find_apps(eg, id, lam_var, apps))
     });
 
     let curr_apps: Vec<Mim> = curr_enodes
+        .clone()
         .into_iter()
         .filter(|n| {
-            if matches!(n, Mim::App(..)) && n.slots().contains(lam_slot) {
-                let app_childs = n.applied_id_occurrences();
+            if matches!(n, Mim::App(..)) {
+                let app_childs = n.children();
                 let arg_id = app_childs.get(1).unwrap();
-                let arg_id = eg.find_applied_id(arg_id);
-                let arg_nodes = eg.enodes_applied(&arg_id);
-                arg_nodes
-                    .iter()
-                    .any(|n| matches!(n, Mim::Var(..)) && n.slots().contains(lam_slot))
+                let arg_nodes = &eg[*arg_id].nodes;
+                arg_nodes.iter().any(|n| {
+                    if let Mim::Symbol(s) = n
+                        && s == lam_var
+                    {
+                        true
+                    } else {
+                        false
+                    }
+                })
             } else {
                 false
             }
@@ -452,37 +455,20 @@ fn find_apps(eg: &EGraph<Mim, MimAnalysis>, id: &AppliedId, lam_slot: &Slot, app
 
 #[allow(unused_variables)]
 #[allow(unused_mut)]
-fn infer_dom(
-    eg: &EGraph<Mim, MimAnalysis>,
-    var_bind: &Bind<AppliedId>,
-    body_id: &AppliedId,
-) -> TypeExpr {
-    let lam_slot = var_bind.slot;
-
+fn infer_dom(eg: &EGraph<Mim, MimAnalysis>, lam_var: &str, body_id: &Id) -> TypeExpr {
     let mut body_apps: Vec<Mim> = vec![];
-    // Finds all applications in the lambda body that fulfill two conditions:
-    // 1) The application takes the slot of the lambda as input (applies it either to the callee or arg)
-    // 2) The applications' arg eclass contains a variable use (var $lam_slot)
-    // Unfortunately, finding these apps performs expensive recursive searches through the e-graph
-    // for each invokation of make_lam_type which leads to stack overflows on any more complex examples.
-    // We therefore only use it during testing for now.
     #[cfg(test)]
-    find_apps(eg, body_id, &lam_slot, &mut body_apps);
+    find_apps(eg, body_id, &lam_var, &mut body_apps);
 
-    // We go through all of the found applications and look for such applications
-    // where the left hand side is a proper pi type from which we can infer the dom of the lambda
     for app in body_apps.iter() {
-        let app_childs = app.applied_id_occurrences();
+        let app_childs = app.children();
         let callee_id = app_childs.first().unwrap();
-        let callee_type = &eg.analysis_data(callee_id.id).type_;
-        if let Some(TypeExpr {
-            node: Mim::Pi(..) | Mim::ImplicitPi(..),
-            children,
-        }) = callee_type
-        {
-            let pi_scope = children.first().unwrap();
-            let pi_dom = pi_scope.children.first().unwrap();
-            return pi_dom.clone();
+        let callee_type = &eg[*callee_id].data.type_;
+        if let Some(type_expr) = callee_type {
+            if matches!(type_expr.last(), Some(Mim::Pi(..) | Mim::ImplicitPi(..))) {
+                let pi_dom = child!(callee_type.clone().unwrap(), 0);
+                return pi_dom;
+            }
         }
     }
 
@@ -490,33 +476,51 @@ fn infer_dom(
 }
 
 fn make_lam_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let var_bind = expect!(enode, Mim::Lam(var_bind) => var_bind );
-    let var_scope = find!(eg, var_bind.elem, Mim::Scope(..));
-    let var_scope_childs = var_scope.applied_id_occurrences();
+    let childs = expect!(enode, Mim::Lam(childs) => childs );
 
-    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
-    let body_type = eg.analysis_data(body_id.id).type_.clone();
+    let body_id = childs.get(2).expect("Expected lam body id");
+    let body_type = eg[*body_id].data.type_.clone();
 
-    let dom = infer_dom(eg, var_bind, body_id);
+    let var_id = childs.first().expect("Expected lam var id");
+    let lam_var = eg[*var_id].nodes.first().expect("Expected lam var node");
+    let lam_var = {
+        if let Mim::Symbol(s) = lam_var {
+            s
+        } else {
+            panic!("Expected lam var to be a symbol")
+        }
+    };
+
+    let dom = infer_dom(eg, &lam_var, body_id);
     let codom = body_type.unwrap_or(TypeExpr::hole());
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
 fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let var_bind = expect!(enode, Mim::Con(var_bind) => var_bind );
-    let var_scope = find!(eg, var_bind.elem, Mim::Scope(..));
-    let var_scope_childs = var_scope.applied_id_occurrences();
+    let childs = expect!(enode, Mim::Con(childs) => childs );
 
-    let body_id = var_scope_childs.get(1).expect("Expected lam body id");
+    let body_id = childs.get(2).expect("Expected con body id");
 
-    let dom = infer_dom(eg, var_bind, body_id);
+    let var_id = childs.first().expect("Expected con var id");
+    let con_var = eg[*var_id].nodes.first().expect("Expected con var node");
+    let con_var = {
+        if let Mim::Symbol(s) = con_var {
+            s
+        } else {
+            panic!("Expected con var to be a symbol")
+        }
+    };
+
+    let dom = infer_dom(eg, con_var, body_id);
     let codom = TypeExpr::bot(TypeExpr::type_(0));
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
@@ -686,7 +690,6 @@ fn make_insert_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData 
         type_: Some(insert_type),
     }
 }
-*/
 
 #[cfg(test)]
 mod test {
