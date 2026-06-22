@@ -394,6 +394,7 @@ macro_rules! expect {
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! find {
     ($eg:expr, $id:expr, $pat:pat) => {{
         let enodes = $eg[$id].nodes;
