@@ -478,6 +478,13 @@ fn infer_dom(eg: &EGraph<Mim, MimAnalysis>, lam_var: &str, body_id: &Id) -> Type
 fn make_lam_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let childs = expect!(enode, Mim::Lam(childs) => childs );
 
+    if childs.len() <= 1 {
+        return AnalysisData {
+            type_: Some(TypeExpr::hole()),
+            ..Default::default()
+        };
+    }
+
     let body_id = childs.get(2).expect("Expected lam body id");
     let body_type = eg[*body_id].data.type_.clone();
 
@@ -503,6 +510,13 @@ fn make_lam_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let childs = expect!(enode, Mim::Con(childs) => childs );
 
+    if childs.len() <= 1 {
+        return AnalysisData {
+            type_: Some(TypeExpr::hole()),
+            ..Default::default()
+        };
+    }
+
     let body_id = childs.get(2).expect("Expected con body id");
 
     let var_id = childs.first().expect("Expected con var id");
@@ -527,8 +541,12 @@ fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 fn make_fun_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let childs = expect!(enode, Mim::Fun(childs) => childs );
 
-    let body_id = childs.get(2).expect("Expected fun body id");
-    let body_type = eg[*body_id].data.type_.clone();
+    let body_type = if childs.len() > 1 {
+        let body_id = childs.get(2).expect("Expected fun body id");
+        eg[*body_id].data.type_.clone()
+    } else {
+        None
+    };
 
     let ret_dom = body_type.unwrap_or(TypeExpr::hole());
     let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
