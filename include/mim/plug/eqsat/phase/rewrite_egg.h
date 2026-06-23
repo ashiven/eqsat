@@ -215,14 +215,17 @@ private:
     }
     uint64_t get_num(uint32_t id) { return nodes()[id].num; }
 
-    std::string remove_uid(std::string name) {
-        if (auto pos = name.rfind("_"); pos != std::string::npos) {
-            auto maybe_uid = name.substr(pos + 1);
+    Sym remove_uid(Sym name) {
+        auto name_str = name.str();
+        if (auto pos = name_str.rfind("_"); pos != std::string::npos) {
+            auto maybe_uid = name_str.substr(pos + 1);
             if (!maybe_uid.empty() && std::all_of(maybe_uid.begin(), maybe_uid.end(), ::isdigit))
-                return name.substr(0, pos);
+                return new_world().sym(name_str.substr(0, pos));
         }
-        return name;
+        return new_world().sym(name_str);
     }
+
+    void set(const Def* def, Sym name) { def->set(remove_uid(name)); }
 
     Sym2Def vars_;
     Sym2Def axms_;

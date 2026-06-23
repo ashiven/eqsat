@@ -252,7 +252,7 @@ const Def* RewriteEgg::init_axm(uint32_t id, NodeFFI node) {
     auto type = create_type(node.type_);
 
     auto new_axm = new_world().axm(type);
-    new_axm->set(name);
+    set(new_axm, name);
     register_axm(name, new_axm);
 
     dbg(new_axm);
@@ -266,7 +266,7 @@ const Def* RewriteEgg::init_root(uint32_t id, NodeFFI node) {
     auto name = get_symbol(node.children[1]);
 
     auto def = init_lookahead(node.children[2]);
-    def->set(name);
+    set(def, name);
     register_var(name, def);
 
     dbg(def);
@@ -281,14 +281,14 @@ const Def* RewriteEgg::init_let(uint32_t id, NodeFFI node) {
     auto var_name = get_symbol(node.children[0]);
 
     auto def = init_lookahead(node.children[1]);
-    def->set(var_name);
+    set(def, var_name);
     register_var(var_name, def);
 
     dbg(def);
     return nullptr;
 }
 
-// (lam <var> <filter> <body>)
+// (lam <var> [<filter> <body>])
 const Def* RewriteEgg::init_lam(uint32_t id, NodeFFI node) {
     dbg("init - current node(", id, "): ", node_ffi_str(node).c_str(), " - ");
 
@@ -297,7 +297,7 @@ const Def* RewriteEgg::init_lam(uint32_t id, NodeFFI node) {
 
     auto var_name = get_symbol(node.children[0]);
     auto var      = mut_lam->var();
-    var->set(var_name);
+    set(var, var_name);
     register_var(var_name, var);
 
     dbg(mut_lam);
@@ -313,7 +313,7 @@ const Def* RewriteEgg::init_pi(uint32_t id, NodeFFI node) {
 
     auto var_name = get_symbol(node.children[0]);
     auto var      = mut_pi->var();
-    var->set(var_name);
+    set(var, var_name);
     register_var(var_name, var);
 
     auto dom = init_lookahead(node.children[1]);
@@ -341,7 +341,7 @@ const Def* RewriteEgg::init_sigma(uint32_t id, NodeFFI node) {
 
     auto var_name = get_symbol(node.children[0]);
     auto var      = mut_sigma->var();
-    var->set(var_name);
+    set(var, var_name);
     register_var(var_name, var);
 
     for (size_t i = 0; i < size; i++) {
@@ -349,7 +349,8 @@ const Def* RewriteEgg::init_sigma(uint32_t id, NodeFFI node) {
         mut_sigma->set(i, type);
     }
 
-    dbg(mut_sigma);
+    // Causes error probably related to frozen-world/arity-literal
+    // dbg(mut_sigma);
 
     if (auto imm_sigma = mut_sigma->immutabilize()) return imm_sigma;
     return mut_sigma;
@@ -365,7 +366,7 @@ const Def* RewriteEgg::init_arr(uint32_t id, NodeFFI node) {
 
     auto var_name = get_symbol(node.children[0]);
     auto var      = mut_arr->var();
-    var->set(var_name);
+    set(var, var_name);
     register_var(var_name, var);
 
     auto body = init_lookahead(node.children[2]);
@@ -389,7 +390,7 @@ const Def* RewriteEgg::init_pack(uint32_t id, NodeFFI node) {
 
     auto var_name = get_symbol(node.children[0]);
     auto var      = mut_pack->var();
-    var->set(var_name);
+    set(var, var_name);
     register_var(var_name, var);
 
     auto body = init_lookahead(node.children[2]);
@@ -485,19 +486,19 @@ const Def* RewriteEgg::convert_let(uint32_t id, NodeFFI node) {
     return expr;
 }
 
-// (lam <var> <filter> <body>)
+// (lam <var> [<filter> <body>])
 const Def* RewriteEgg::convert_lam(uint32_t id, NodeFFI node) {
     auto lam = get_def(id)->as<Lam>();
 
     if (auto mut_lam = lam->isa_mut<Lam>()) {
-        auto filter = get_def(node.children[1]);
-        auto body   = get_def(node.children[2]);
+        if (node.children.size() == 3) {
+            auto filter = get_def(node.children[1]);
+            auto body   = get_def(node.children[2]);
 
-        mut_lam->unset();
+            mut_lam->unset();
 
-        if (filter && body)
-            mut_lam->set(filter, body);
-        else
+            if (filter && body) mut_lam->set(filter, body);
+        } else
             mut_lam->set_filter(false);
     }
 
