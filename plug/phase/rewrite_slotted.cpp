@@ -385,7 +385,7 @@ const Def* RewriteSlotted::init_sigma(uint32_t id, NodeFFI node) {
     set_loc(saved_loc);
     set_depth_visits(saved_depth_visits);
 
-    dbg(mut_sigma);
+    // dbg(mut_sigma);
     exit_scope(var_scope);
 
     if (auto imm_sigma = mut_sigma->immutabilize()) return imm_sigma;
