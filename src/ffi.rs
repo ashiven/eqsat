@@ -300,7 +300,7 @@ impl FFIInner for Mim {
             Mim::Rule(children) => new_node_ffi(MimKind::Rule, children, None, None, type_),
             Mim::Inj(children) => new_node_ffi(MimKind::Inj, children, None, None, type_),
             Mim::Merge(children) => new_node_ffi(MimKind::Merge, children, None, None, type_),
-            Mim::Axm(children) => new_node_ffi(MimKind::Axm, children, None, None, type_),
+            Mim::Axm(child) => new_node_ffi(MimKind::Axm, &[*child], None, None, type_),
             Mim::Match(children) => new_node_ffi(MimKind::Match, children, None, None, type_),
             Mim::Proxy(children) => new_node_ffi(MimKind::Proxy, children, None, None, type_),
             Mim::Join(children) => new_node_ffi(MimKind::Join, children, None, None, type_),

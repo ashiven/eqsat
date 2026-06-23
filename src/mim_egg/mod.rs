@@ -56,8 +56,8 @@ define_language! {
         "inj" = Inj([Id; 2]),
         // (merge <type> <values>...)
         "merge" = Merge(Box<[Id]>),
-        // (axm <name> <type>)
-        "axm" = Axm([Id; 2]),
+        // (axm <name>)
+        "axm" = Axm(Id),
         // (match <scrutinee> <arms>...)
         "match" = Match(Box<[Id]>),
         // (proxy <type> <pass> <tag> <ops>...)

@@ -1,3 +1,4 @@
+// RUN: sed 's/__IMPL__/egg/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 // RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin eqsat;
