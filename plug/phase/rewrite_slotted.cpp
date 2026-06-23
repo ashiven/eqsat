@@ -542,7 +542,7 @@ const Def* RewriteSlotted::convert_lam(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto lam = get_def(id)->as<Lam>();
+    auto lam = get_def(id);
 
     if (auto mut_lam = lam->isa_mut<Lam>()) {
         auto filter = get_def(var_scope.children[0]);
@@ -591,7 +591,7 @@ const Def* RewriteSlotted::convert_pack(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto pack = get_def(id)->as<Pack>();
+    auto pack = get_def(id);
 
     if (auto mut_pack = pack->isa_mut<Pack>()) {
         auto body = get_def(var_scope.children[1]);
@@ -731,7 +731,7 @@ const Def* RewriteSlotted::convert_arr(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto arr = get_def(id)->as<Arr>();
+    auto arr = get_def(id);
 
     if (auto mut_arr = arr->isa_mut<Arr>()) {
         auto arity = get_def(var_scope.children[0]);
@@ -751,7 +751,7 @@ const Def* RewriteSlotted::convert_sigma(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto sigma = get_def(id)->as<Sigma>();
+    auto sigma = get_def(id);
 
     exit_scope(var_scope);
     return sigma;
@@ -763,7 +763,7 @@ const Def* RewriteSlotted::convert_pi(uint32_t id, NodeFFI node) {
     auto var_scope = get_node(MimKind::Scope, node.children[0]);
     enter_scope(var_scope, true);
 
-    auto pi = get_def(id)->as<Pi>();
+    auto pi = get_def(id);
 
     if (auto mut_pi = pi->isa_mut<Pi>()) {
         auto domain   = get_def(var_scope.children[0]);

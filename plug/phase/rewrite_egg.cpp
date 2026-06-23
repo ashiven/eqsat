@@ -488,7 +488,7 @@ const Def* RewriteEgg::convert_let(uint32_t id, NodeFFI node) {
 
 // (lam <var> [<filter> <body>])
 const Def* RewriteEgg::convert_lam(uint32_t id, NodeFFI node) {
-    auto lam = get_def(id)->as<Lam>();
+    auto lam = get_def(id);
 
     if (auto mut_lam = lam->isa_mut<Lam>()) {
         if (node.children.size() == 3) {
@@ -526,7 +526,7 @@ const Def* RewriteEgg::convert_lit(uint32_t id, NodeFFI node) {
 
 // (pack <var> <arity> <body>)
 const Def* RewriteEgg::convert_pack(uint32_t id, NodeFFI node) {
-    auto pack = get_def(id)->as<Pack>();
+    auto pack = get_def(id);
 
     if (auto mut_pack = pack->isa_mut<Pack>()) {
         auto body = get_def(node.children[2]);
@@ -651,7 +651,7 @@ const Def* RewriteEgg::convert_top(uint32_t id, NodeFFI node) {
 
 // (arr <var> <arity> <body>)
 const Def* RewriteEgg::convert_arr(uint32_t id, NodeFFI node) {
-    auto arr = get_def(id)->as<Arr>();
+    auto arr = get_def(id);
 
     if (auto mut_arr = arr->isa_mut<Arr>()) {
         auto arity = get_def(node.children[1]);
@@ -666,7 +666,7 @@ const Def* RewriteEgg::convert_arr(uint32_t id, NodeFFI node) {
 
 // (sigma <var> <types>...)
 const Def* RewriteEgg::convert_sigma(uint32_t id, NodeFFI node) {
-    auto sigma = get_def(id)->as<Sigma>();
+    auto sigma = get_def(id);
 
     // TODO: reset needed for mut?
 
@@ -675,7 +675,7 @@ const Def* RewriteEgg::convert_sigma(uint32_t id, NodeFFI node) {
 
 // (pi <var> <domain> <codomain>)
 const Def* RewriteEgg::convert_pi(uint32_t id, NodeFFI node) {
-    auto pi = get_def(id)->as<Pi>();
+    auto pi = get_def(id);
 
     if (auto mut_pi = pi->isa_mut<Pi>()) {
         auto domain   = get_def(node.children[1]);
