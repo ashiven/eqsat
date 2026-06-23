@@ -2,6 +2,8 @@
 
 #include <mim/phase.h>
 
+#include <mim/plug/eqsat/phase/util.h>
+
 #include "mim/def.h"
 #include "mim/rewrite.h"
 
@@ -9,6 +11,28 @@
 
 namespace mim::plug::eqsat {
 
+/***************** TYPES **********************/
+typedef std::vector<std::tuple<std::string, std::string, size_t>> ReachesArgs;
+typedef rust::Vec<RuleSet> RuleSets;
+typedef std::tuple<RuleSets, CostFn, ReachesArgs, OptionSelected> ConfigValues;
+
+typedef fe::SymMap<const Def*> Sym2Def;
+typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
+typedef rust::Vec<NodeFFI> Nodes;
+
+typedef struct RecExprState {
+    Cache cache;
+    Nodes nodes;
+} RecExprState;
+
+typedef struct Context {
+    size_t id;
+    RecExprState* state;
+} Context;
+
+typedef absl::flat_hash_map<size_t, RecExprState> RecExprStates;
+
+/***************** REWRITER *********************/
 class RewriteEgg : public Phase, public Rewriter {
 public:
     RewriteEgg(World& world, std::string name)
@@ -33,38 +57,60 @@ public:
 private:
     void register_symbols() {
         for (auto [flags, e] : old_world().annexes()) {
-            auto new_annex                = new_world().annexes().attach(flags, e.sym, rewrite(e.def));
-            axms_[new_annex->sym().str()] = new_annex;
+            auto new_annex          = new_world().annexes().attach(flags, e.sym, rewrite(e.def));
+            axms_[new_annex->sym()] = new_annex;
         }
 
-        aliases_["Univ"] = new_world().univ();
-        aliases_["Bool"] = new_world().type_bool();
-        aliases_["Nat"]  = new_world().type_nat();
-        aliases_["I8"]   = new_world().type_i8();
-        aliases_["I16"]  = new_world().type_i16();
-        aliases_["I32"]  = new_world().type_i32();
-        aliases_["I64"]  = new_world().type_i64();
-        aliases_["ff"]   = new_world().lit_ff();
-        aliases_["tt"]   = new_world().lit_tt();
-        aliases_["i8"]   = new_world().lit_nat(0x100);
-        aliases_["i16"]  = new_world().lit_nat(0x10000);
-        aliases_["i32"]  = new_world().lit_nat(0x100000000);
+        aliases_[new_world().sym("Univ")] = new_world().univ();
+        aliases_[new_world().sym("Bool")] = new_world().type_bool();
+        aliases_[new_world().sym("Nat")]  = new_world().type_nat();
+        aliases_[new_world().sym("I8")]   = new_world().type_i8();
+        aliases_[new_world().sym("I16")]  = new_world().type_i16();
+        aliases_[new_world().sym("I32")]  = new_world().type_i32();
+        aliases_[new_world().sym("I64")]  = new_world().type_i64();
+        aliases_[new_world().sym("ff")]   = new_world().lit_ff();
+        aliases_[new_world().sym("tt")]   = new_world().lit_tt();
+        aliases_[new_world().sym("i8")]   = new_world().lit_nat(0x100);
+        aliases_[new_world().sym("i16")]  = new_world().lit_nat(0x10000);
+        aliases_[new_world().sym("i32")]  = new_world().lit_nat(0x100000000);
     }
 
-    std::pair<rust::Vec<RuleSet>, CostFn> import_config();
+    bool swap_world_unchanged(OptionSelected selected);
+    ConfigValues import_config();
 
-    enum InitStage {
-        Declarations,
-        Lambdas,
-        Bindings,
-    };
-    void init(rust::Vec<RecExprFFI> rewrites, InitStage stage);
-    const Def* init_lam(uint32_t id, NodeFFI node);
-    const Def* init_let(uint32_t id, NodeFFI node);
+    // Asserts whether a start term can reach an
+    // end term in a given number of steps using the
+    // provided sets of rules.
+    void assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args);
+
+    // NodeFFI can carry a type that is also in the form
+    // of a RecExprFFI. We convert this type with a top-down
+    // traversal for creating binders followed by a bottom-up
+    // traversal to create the remaining Def's
+    const Def* create_type(RecExprFFI type_);
+
+    // Performs a top-down traverse of each RecExprFFI
+    // and creates and stores all bindings with their definitions.
+    // Lambdas are created without their bodies in this phase.
+    void init(rust::Vec<RecExprFFI> rec_exprs);
+    const Def* init(uint32_t id);
+    const Def* init_lookahead(uint32_t id);
     const Def* init_axm(uint32_t id, NodeFFI node);
+    const Def* init_root(uint32_t id, NodeFFI node);
+    const Def* init_let(uint32_t id, NodeFFI node);
+    const Def* init_lam(uint32_t id, NodeFFI node);
+    const Def* init_pi(uint32_t id, NodeFFI node);
+    const Def* init_sigma(uint32_t id, NodeFFI node);
+    const Def* init_arr(uint32_t id, NodeFFI node);
+    const Def* init_pack(uint32_t id, NodeFFI node);
 
-    void convert(rust::Vec<RecExprFFI> rewrites);
-    const Def* convert(uint32_t id, bool recurse = false);
+    // Performs a bottom-up traverse of each RecExprFFI and
+    // creates a Def in the new_world() for every node.
+    // At this point, the bodies of the lambdas created
+    // in the init phase will be set.
+    void convert(rust::Vec<RecExprFFI> rec_exprs);
+    const Def* convert(uint32_t id);
+    const Def* convert_root(uint32_t id, NodeFFI node);
     const Def* convert_let(uint32_t id, NodeFFI node);
     const Def* convert_lam(uint32_t id, NodeFFI node);
     const Def* convert_app(uint32_t id, NodeFFI node);
@@ -92,78 +138,100 @@ private:
     const Def* convert_num(uint32_t id, NodeFFI node);
     const Def* convert_symbol(uint32_t id, NodeFFI node);
 
-    // A node that is associated with a Def can be:
-    // 1) A node representing an arbitrary term
-    // 2) A symbol node representing an annex
-    // 3) A symbol node representing a type or term alias
-    // 4) A symbol node representing a variable
-    // 5) A symbol node representing a lambda
+    Context& ctx() { return ctx_; }
+
+    size_t id() { return ctx().id; }
+    void set_id(size_t id) { ctx().id = id; }
+
+    void switch_context(size_t id) {
+        set_id(id);
+        set_state(id);
+    }
+
+    void switch_context(Context& other) {
+        set_id(other.id);
+        set_state(other.id);
+    }
+
+    RecExprState* state() { return ctx().state; }
+    void set_state(size_t id) { ctx().state = &states_[id]; }
+
+    Nodes& nodes() { return state()->nodes; }
+    void set_nodes(size_t id, Nodes nodes) { states_[id].nodes = nodes; }
+    size_t root() { return nodes().size() - 1; }
+
+    Cache& cache() { return state()->cache; }
+    void set_cache(size_t id, Cache cache) { states_[id].cache = cache; }
+
+    void init_state(size_t id, RecExprFFI& rec_expr) {
+        set_cache(id, {});
+        set_nodes(id, rec_expr.nodes);
+    }
+
     const Def* get_def(uint32_t id) {
-        auto def = added_[id];
-        if (def == nullptr) {
+        auto def = cache()[id];
+        if (!def) {
             auto sym = get_symbol(id);
-            if (aliases_.contains(sym))
-                def = aliases_[sym];
-            else if (axms_.contains(sym))
-                def = get_axm(sym);
-            else if (vars_.contains(sym))
-                def = get_var(sym);
-            else if (lams_.contains(sym))
-                def = get_lam(sym);
+            if (auto alias = get_alias(sym))
+                def = alias;
+            else if (auto axm = get_axm(sym))
+                def = axm;
+            else if (auto var = get_var(sym))
+                def = var;
         }
         return def;
     }
 
-    void register_var(std::string name, const Def* converted) { vars_[name] = converted; }
-    void register_axm(std::string name, const Axm* converted) { axms_[name] = converted; }
-    void register_lam(std::string name, const Lam* converted) { lams_[name] = converted; }
-    void register_projs(uint32_t id) {
-        auto node = get_node_unsafe(id);
-        if (node.kind == MimKind::Var) {
-            auto var = get_def(node.children[0]);
-            if (var && (var->type()->isa<Sigma>() || var->type()->isa<Arr>())) {
-                size_t proj_idx = 0;
-                for (size_t i = 1; i < node.children.size(); i++) {
-                    auto proj_node       = get_node(MimKind::Var, node.children[i]);
-                    auto proj_name       = get_symbol(proj_node.children[0]);
-                    auto proj_name_nouid = remove_uid(proj_name);
-                    auto proj            = var->proj(proj_idx++);
-                    proj->set(proj_name_nouid);
-                    register_var(proj_name, proj);
-                }
-            }
-        }
-        for (uint32_t child : node.children)
-            register_projs(child);
+    const Def* get_alias(Sym name) {
+        auto it = aliases_.find(name);
+        return it == aliases_.end() ? nullptr : it->second;
     }
 
-    const Def* get_var(std::string name) { return vars_[name]; }
-    const Def* get_axm(std::string name) { return axms_[name]; }
-    const Lam* get_lam(std::string name) { return lams_[name]; }
-
-    NodeFFI get_node(MimKind expected, uint32_t id) {
-        assert(res_[id].kind == expected && "get_node: mismatch between expected and actual node kind");
-        return res_[id];
+    void register_var(Sym name, const Def* def) { vars_[name] = def; }
+    const Def* get_var(Sym name) {
+        auto it = vars_.find(name);
+        return it == vars_.end() ? nullptr : it->second;
     }
-    NodeFFI get_node_unsafe(uint32_t id) { return res_[id]; }
-    std::string get_symbol(uint32_t id) { return res_[id].symbol.c_str(); }
-    uint64_t get_num(uint32_t id) { return res_[id].num; }
 
-    std::string remove_uid(std::string name) {
-        if (auto pos = name.rfind("_"); pos != std::string::npos) {
-            auto maybe_uid = name.substr(pos + 1);
+    void register_axm(Sym name, const Axm* converted) {
+        if (!axms_.contains(name)) axms_[name] = converted;
+    }
+    const Def* get_axm(Sym name) {
+        auto it = axms_.find(name);
+        return it == axms_.end() ? nullptr : it->second;
+    }
+
+    NodeFFI& get_node(MimKind expected, uint32_t id) {
+        NodeFFI& node = nodes()[id];
+        assert(node.kind == expected && "get_node: mismatch between expected and actual node kind");
+        return node;
+    }
+    NodeFFI& get_node_unsafe(uint32_t id) { return nodes()[id]; }
+
+    Sym get_symbol(uint32_t id) {
+        auto node = nodes()[id];
+        auto sym  = node.symbol.c_str();
+        return new_world().sym(sym);
+    }
+    uint64_t get_num(uint32_t id) { return nodes()[id].num; }
+
+    Sym remove_uid(Sym name) {
+        auto name_str = name.str();
+        if (auto pos = name_str.rfind("_"); pos != std::string::npos) {
+            auto maybe_uid = name_str.substr(pos + 1);
             if (!maybe_uid.empty() && std::all_of(maybe_uid.begin(), maybe_uid.end(), ::isdigit))
-                return name.substr(0, pos);
+                return new_world().sym(name_str.substr(0, pos));
         }
-        return name;
+        return new_world().sym(name_str);
     }
 
-    rust::Vec<NodeFFI> res_;
-    std::unordered_map<uint32_t, const Def*> added_;
-    std::unordered_map<std::string, const Def*> vars_;
-    std::unordered_map<std::string, const Lam*> lams_;
-    std::unordered_map<std::string, const Def*> axms_;
-    std::unordered_map<std::string, const Def*> aliases_;
+    void set(const Def* def, Sym name) { def->set(remove_uid(name)); }
+
+    Sym2Def vars_;
+    Sym2Def axms_;
+    Sym2Def aliases_;
+    Context ctx_;
+    RecExprStates states_;
 };
 
 }; // namespace mim::plug::eqsat

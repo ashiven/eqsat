@@ -98,7 +98,7 @@ define_language! {
         Fn(Bind<AppliedId>) = "fn",
         // (idx <size>)
         Idx(AppliedId) = "idx",
-        // (hole <type>) - does it even make sense to have this?
+        // (hole <type>)
         Hole(AppliedId) = "hole",
         // (type <level>)
         Type(AppliedId) = "type",

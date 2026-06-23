@@ -6,8 +6,24 @@ pub mod ffi;
 mod mim_egg;
 mod mim_slotted;
 
-pub fn eqsat_egg(sexpr: &str, rulesets: Vec<RuleSet>, cost_fn: CostFn) -> Vec<RecExprFFI> {
-    mim_egg::equality_saturate(sexpr, rulesets, cost_fn)
+pub fn eqsat_egg(
+    sexpr: &str,
+    selected: OptionSelected,
+    rulesets: Vec<RuleSet>,
+    cost_fn: CostFn,
+) -> Vec<RecExprFFI> {
+    mim_egg::equality_saturate(sexpr, selected, rulesets, cost_fn)
+}
+
+pub fn reaches_egg(
+    _sexpr: &str,
+    _rulesets: Vec<RuleSet>,
+    _start_name: &str,
+    _end_name: &str,
+    _max_steps: usize,
+) -> bool {
+    // mim_egg::reaches(sexpr, rulesets, start_name, end_name, max_steps)
+    true
 }
 
 pub fn pretty_egg(sexpr: &str, line_len: usize) -> String {

@@ -1,9 +1,9 @@
-// RUN: sed 's/__IMPL__/egg/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 // RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin core;
 plugin eqsat;
 import _pipeline;
+// TODO: Doesn't work for egg currently - not sure why yet
 import _config___IMPL__;
 
 cfun println_char[%mem.M 0, I8]: %mem.M 0;

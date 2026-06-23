@@ -309,7 +309,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (_, MimSlotted::Top(_)) => r.clone(),
         (MimSlotted::Top(_), _) => l.clone(),
 
-        // TODO: Idx, Join, Meet
+        // TODO: Idx, Join, Meet, ImplicitPi
         (MimSlotted::Symbol(_), MimSlotted::Symbol(_)) => l.clone(),
         (MimSlotted::Arr(_), MimSlotted::Arr(_)) => {
             let l_scope = child!(l, 0);
@@ -384,7 +384,8 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             TypeExpr::sigma(types, Some(&var))
         }
-        (MimSlotted::Pi(_), MimSlotted::Pi(_)) => {
+        (MimSlotted::Pi(_), MimSlotted::Pi(_))
+        | (MimSlotted::ImplicitPi(_), MimSlotted::ImplicitPi(_)) => {
             let l_scope = child!(l, 0);
             let l_dom = child!(l_scope, 0);
             let l_codom = child!(l_scope, 1);

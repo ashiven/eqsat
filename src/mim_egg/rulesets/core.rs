@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::find_node;
 use crate::mim_egg::Mim;
 use crate::mim_egg::Mim::*;
@@ -385,24 +386,24 @@ fn idx_size(type_: &Mim) -> u64 {
     0
 }
 
-fn new_const(val: Mim, type_: Mim) -> Option<CoreConst> {
-    Some(CoreConst { val, type_ })
+fn new_const(val: Mim, type_: Mim) -> Option<CoreData> {
+    Some(CoreData { val, type_ })
 }
 
-fn bool_lit(tt: bool) -> Option<CoreConst> {
+fn bool_lit(tt: bool) -> Option<CoreData> {
     let val = if tt { "tt" } else { "ff" }.to_string();
     new_const(Symbol(val), Symbol("Bool".into()))
 }
 
-fn nat_lit(n: u64) -> Option<CoreConst> {
+fn nat_lit(n: u64) -> Option<CoreData> {
     new_const(Num(n), Symbol("Nat".into()))
 }
 
 /* constant folding */
 
-pub type CoreData = Option<CoreConst>;
+pub type CoreData = CoreConst;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreConst {
     val: Mim,
     type_: Mim,
@@ -419,12 +420,13 @@ pub fn core_merge(a: &mut AnalysisData, b: AnalysisData) -> DidMerge {
 
 pub fn core_make(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
     AnalysisData {
+        type_: None,
         core_data: fold_core(egraph, enode),
     }
 }
 
 pub fn core_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
-    if let Some(CoreConst { val: c, type_: t }) = egraph[id].data.core_data.clone() {
+    if let Some(CoreData { val: c, type_: t }) = egraph[id].data.core_data.clone() {
         let const_id = egraph.add(c);
         let type_id = egraph.add(t);
         let lit_id = egraph.add(Lit([const_id, type_id]));
@@ -437,7 +439,7 @@ fn _is_const(v: egg::Var) -> impl Fn(&mut EGraph<Mim, MimAnalysis>, Id, &Subst) 
     move |eg, _, subst| eg[subst[v]].data.core_data.is_some()
 }
 
-pub fn fold_core(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+pub fn fold_core(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     if let Lit([v, t]) = enode
         && let Some(v) = egraph[*v].nodes.first()
         && let Some(t) = egraph[*t].nodes.first()
@@ -462,7 +464,7 @@ pub fn fold_core(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<C
     None
 }
 
-fn fold_nat(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_nat(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     if let App([callee, arg]) = enode
@@ -483,7 +485,7 @@ fn fold_nat(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreCo
     None
 }
 
-fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     if let App([callee, arg]) = enode
@@ -491,11 +493,11 @@ fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreC
         && let Some(s) = find_node!(egraph, op, Symbol(s) => s)
         && let Some(t) = find_node!(egraph, arg, Tuple(t) => t)
         && let [e1, e2] = &**t
-        && let CoreConst {
+        && let CoreData {
             val: Num(n1),
             type_: t1,
         } = c(e1)?
-        && let CoreConst {
+        && let CoreData {
             val: Num(n2),
             type_: t2,
         } = c(e2)?
@@ -520,7 +522,7 @@ fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreC
     None
 }
 
-fn fold_ncmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_ncmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     if let App([callee, arg]) = enode
@@ -544,7 +546,7 @@ fn fold_ncmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreC
     None
 }
 
-fn fold_shr(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_shr(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     if let App([callee, arg]) = enode
@@ -566,7 +568,7 @@ fn fold_shr(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreCo
     None
 }
 
-fn fold_wrap(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_wrap(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     // (app (app %core.wrap.(add,sub,mul,shl) [mode: Nat]) <<2; Idx s>>)
@@ -592,7 +594,7 @@ fn fold_wrap(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreC
     None
 }
 
-fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreConst> {
+fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
     let c = |id: &Id| egraph[*id].data.core_data.clone();
 
     // (app %core.div.(udiv,sdiv,urem,srem) [%mem.M 0, <<2; Idx s>>])
@@ -617,3 +619,112 @@ fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreCo
 
     None
 }
+
+/*
+#[cfg(test)]
+mod test {
+    use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+    use crate::mim_egg::equality_saturate;
+
+    const LINE_LEN: usize = 80;
+
+    fn first(rewrites: Vec<RecExprFFI>) -> String {
+        rewrites
+            .first()
+            .expect("rewrites was empty")
+            .pretty(LINE_LEN)
+    }
+
+    #[test]
+    fn fold_core_nat_simple() {
+        let sexpr = "(app %core.nat.add (tuple (lit 1 Nat) (lit 1 Nat)))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit 2 Nat)");
+    }
+
+    #[test]
+    fn fold_core_nat_complex() {
+        let sexpr = "(app %core.nat.mul (tuple (app %core.nat.add (tuple (lit 1 Nat) (lit 1 Nat))) (app %core.nat.sub (tuple (lit 5 Nat) (lit 4 Nat)))))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit 2 Nat)");
+    }
+
+    #[test]
+    fn fold_core_ncmp_simple() {
+        let sexpr = "(app %core.ncmp.e (tuple (lit 4 Nat) (lit 2 Nat)))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit ff Bool)");
+    }
+
+    #[test]
+    fn fold_core_ncmp_complex() {
+        let sexpr = "(app %core.ncmp.ne (tuple (app %core.nat.add (tuple (lit 1 Nat) (lit 1 Nat))) (app %core.nat.sub (tuple (lit 5 Nat) (lit 4 Nat)))))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit tt Bool)");
+    }
+
+    #[test]
+    fn fold_core_icmp_plusminus() {
+        let sexpr = "(app (app %core.icmp.Xygle (lit i32 Nat)) (tuple (lit 4 I32) (lit 2 I32)))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit ff Bool)");
+    }
+
+    #[test]
+    fn fold_core_icmp_minusplus() {
+        let sexpr =
+            "(app (app %core.icmp.xYgle (lit i32 Nat)) (tuple (lit 4171510507 I32) (lit 2 I32)))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit tt Bool)");
+    }
+
+    #[test]
+    fn fold_core_icmp_greater() {
+        let sexpr = "(app (app %core.icmp.xyGle (lit i32 Nat)) (tuple (lit 4 I32) (lit 2 I32)))";
+        let rewrites = equality_saturate(
+            sexpr,
+            OptionSelected::none(),
+            vec![RuleSet::Core],
+            CostFn::AstSize,
+        );
+        let res = first(rewrites);
+        assert_eq!(res, "(lit tt Bool)");
+    }
+}
+*/
