@@ -8,6 +8,7 @@ use crate::mim_egg::rulesets::get_rules;
 use crate::mim_egg::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
 };
+use crate::mim_egg::util::assert_reaches;
 use egg::*;
 use regex::Regex;
 use std::cell::RefCell;
@@ -147,6 +148,63 @@ pub(crate) fn pretty(sexpr: &str, line_len: usize) -> String {
     }
 
     res
+}
+
+pub(crate) fn reaches(
+    sexpr: &str,
+    rulesets: Vec<RuleSet>,
+    start_name: &str,
+    end_name: &str,
+    max_steps: usize,
+) -> bool {
+    set_rulesets(rulesets);
+
+    let mut sexprs = split_sexprs(sexpr);
+    let mut rules = get_rules();
+
+    convert_rules(&mut sexprs, &mut rules);
+
+    let start_term = sexprs
+        .iter()
+        .find(|sexpr| {
+            sexpr.starts_with(format!("(root extern {}\n", start_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}\n", start_name).as_str())
+        })
+        .expect("Reaches failed to find start term");
+
+    let end_term = sexprs
+        .iter()
+        .find(|sexpr| {
+            sexpr.starts_with(format!("(root extern {}\n", end_name).as_str())
+                || sexpr.starts_with(format!("(root intern {}\n", end_name).as_str())
+        })
+        .expect("Reaches failed to find end term");
+
+    // We want to assert only for the terms inside of the root nodes
+    let start_term = start_term
+        .strip_prefix(&format!("(root extern {}\n", start_name))
+        .or(start_term.strip_prefix(&format!("(root intern {}\n", start_name)))
+        .expect("Reaches failed to strip prefix")
+        .strip_suffix(")")
+        .expect("Reaches failed to strip suffix");
+
+    let end_term = end_term
+        .strip_prefix(&format!("(root extern {}\n", end_name))
+        .or(end_term.strip_prefix(&format!("(root intern {}\n", end_name)))
+        .expect("Reaches failed to strip prefix")
+        .strip_suffix(")")
+        .expect("Reaches failed to strip suffix");
+
+    // We also don't care about type annotations, so we just remove them.
+    let start_term_expr = start_term.parse().unwrap();
+    let start_term_expr_unannotated = remove_type_annotations(&start_term_expr);
+    let start_term = format!("{}", start_term_expr_unannotated);
+
+    let end_term_expr = end_term.parse().unwrap();
+    let end_term_expr_unannotated = remove_type_annotations(&end_term_expr);
+    let end_term = format!("{}", end_term_expr_unannotated);
+
+    assert_reaches(&start_term, &end_term, &rules, max_steps)
 }
 
 fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {

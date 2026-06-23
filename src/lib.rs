@@ -16,14 +16,13 @@ pub fn eqsat_egg(
 }
 
 pub fn reaches_egg(
-    _sexpr: &str,
-    _rulesets: Vec<RuleSet>,
-    _start_name: &str,
-    _end_name: &str,
-    _max_steps: usize,
+    sexpr: &str,
+    rulesets: Vec<RuleSet>,
+    start_name: &str,
+    end_name: &str,
+    max_steps: usize,
 ) -> bool {
-    // mim_egg::reaches(sexpr, rulesets, start_name, end_name, max_steps)
-    true
+    mim_egg::reaches(sexpr, rulesets, start_name, end_name, max_steps)
 }
 
 pub fn pretty_egg(sexpr: &str, line_len: usize) -> String {
