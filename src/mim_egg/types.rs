@@ -1044,7 +1044,7 @@ mod test {
         // TODO: This should work but doesn't yet
         // assert_eq!(
         //     format!("{}", b_ffi_type.pretty(80)),
-        //     "(arr\n  foo\n  (extract baz (lit ff Bool)) (extract foo (lit ff Bool)))"
+        //     "(arr foo (extract baz (lit ff Bool)) (extract foo (lit ff Bool)))"
         // );
 
         assert_eq!(

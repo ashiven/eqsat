@@ -156,6 +156,7 @@ void RewriteEgg::assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArg
 const Def* RewriteEgg::create_type(RecExprFFI type_) {
     if (type_.nodes.empty()) error("Tried to create an empty type.");
     dbg("\nCreating Type");
+    dbg(type_str(type_, 80).c_str());
 
     auto outer_ctx = ctx();
 
