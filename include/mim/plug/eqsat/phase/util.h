@@ -3,7 +3,7 @@
 #include <iostream>
 
 /****************** DEBUG *********************/
-inline constexpr bool DEBUG       = true;
+inline constexpr bool DEBUG       = false;
 inline constexpr bool SCOPES      = false;
 inline constexpr bool PERFORMANCE = false;
 

@@ -13,5 +13,5 @@ lam extern _config() =
         %eqsat.rules (foo),
     );
 
-con extern mul_lit_nat [a: Nat, b: Nat, return : Cn Nat] =
+fun extern mul_lit_nat (a: Nat, b: Nat) =
     return (%core.nat.add (a, (%core.nat.sub (b, a))));
