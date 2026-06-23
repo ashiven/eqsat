@@ -283,7 +283,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
         (_, Mim::Top(_)) => r.clone(),
         (Mim::Top(_), _) => l.clone(),
 
-        // TODO: Idx, Join, Meet, ImplicitPi
+        // TODO: Idx, Join, Meet
         (Mim::Symbol(_), Mim::Symbol(_)) => l.clone(),
         (Mim::Arr(_), Mim::Arr(_)) => {
             let l_arity = child!(l, 1);
@@ -602,7 +602,7 @@ fn make_tuple_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     let mut types: Vec<TypeExpr> = Vec::new();
 
-    for child in childs.iter().skip(1) {
+    for child in childs.iter() {
         let type_ = eg[*child].data.type_.clone();
         types.push(type_.unwrap_or(TypeExpr::hole()));
     }
@@ -672,6 +672,8 @@ fn make_insert_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ffi::FFI;
+    use egg::rewrite;
     const MAX_LINE: usize = 80;
 
     fn type_of(eg: &EGraph<Mim, MimAnalysis>, id: &Id) -> Option<TypeData> {
@@ -757,249 +759,208 @@ mod test {
         );
     }
 
-    /*
     #[test]
     fn make_types_var_lit() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let lit = "(lit 10 (idx 3))";
-        let lit: RecExpr<Mim> = RecExpr::parse(lit).unwrap();
-        let lit_id = eg.add_expr(lit);
+        let lit = "(lit 10 (idx 3))".parse().unwrap();
+        let lit_id = eg.add_expr(&lit);
 
-        assert_eq!(type_of(&eg, lit_id), type_("(idx 3)"));
+        assert_eq!(type_of(&eg, &lit_id), type_("(idx 3)"));
 
-        let binding = "(let $x (scope (lit tt Bool) (app (lam $y (scope (lit ff Bool) (lit 10 (idx 3)))) (var $x))))";
-        let binding: RecExpr<Mim> = RecExpr::parse(binding).unwrap();
-        let binding_id = eg.add_expr(binding);
+        let binding = "(let x (lit tt Bool) (app (lam y (lit ff Bool) (lit 10 (idx 3))) x))"
+            .parse()
+            .unwrap();
+        let binding_id = eg.add_expr(&binding);
 
-        assert_eq!(type_of(&eg, binding_id), type_("(idx 3)"));
+        assert_eq!(type_of(&eg, &binding_id), type_("(idx 3)"));
 
-        let var = "(var $foo)";
-        let var: RecExpr<Mim> = RecExpr::parse(var).unwrap();
-        let var_id = eg.add_expr(var);
+        let var = "foo".parse().unwrap();
+        let var_id = eg.add_expr(&var);
 
-        assert_eq!(type_of(&eg, var_id), type_("(hole (type (lit 0 Univ)))"));
+        assert_eq!(type_of(&eg, &var_id), type_("(hole (type (lit 0 Univ)))"));
 
-        let app = "(app (var $foo) (var $bar))";
-        let app: RecExpr<Mim> = RecExpr::parse(app).unwrap();
-        let app_id = eg.add_expr(app);
+        let app = "(app foo bar)".parse().unwrap();
+        let app_id = eg.add_expr(&app);
 
-        assert_eq!(type_of(&eg, app_id), type_("(hole (type (lit 0 Univ)))"));
+        assert_eq!(type_of(&eg, &app_id), type_("(hole (type (lit 0 Univ)))"));
     }
 
     #[test]
     fn make_types_tuple_pack() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let tuple = "(tuple (cons (lit 1 Nat) (cons (lit 2 Nat) (cons (lit 3 Nat) nil))))";
-        let tuple: RecExpr<Mim> = RecExpr::parse(tuple).unwrap();
-        let tuple_id = eg.add_expr(tuple);
+        let tuple = "(tuple (lit 1 Nat) (lit 2 Nat) (lit 3 Nat))"
+            .parse()
+            .unwrap();
+        let tuple_id = eg.add_expr(&tuple);
 
-        assert_eq!(
-            type_of(&eg, tuple_id),
-            type_("(sigma $dummy (scope (cons Nat (cons Nat (cons Nat nil))) nil))")
-        );
+        assert_eq!(type_of(&eg, &tuple_id), type_("(sigma dummy Nat Nat Nat)"));
 
-        let tuple_empty = "(tuple nil)";
-        let tuple_empty: RecExpr<Mim> = RecExpr::parse(tuple_empty).unwrap();
-        let tuple_empty_id = eg.add_expr(tuple_empty);
+        let tuple_empty = "(tuple)".parse().unwrap();
+        let tuple_empty_id = eg.add_expr(&tuple_empty);
 
-        assert_eq!(
-            type_of(&eg, tuple_empty_id),
-            type_("(sigma $dummy (scope nil nil))")
-        );
+        assert_eq!(type_of(&eg, &tuple_empty_id), type_("(sigma dummy)"));
 
-        let pack = "(pack $dummy (scope (top Nat) (lit 3 Nat)))";
-        let pack: RecExpr<Mim> = RecExpr::parse(pack).unwrap();
-        let pack_id = eg.add_expr(pack);
+        let pack = "(pack dummy (top Nat) (lit 3 Nat))".parse().unwrap();
+        let pack_id = eg.add_expr(&pack);
 
-        assert_eq!(
-            type_of(&eg, pack_id),
-            type_("(arr $dummy (scope (top Nat) Nat))")
-        );
+        assert_eq!(type_of(&eg, &pack_id), type_("(arr dummy (top Nat) Nat)"));
     }
 
     #[test]
     fn make_types_extract_insert() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let insert_tuple = "(insert (tuple (cons (lit 1 Nat) (cons (lit 2 Nat) nil))) (lit tt Bool) (lit ff Bool))";
-        let insert_tuple: RecExpr<Mim> = RecExpr::parse(insert_tuple).unwrap();
-        let insert_tuple_id = eg.add_expr(insert_tuple);
+        let insert_tuple = "(insert (tuple (lit 1 Nat) (lit 2 Nat)) (lit tt Bool) (lit ff Bool))"
+            .parse()
+            .unwrap();
+        let insert_tuple_id = eg.add_expr(&insert_tuple);
 
         assert_eq!(
-            type_of(&eg, insert_tuple_id),
-            type_("(sigma $dummy (scope (cons Nat (cons Bool nil)) nil))")
+            type_of(&eg, &insert_tuple_id),
+            type_("(sigma dummy Nat Bool)")
         );
 
         let insert_pack =
-            "(insert (pack $dummy (scope (top Nat) (lit ff Bool))) (lit tt Bool) (lit ff Bool))";
-        let insert_pack: RecExpr<Mim> = RecExpr::parse(insert_pack).unwrap();
-        let insert_pack_id = eg.add_expr(insert_pack);
+            "(insert (pack dummy (top Nat) (lit ff Bool)) (lit tt Bool) (lit ff Bool))"
+                .parse()
+                .unwrap();
+        let insert_pack_id = eg.add_expr(&insert_pack);
 
         assert_eq!(
-            type_of(&eg, insert_pack_id),
-            type_("(arr $dummy (scope (top Nat) Bool))")
+            type_of(&eg, &insert_pack_id),
+            type_("(arr dummy (top Nat) Bool)")
         );
 
-        let extract_tuple =
-            "(extract (tuple (cons (lit 1 Nat) (cons (lit 3 (idx i32)) nil))) (lit tt Bool))";
-        let extract_tuple: RecExpr<Mim> = RecExpr::parse(extract_tuple).unwrap();
-        let extract_tuple_id = eg.add_expr(extract_tuple);
+        let extract_tuple = "(extract (tuple (lit 1 Nat) (lit 3 (idx i32))) (lit tt Bool))"
+            .parse()
+            .unwrap();
+        let extract_tuple_id = eg.add_expr(&extract_tuple);
 
-        assert_eq!(type_of(&eg, extract_tuple_id), type_("(idx i32)"));
+        assert_eq!(type_of(&eg, &extract_tuple_id), type_("(idx i32)"));
 
-        let extract_pack =
-            "(extract (pack $dummy (scope (top Nat) (lit ff Bool))) (lit 0 (idx 1)))";
-        let extract_pack: RecExpr<Mim> = RecExpr::parse(extract_pack).unwrap();
-        let extract_pack_id = eg.add_expr(extract_pack);
+        let extract_pack = "(extract (pack dummy (top Nat) (lit ff Bool)) (lit 0 (idx 1)))"
+            .parse()
+            .unwrap();
+        let extract_pack_id = eg.add_expr(&extract_pack);
 
-        assert_eq!(type_of(&eg, extract_pack_id), type_("Bool"));
+        assert_eq!(type_of(&eg, &extract_pack_id), type_("Bool"));
 
-        let extract_var = "(extract (var $foo) (lit 0 (idx 1)))";
-        let extract_var: RecExpr<Mim> = RecExpr::parse(extract_var).unwrap();
-        let extract_var_id = eg.add_expr(extract_var);
+        let extract_var = "(extract foo (lit 0 (idx 1)))".parse().unwrap();
+        let extract_var_id = eg.add_expr(&extract_var);
 
         assert_eq!(
-            type_of(&eg, extract_var_id),
+            type_of(&eg, &extract_var_id),
             type_("(hole (type (lit 0 Univ)))")
         );
     }
 
     #[test]
-    fn make_var_type_hole() {
+    fn make_var_type() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let var_annotated = "(@ Bool (var $foo))";
-        let var_annotated: RecExpr<Mim> = RecExpr::parse(var_annotated).unwrap();
+        let var_annotated = "(@ Bool foo)".parse().unwrap();
         let var_typed = extract_type_annotations(&var_annotated);
         let var_typed_id = add_expr_typed(&mut eg, var_typed);
 
-        // The annotated type for var should be overwritten with hole at this point.
-        // Since all vars are represented with the same singleton var eclass, we
-        // can't maintain the variables' types with an analysis and should hope that
-        // the mim compiler can type-infer these var holes.
-        assert_eq!(
-            type_of(&eg, var_typed_id),
-            type_("(hole (type (lit 0 Univ)))")
-        );
+        assert_eq!(type_of(&eg, &var_typed_id), type_("Bool"));
 
-        let var = "(var $bar)";
-        let var: RecExpr<Mim> = RecExpr::parse(var).unwrap();
-        let var_id = eg.add_expr(var);
+        let var = "bar".parse().unwrap();
+        let var_id = eg.add_expr(&var);
 
-        assert_eq!(type_of(&eg, var_id), type_("(hole (type (lit 0 Univ)))"));
+        assert_eq!(type_of(&eg, &var_id), type_("(hole (type (lit 0 Univ)))"));
     }
 
     #[test]
     fn infer_let_type() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let let_annotated = "(let $foo (scope (@ Bool (lit ff Bool)) (@ Nat (lit 1 Nat))))";
-        let let_annotated: RecExpr<Mim> = RecExpr::parse(let_annotated).unwrap();
+        let let_annotated = "(let foo (@ Bool (lit ff Bool)) (@ Nat (lit 1 Nat)))"
+            .parse()
+            .unwrap();
         let let_typed = extract_type_annotations(&let_annotated);
         let let_typed_id = add_expr_typed(&mut eg, let_typed);
 
-        assert_eq!(type_of(&eg, let_typed_id), type_("Nat"));
+        assert_eq!(type_of(&eg, &let_typed_id), type_("Nat"));
 
-        let let_var_annotated = "(let $foo (scope (@ Bool (lit ff Bool)) (@ Nat (var $bar))))";
-        let let_var_annotated: RecExpr<Mim> = RecExpr::parse(let_var_annotated).unwrap();
+        let let_var_annotated = "(let foo (@ Bool (lit ff Bool)) (@ Nat bar)))"
+            .parse()
+            .unwrap();
         let let_var_typed = extract_type_annotations(&let_var_annotated);
         let let_var_typed_id = add_expr_typed(&mut eg, let_var_typed);
 
-        assert_eq!(
-            type_of(&eg, let_var_typed_id),
-            type_("(hole (type (lit 0 Univ)))")
-        );
+        assert_eq!(type_of(&eg, &let_var_typed_id), type_("Nat"));
     }
 
     #[test]
     fn implicit_pi_callee() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f_annotated = "(@ (pi* $dummy (scope Nat (pi $dummy (scope Nat Nat)))) f)";
-        let f_annotated: RecExpr<Mim> = RecExpr::parse(f_annotated).unwrap();
+        let f_annotated = "(@ (pi* dummy Nat (pi dummy Nat Nat)) f)".parse().unwrap();
         let f_typed = extract_type_annotations(&f_annotated);
         let f_typed_id = add_expr_typed(&mut eg, f_typed);
 
         assert_eq!(
-            type_of(&eg, f_typed_id),
-            type_("(pi* $dummy (scope Nat (pi $dummy (scope Nat Nat))))")
+            type_of(&eg, &f_typed_id),
+            type_("(pi* dummy Nat (pi dummy Nat Nat))")
         );
 
-        let implicit_app = "(app f (lit 1 Nat))";
-        let implicit_app: RecExpr<Mim> = RecExpr::parse(implicit_app).unwrap();
-        let implicit_app_id = eg.add_expr(implicit_app);
-        assert_eq!(
-            type_of(&eg, implicit_app_id),
-            type_("(pi $dummy (scope Nat Nat))")
-        );
+        let implicit_app = "(app f (lit 1 Nat))".parse().unwrap();
+        let implicit_app_id = eg.add_expr(&implicit_app);
+        assert_eq!(type_of(&eg, &implicit_app_id), type_("(pi dummy Nat Nat)"));
     }
 
     #[test]
     fn union_hole_pis() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f_annotated = "(@ (pi $dummy (scope (hole (type (lit 0 Univ))) Nat)) f)";
-        let f_annotated: RecExpr<Mim> = RecExpr::parse(f_annotated).unwrap();
+        let f_annotated = "(@ (pi dummy (hole (type (lit 0 Univ))) Nat) f)"
+            .parse()
+            .unwrap();
         let f_typed = extract_type_annotations(&f_annotated);
         let f_typed_id = add_expr_typed(&mut eg, f_typed);
 
         assert_eq!(
-            type_of(&eg, f_typed_id.clone()),
-            type_("(pi $dummy (scope (hole (type (lit 0 Univ))) Nat))")
+            type_of(&eg, &f_typed_id),
+            type_("(pi dummy (hole (type (lit 0 Univ))) Nat)")
         );
 
-        let g_annotated = "(@ (pi $dummy (scope Nat (hole (type (lit 0 Univ))))) g)";
-        let g_annotated: RecExpr<Mim> = RecExpr::parse(g_annotated).unwrap();
+        let g_annotated = "(@ (pi dummy Nat (hole (type (lit 0 Univ)))) g)"
+            .parse()
+            .unwrap();
         let g_typed = extract_type_annotations(&g_annotated);
         let g_typed_id = add_expr_typed(&mut eg, g_typed);
 
-        eg.union(&f_typed_id, &g_typed_id);
+        eg.union(f_typed_id, g_typed_id);
 
-        let f_typed_id = eg.find_applied_id(&f_typed_id);
-        let g_typed_id = eg.find_applied_id(&g_typed_id);
-
-        assert_eq!(
-            type_of(&eg, f_typed_id),
-            type_("(pi $dummy (scope Nat Nat))")
-        );
-        assert_eq!(
-            type_of(&eg, g_typed_id),
-            type_("(pi $dummy (scope Nat Nat))")
-        );
+        assert_eq!(type_of(&eg, &f_typed_id), type_("(pi dummy Nat Nat)"));
+        assert_eq!(type_of(&eg, &g_typed_id), type_("(pi dummy Nat Nat)"));
     }
 
     #[test]
     fn union_sigma_with_vars() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let a = "(@ (sigma $foo (scope (cons (hole (type (lit 0 Univ))) (cons (extract (var $foo) (lit ff Bool)) nil)) nil)) a)";
-        let a: RecExpr<Mim> = RecExpr::parse(a).unwrap();
+        let a = "(@ (sigma foo (hole (type (lit 0 Univ))) (extract foo (lit ff Bool))) a)"
+            .parse()
+            .unwrap();
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
 
-        let b = "(let $bar (scope (tuple nil) (@ (sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (hole (type (lit 0 Univ))) nil)) nil)) b)))";
-        let b: RecExpr<Mim> = RecExpr::parse(b).unwrap();
+        let b = "(let bar (tuple) (@ (sigma foo (extract bar (lit ff Bool)) (hole (type (lit 0 Univ)))) b))".parse().unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
 
-        eg.union(&a_id, &b_id);
-
-        let a_id = eg.find_applied_id(&a_id);
-        let b_id = eg.find_applied_id(&b_id);
+        eg.union(a_id, b_id);
 
         assert_eq!(
-            type_of(&eg, a_id),
-            type_(
-                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
-            )
+            type_of(&eg, &a_id),
+            type_("(sigma foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
         assert_eq!(
-            type_of(&eg, b_id),
-            type_(
-                "(sigma $foo (scope (cons (extract (var $bar) (lit ff Bool)) (cons (extract (var $foo) (lit ff Bool)) nil)) nil))"
-            )
+            type_of(&eg, &b_id),
+            type_("(sigma foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
     }
 
@@ -1007,81 +968,70 @@ mod test {
     fn union_arr_with_vars() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let a = "(@ (arr $foo (scope (hole (type (lit 0 Univ))) (extract (var $foo) (lit ff Bool)))) a)";
-        let a: RecExpr<Mim> = RecExpr::parse(a).unwrap();
+        let a = "(@ (arr foo (hole (type (lit 0 Univ))) (extract foo (lit ff Bool))) a)"
+            .parse()
+            .unwrap();
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
 
-        let b = "(let $bar (scope (tuple nil) (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (hole (type (lit 0 Univ))))) b)))";
-        let b: RecExpr<Mim> = RecExpr::parse(b).unwrap();
+        let b = "(let bar (tuple) (@ (arr foo (extract bar (lit ff Bool)) (hole (type (lit 0 Univ)))) b))".parse().unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
 
-        eg.union(&a_id, &b_id);
-
-        let a_id = eg.find_applied_id(&a_id);
-        let b_id = eg.find_applied_id(&b_id);
+        eg.union(a_id, b_id);
 
         assert_eq!(
-            type_of(&eg, a_id),
-            type_(
-                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
-            )
+            type_of(&eg, &a_id),
+            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
         assert_eq!(
-            type_of(&eg, b_id),
-            type_(
-                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
-            )
+            type_of(&eg, &b_id),
+            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
     }
 
     #[test]
-    fn type_depending_on_outer_slot() {
+    fn type_depending_on_outer_var() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let b = "(let $bar (scope
+        let b = "(let bar
                             (lit ff Bool)
-                            (@ (arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))
-                            b)))";
-        let b: RecExpr<Mim> = RecExpr::parse(b).unwrap();
+                            (@ (arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))
+                            b))"
+        .parse()
+        .unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
 
         assert_eq!(
-            type_of(&eg, b_id.clone()),
-            type_(
-                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
-            )
+            type_of(&eg, &b_id),
+            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
 
-        let lam_rewrite: Rewrite<Mim, MimAnalysis> = rw!("lam-rewrite";
-            "(let $bar (scope (lit ff Bool) ?e))"
-            => "(let $baz (scope Nat ?e))" );
+        let lam_rewrite: Rewrite<Mim, MimAnalysis> = rewrite!("lam-rewrite";
+            "(let bar (lit ff Bool) ?e)"
+            => "(let baz Nat ?e)" );
 
-        let mut runner = Runner::<Mim, MimAnalysis>::default().with_egraph(eg);
-        runner.run(&[lam_rewrite]);
+        let runner = Runner::<Mim, MimAnalysis>::default().with_egraph(eg);
+        let runner = runner.run(&[lam_rewrite]);
 
         let extractor = Extractor::new(&runner.egraph, AstSize);
-        let b = extractor.extract(&b_id, &runner.egraph);
+        let (_c, b) = extractor.find_best(b_id);
 
-        assert_eq!(format!("{}", b), "(let $f13 (scope Nat b))",);
+        assert_eq!(format!("{}", b), "(let baz Nat b)",);
 
         let b_ffi = b.to_ffi(Some(&runner.egraph));
         let _b_ffi_type = &b_ffi.nodes.last().unwrap().type_;
 
-        // TODO: This should work but doesn't - see TODO in ffi.rs line 353
+        // TODO: This should work but doesn't yet
         // assert_eq!(
         //     format!("{}", b_ffi_type.pretty(80)),
-        //     "(arr\n  $foo\n  (scope (extract (var $f13) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
+        //     "(arr\n  foo\n  (extract baz (lit ff Bool)) (extract foo (lit ff Bool)))"
         // );
 
-        let b_id = runner.egraph.find_applied_id(&b_id);
         assert_eq!(
-            type_of(&runner.egraph, b_id),
-            type_(
-                "(arr $foo (scope (extract (var $bar) (lit ff Bool)) (extract (var $foo) (lit ff Bool))))"
-            )
+            type_of(&runner.egraph, &b_id),
+            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
         );
     }
 
@@ -1089,44 +1039,38 @@ mod test {
     fn infer_lam_domain() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f = "(@ (pi $dummy (scope Nat Bool)) f)";
-        let f = RecExpr::<Mim>::parse(f).unwrap();
+        let f = "(@ (pi dummy Nat Bool) f)".parse().unwrap();
         let f = extract_type_annotations(&f);
         let f_id = add_expr_typed(&mut eg, f);
 
-        assert_eq!(type_of(&eg, f_id), type_("(pi $dummy (scope Nat Bool))"));
+        assert_eq!(type_of(&eg, &f_id), type_("(pi dummy Nat Bool)"));
 
-        let g = "(@ (pi $dummy (scope Bool Nat)) g)";
-        let g = RecExpr::<Mim>::parse(g).unwrap();
+        let g = "(@ (pi dummy Bool Nat) g)".parse().unwrap();
         let g = extract_type_annotations(&g);
         let g_id = add_expr_typed(&mut eg, g);
 
-        assert_eq!(type_of(&eg, g_id), type_("(pi $dummy (scope Bool Nat))"));
+        assert_eq!(type_of(&eg, &g_id), type_("(pi dummy Bool Nat)"));
 
-        let lam = "(lam $x (scope
+        let lam = "(lam x
                             (lit ff Bool)
-                            (lam $y (scope
+                            (lam y
                                 (lit ff Bool)
                                 (tuple
-                                    (cons
-                                        (app g (var $y))
-                                    (cons
-                                        (app f (var $x))
-                                    nil))))))) ";
-
-        let lam = RecExpr::<Mim>::parse(lam).unwrap();
-        let lam_id = eg.add_expr(lam);
+                                    (app g y)
+                                    (app f x))))"
+            .parse()
+            .unwrap();
+        let lam_id = eg.add_expr(&lam);
 
         assert_eq!(
-            type_of(&eg, lam_id),
+            type_of(&eg, &lam_id),
             type_(
-                "(pi $dummy (scope
+                "(pi dummy
                     Nat
-                    (pi $dummy (scope
+                    (pi dummy
                         Bool
-                        (sigma $dummy (scope (cons Nat (cons Bool nil)) nil))))))"
+                        (sigma dummy Nat Bool)))"
             )
         );
     }
-    */
 }
