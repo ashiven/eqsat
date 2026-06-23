@@ -121,8 +121,8 @@ define_language! {
 
         // This is used to represent the meta variables introduced by rule declarations
         // without clashing with the 'var' nodes using slots.
-        // (metavar <name> <type>)
-        MetaVar(AppliedId, AppliedId) = "metavar",
+        // (metavar <name>)
+        MetaVar(AppliedId) = "metavar",
 
         // A root-level sexpr (in most cases this will be a closed/top-level continuation)
         // We introduce a node for this to avoid having to write (con extern main ...) to bind
