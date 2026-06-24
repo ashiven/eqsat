@@ -796,9 +796,7 @@ mod test {
 
         assert_eq!(
             type_of(&eg, &eta_exp_fun_id),
-            type_(
-                "(pi dummy (sigma dummy (hole (type (lit 0 Univ))) (pi dummy Bool (bot (type (lit 0 Univ))))) (bot (type (lit 0 Univ))))"
-            )
+            type_("(pi dummy (hole (type (lit 0 Univ))) (bot (type (lit 0 Univ))))")
         );
     }
 
