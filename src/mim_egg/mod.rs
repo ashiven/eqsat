@@ -39,8 +39,8 @@ define_language! {
         "fun" = Fun(Box<[Id]>),
         // (app <callee> <arg>)
         "app" = App([Id; 2]),
-        // (var <name> [<proj1> <proj2> ...] <type>)
-        "var" = Var(Box<[Id]>),
+        // (var <name>)
+        "var" = Var(Id),
         // (lit <value> <type>)
         "lit" = Lit([Id; 2]),
         // (pack <var> <arity> <body>)
@@ -100,6 +100,8 @@ define_language! {
         "@" = TypeWrap([Id; 2]),
         // (root <extern> <name> <definition>)
         "root" = Root([Id; 3]),
+        // (metavar <name> [<projs>...])
+        "metavar" = MetaVar(Box<[Id]>),
 
         Num(u64), Symbol(String),
     }
@@ -348,7 +350,7 @@ fn convert_rules(sexprs: &mut Vec<String>, rules: &mut Vec<Rewrite<Mim, MimAnaly
 
             let meta_var_rexpr = rule[meta_var].build_recexpr(nth_node);
             for node in meta_var_rexpr.iter() {
-                if let Mim::Var(ids) = node
+                if let Mim::MetaVar(ids) = node
                     && let [var_name, ..] = &**ids
                 {
                     if let Mim::Symbol(s) =

@@ -291,7 +291,7 @@ impl FFIInner for Mim {
             Mim::Con(children) => new_node_ffi(MimKind::Con, children, None, None, type_),
             Mim::Fun(children) => new_node_ffi(MimKind::Fun, children, None, None, type_),
             Mim::App(children) => new_node_ffi(MimKind::App, children, None, None, type_),
-            Mim::Var(children) => new_node_ffi(MimKind::Var, children, None, None, type_),
+            Mim::Var(child) => new_node_ffi(MimKind::Var, &[*child], None, None, type_),
             Mim::Lit(children) => new_node_ffi(MimKind::Lit, children, None, None, type_),
             Mim::Pack(children) => new_node_ffi(MimKind::Pack, children, None, None, type_),
             Mim::Tuple(children) => new_node_ffi(MimKind::Tuple, children, None, None, type_),
@@ -321,6 +321,7 @@ impl FFIInner for Mim {
             Mim::Reform(child) => new_node_ffi(MimKind::Type, &[*child], None, None, type_),
             Mim::TypeWrap(children) => new_node_ffi(MimKind::TypeWrap, children, None, None, type_),
             Mim::Root(children) => new_node_ffi(MimKind::Root, children, None, None, type_),
+            Mim::MetaVar(children) => new_node_ffi(MimKind::MetaVar, children, None, None, type_),
             Mim::Num(n) => new_node_ffi(MimKind::Num, &[], Some(*n), None, type_),
             Mim::Symbol(s) => new_node_ffi(MimKind::Symbol, &[], None, Some(s.clone()), type_),
         }

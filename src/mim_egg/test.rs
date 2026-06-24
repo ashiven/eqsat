@@ -95,13 +95,9 @@ fn eqsat_pow_egg() {
 fn convert_custom_rule() {
     let rule = "
     (rule foo
-        (var foo
-            (var
-                a_22735
-                Nat)
-            (var
-                b_22734
-                Nat))
+        (metavar foo
+            (metavar a_22735)
+            (metavar b_22734))
         (app
             %core.nat.add
             (tuple

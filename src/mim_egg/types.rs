@@ -191,6 +191,8 @@ pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisD
         Mim::Fun(..) => make_fun_type(eg, enode),
         // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
         Mim::App(..) => make_app_type(eg, enode),
+        // typeof[(var $x)]                                 = Hole(*)
+        Mim::Var(..) => make_var_type(eg, enode),
         // typeof[(lit <val> <type>)]                       = <type>
         Mim::Lit(..) => make_lit_type(eg, enode),
         // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
@@ -313,7 +315,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::arr(l_arity.clone(), body, Some(var))
+            TypeExpr::arr(l_arity, body, Some(var))
         }
         (Mim::Sigma(_), Mim::Arr(_)) => {
             let l_types = childs!(l, 1);
@@ -329,7 +331,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
             let var = var!(l);
 
-            TypeExpr::arr(r_arity.clone(), body, Some(var))
+            TypeExpr::arr(r_arity, body, Some(var))
         }
         (Mim::Sigma(_), Mim::Sigma(_)) => {
             let l_types = childs!(l, 1);
@@ -436,7 +438,8 @@ fn find_apps(eg: &EGraph<Mim, MimAnalysis>, id: &Id, lam_var: &str, apps: &mut V
                 let arg_id = app_childs.get(1).unwrap();
                 let arg_nodes = &eg[*arg_id].nodes;
                 arg_nodes.iter().any(|n| {
-                    if let Mim::Symbol(s) = n
+                    if let Mim::Var(v) = n
+                        && let Some(Mim::Symbol(s)) = eg[*v].nodes.first()
                         && s == lam_var
                     {
                         true
@@ -541,20 +544,27 @@ fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 fn make_fun_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let childs = expect!(enode, Mim::Fun(childs) => childs );
 
-    let body_type = if childs.len() > 1 {
+    let _body_type = if childs.len() > 1 {
         let body_id = childs.get(2).expect("Expected fun body id");
         eg[*body_id].data.type_.clone()
     } else {
         None
     };
 
-    let ret_dom = body_type.unwrap_or(TypeExpr::hole());
-    let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
-    let ret_pi = TypeExpr::pi(ret_dom, ret_codom, None);
-
     // TODO: Domain inference is a bit more complicated than for lam - need app to var#0
-    let dom_inner = TypeExpr::hole();
-    let dom = TypeExpr::sigma(vec![dom_inner, ret_pi], None);
+    // let ret_dom = body_type.unwrap_or(TypeExpr::hole());
+    // let ret_codom = TypeExpr::bot(TypeExpr::type_(0));
+    // let ret_pi = TypeExpr::pi(ret_dom, ret_codom, None);
+    // let dom_inner = TypeExpr::hole();
+    // let dom = TypeExpr::sigma(vec![dom_inner, ret_pi], None);
+    // let codom = TypeExpr::bot(TypeExpr::type_(0));
+
+    // Furthermore, we can't really use the inferrence above that we used in slotted
+    // because here sigmas are variadic and if I infer a sigma with a single hole for
+    // the domain, I might end up unifying it with a sigma containing two or more types
+    // in place of the domain which leads to messed up unification i.e. [_] + [Nat, Nat, ...] = [Nat]
+
+    let dom = TypeExpr::hole();
     let codom = TypeExpr::bot(TypeExpr::type_(0));
 
     AnalysisData {
@@ -589,6 +599,13 @@ fn make_app_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     }
 }
 
+fn make_var_type(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {
+    AnalysisData {
+        type_: Some(TypeExpr::hole()),
+        ..Default::default()
+    }
+}
+
 fn make_lit_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let [_val, type_] = expect!(enode, Mim::Lit([val, type_]) => [val, type_]);
 
@@ -616,7 +633,7 @@ fn make_pack_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 }
 
 fn make_tuple_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    let childs = expect!(enode, Mim::Tuple(childs)=> childs);
+    let childs = expect!(enode, Mim::Tuple(childs) => childs);
 
     let mut types: Vec<TypeExpr> = Vec::new();
 
@@ -753,12 +770,12 @@ mod test {
 
         assert_eq!(type_of(&eg, &fun_typed_id), type_("(pi x Nat Bool)"));
 
-        let eta_exp_lam = "(lam x (lit ff Bool) (app func x))".parse().unwrap();
+        let eta_exp_lam = "(lam x (lit ff Bool) (app func (var x)))".parse().unwrap();
         let eta_exp_lam_id = eg.add_expr(&eta_exp_lam);
 
         assert_eq!(type_of(&eg, &eta_exp_lam_id), type_("(pi dummy Nat Bool)"));
 
-        let eta_exp_con = "(con x (lit ff Bool) (app func x))".parse().unwrap();
+        let eta_exp_con = "(con x (lit ff Bool) (app func (var x)))".parse().unwrap();
         let eta_exp_con_id = eg.add_expr(&eta_exp_con);
 
         assert_eq!(
@@ -766,7 +783,7 @@ mod test {
             type_("(pi dummy Nat (bot (type (lit 0 Univ))))")
         );
 
-        let eta_exp_fun = "(fun x (lit ff Bool) (app func x))".parse().unwrap();
+        let eta_exp_fun = "(fun x (lit ff Bool) (app func (var x)))".parse().unwrap();
         let eta_exp_fun_id = eg.add_expr(&eta_exp_fun);
 
         assert_eq!(
@@ -786,7 +803,7 @@ mod test {
 
         assert_eq!(type_of(&eg, &lit_id), type_("(idx 3)"));
 
-        let binding = "(let x (lit tt Bool) (app (lam y (lit ff Bool) (lit 10 (idx 3))) x))"
+        let binding = "(let x (lit tt Bool) (app (lam y (lit ff Bool) (lit 10 (idx 3))) (var x)))"
             .parse()
             .unwrap();
         let binding_id = eg.add_expr(&binding);
@@ -878,13 +895,13 @@ mod test {
     fn make_var_type() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let var_annotated = "(@ Bool foo)".parse().unwrap();
+        let var_annotated = "(@ Bool (var foo))".parse().unwrap();
         let var_typed = extract_type_annotations(&var_annotated);
         let var_typed_id = add_expr_typed(&mut eg, var_typed);
 
         assert_eq!(type_of(&eg, &var_typed_id), type_("Bool"));
 
-        let var = "bar".parse().unwrap();
+        let var = "(var bar)".parse().unwrap();
         let var_id = eg.add_expr(&var);
 
         assert_eq!(type_of(&eg, &var_id), type_("(hole (type (lit 0 Univ)))"));
@@ -902,7 +919,7 @@ mod test {
 
         assert_eq!(type_of(&eg, &let_typed_id), type_("Nat"));
 
-        let let_var_annotated = "(let foo (@ Bool (lit ff Bool)) (@ Nat bar)))"
+        let let_var_annotated = "(let foo (@ Bool (lit ff Bool)) (@ Nat (var bar)))"
             .parse()
             .unwrap();
         let let_var_typed = extract_type_annotations(&let_var_annotated);
@@ -915,7 +932,9 @@ mod test {
     fn implicit_pi_callee() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f_annotated = "(@ (pi* dummy Nat (pi dummy Nat Nat)) f)".parse().unwrap();
+        let f_annotated = "(@ (pi* dummy Nat (pi dummy Nat Nat)) (var f))"
+            .parse()
+            .unwrap();
         let f_typed = extract_type_annotations(&f_annotated);
         let f_typed_id = add_expr_typed(&mut eg, f_typed);
 
@@ -924,7 +943,7 @@ mod test {
             type_("(pi* dummy Nat (pi dummy Nat Nat))")
         );
 
-        let implicit_app = "(app f (lit 1 Nat))".parse().unwrap();
+        let implicit_app = "(app (var f) (lit 1 Nat))".parse().unwrap();
         let implicit_app_id = eg.add_expr(&implicit_app);
         assert_eq!(type_of(&eg, &implicit_app_id), type_("(pi dummy Nat Nat)"));
     }
@@ -933,7 +952,7 @@ mod test {
     fn union_hole_pis() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f_annotated = "(@ (pi dummy (hole (type (lit 0 Univ))) Nat) f)"
+        let f_annotated = "(@ (pi dummy (hole (type (lit 0 Univ))) Nat) (var f))"
             .parse()
             .unwrap();
         let f_typed = extract_type_annotations(&f_annotated);
@@ -944,7 +963,7 @@ mod test {
             type_("(pi dummy (hole (type (lit 0 Univ))) Nat)")
         );
 
-        let g_annotated = "(@ (pi dummy Nat (hole (type (lit 0 Univ)))) g)"
+        let g_annotated = "(@ (pi dummy Nat (hole (type (lit 0 Univ)))) (var g))"
             .parse()
             .unwrap();
         let g_typed = extract_type_annotations(&g_annotated);
@@ -960,13 +979,14 @@ mod test {
     fn union_sigma_with_vars() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let a = "(@ (sigma foo (hole (type (lit 0 Univ))) (extract foo (lit ff Bool))) a)"
-            .parse()
-            .unwrap();
+        let a =
+            "(@ (sigma foo (hole (type (lit 0 Univ))) (extract (var foo) (lit ff Bool))) (var a))"
+                .parse()
+                .unwrap();
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
 
-        let b = "(let bar (tuple) (@ (sigma foo (extract bar (lit ff Bool)) (hole (type (lit 0 Univ)))) b))".parse().unwrap();
+        let b = "(let bar (tuple) (@ (sigma foo (extract (var bar) (lit ff Bool)) (hole (type (lit 0 Univ)))) (var b)))".parse().unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
 
@@ -974,11 +994,15 @@ mod test {
 
         assert_eq!(
             type_of(&eg, &a_id),
-            type_("(sigma foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_(
+                "(sigma foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))"
+            )
         );
         assert_eq!(
             type_of(&eg, &b_id),
-            type_("(sigma foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_(
+                "(sigma foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))"
+            )
         );
     }
 
@@ -986,13 +1010,14 @@ mod test {
     fn union_arr_with_vars() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let a = "(@ (arr foo (hole (type (lit 0 Univ))) (extract foo (lit ff Bool))) a)"
-            .parse()
-            .unwrap();
+        let a =
+            "(@ (arr foo (hole (type (lit 0 Univ))) (extract (var foo) (lit ff Bool))) (var a))"
+                .parse()
+                .unwrap();
         let a = extract_type_annotations(&a);
         let a_id = add_expr_typed(&mut eg, a);
 
-        let b = "(let bar (tuple) (@ (arr foo (extract bar (lit ff Bool)) (hole (type (lit 0 Univ)))) b))".parse().unwrap();
+        let b = "(let bar (tuple) (@ (arr foo (extract (var bar) (lit ff Bool)) (hole (type (lit 0 Univ)))) (var b)))".parse().unwrap();
         let b = extract_type_annotations(&b);
         let b_id = add_expr_typed(&mut eg, b);
 
@@ -1000,11 +1025,11 @@ mod test {
 
         assert_eq!(
             type_of(&eg, &a_id),
-            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_("(arr foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))")
         );
         assert_eq!(
             type_of(&eg, &b_id),
-            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_("(arr foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))")
         );
     }
 
@@ -1014,8 +1039,8 @@ mod test {
 
         let b = "(let bar
                             (lit ff Bool)
-                            (@ (arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))
-                            b))"
+                            (@ (arr foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))
+                            (var b)))"
         .parse()
         .unwrap();
         let b = extract_type_annotations(&b);
@@ -1023,7 +1048,7 @@ mod test {
 
         assert_eq!(
             type_of(&eg, &b_id),
-            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_("(arr foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))")
         );
 
         let lam_rewrite: Rewrite<Mim, MimAnalysis> = rewrite!("lam-rewrite";
@@ -1036,7 +1061,7 @@ mod test {
         let extractor = Extractor::new(&runner.egraph, AstSize);
         let (_c, b) = extractor.find_best(b_id);
 
-        assert_eq!(format!("{}", b), "(let baz Nat b)",);
+        assert_eq!(format!("{}", b), "(let baz Nat (var b))",);
 
         let b_ffi = b.to_ffi(Some(&runner.egraph));
         let _b_ffi_type = &b_ffi.nodes.last().unwrap().type_;
@@ -1044,12 +1069,12 @@ mod test {
         // TODO: This should work but doesn't yet
         // assert_eq!(
         //     format!("{}", b_ffi_type.pretty(80)),
-        //     "(arr foo (extract baz (lit ff Bool)) (extract foo (lit ff Bool)))"
+        //     "(arr foo (extract (var baz) (lit ff Bool)) (extract (var foo) (lit ff Bool)))"
         // );
 
         assert_eq!(
             type_of(&runner.egraph, &b_id),
-            type_("(arr foo (extract bar (lit ff Bool)) (extract foo (lit ff Bool)))")
+            type_("(arr foo (extract (var bar) (lit ff Bool)) (extract (var foo) (lit ff Bool)))")
         );
     }
 
@@ -1057,13 +1082,13 @@ mod test {
     fn infer_lam_domain() {
         let mut eg = EGraph::<Mim, MimAnalysis>::default();
 
-        let f = "(@ (pi dummy Nat Bool) f)".parse().unwrap();
+        let f = "(@ (pi dummy Nat Bool) (var f))".parse().unwrap();
         let f = extract_type_annotations(&f);
         let f_id = add_expr_typed(&mut eg, f);
 
         assert_eq!(type_of(&eg, &f_id), type_("(pi dummy Nat Bool)"));
 
-        let g = "(@ (pi dummy Bool Nat) g)".parse().unwrap();
+        let g = "(@ (pi dummy Bool Nat) (var g))".parse().unwrap();
         let g = extract_type_annotations(&g);
         let g_id = add_expr_typed(&mut eg, g);
 
@@ -1074,8 +1099,8 @@ mod test {
                             (lam y
                                 (lit ff Bool)
                                 (tuple
-                                    (app g y)
-                                    (app f x))))"
+                                    (app (var g) (var y))
+                                    (app (var f) (var x)))))"
             .parse()
             .unwrap();
         let lam_id = eg.add_expr(&lam);

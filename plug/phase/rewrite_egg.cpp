@@ -433,6 +433,7 @@ const Def* RewriteEgg::convert(uint32_t id) {
         case MimKind::Con:
         case MimKind::Lam: res = convert_lam(id, node); break;
         case MimKind::App: res = convert_app(id, node); break;
+        case MimKind::Var: res = convert_var(id, node); break;
         case MimKind::Lit: res = convert_lit(id, node); break;
         case MimKind::Pack: res = convert_pack(id, node); break;
         case MimKind::Tuple: res = convert_tuple(id, node); break;
@@ -511,6 +512,12 @@ const Def* RewriteEgg::convert_app(uint32_t id, NodeFFI node) {
     auto arg     = get_def(node.children[1]);
     auto new_app = new_world().app(callee, arg);
     return new_app;
+}
+
+// (var <name>)
+const Def* RewriteEgg::convert_var(uint32_t id, NodeFFI node) {
+    auto var = get_def(node.children[0]);
+    return var;
 }
 
 // (lit <val> <type>)
