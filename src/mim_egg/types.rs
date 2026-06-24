@@ -374,14 +374,22 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
 
 pub(crate) fn merge_type(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
     match (&l.type_, r.type_) {
-        (Some(_), None) => DidMerge(false, false),
+        (Some(_), None) => DidMerge(false, true),
         (None, Some(r_type)) => {
             l.type_ = Some(r_type);
-            DidMerge(true, true)
+            DidMerge(true, false)
         }
         (Some(l_type), Some(r_type)) => {
-            l.type_ = Some(unify(l_type, &r_type));
-            DidMerge(true, true)
+            let unified = unify(l_type, &r_type);
+
+            let l_changed = *l_type != unified;
+            let r_changed = r_type != unified;
+
+            if l_changed {
+                l.type_ = Some(unified);
+            }
+
+            DidMerge(l_changed, r_changed)
         }
         _ => DidMerge(false, false),
     }
