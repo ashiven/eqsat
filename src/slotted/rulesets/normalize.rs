@@ -1,7 +1,7 @@
-use crate::slotted::{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis};
+use crate::slotted::{Mim, analysis::AnalysisData, analysis::MimAnalysis};
 use slotted_egraphs::{EGraph, Rewrite};
 
-pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
+pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     let rules = vec![
         normalize_three_tuple(),
         normalize_three_pack(),
@@ -13,31 +13,31 @@ pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
     rules
 }
 
-fn normalize_three_tuple() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn normalize_three_tuple() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(tuple (cons ?a (cons ?a (cons ?a nil))))";
     let outpat = "(pack $dummy (scope (lit 3 Nat) ?a))";
     Rewrite::new("normalize-three-tuple", pat, outpat)
 }
 
-fn normalize_three_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn normalize_three_pack() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(pack $dummy (scope (lit 3 Nat) ?a))";
     let outpat = "(tuple (cons ?a (cons ?a (cons ?a nil))))";
     Rewrite::new("normalize-three-pack", pat, outpat)
 }
 
-fn normalize_two_tuple() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn normalize_two_tuple() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(tuple (cons ?a (cons ?a nil)))";
     let outpat = "(pack $dummy (scope (lit 2 Nat) ?a))";
     Rewrite::new("normalize-two-tuple", pat, outpat)
 }
 
-fn normalize_two_pack() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn normalize_two_pack() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(pack $dummy (scope (lit 2 Nat) ?a))";
     let outpat = "(tuple (cons ?a (cons ?a nil)))";
     Rewrite::new("normalize-two-pack", pat, outpat)
 }
 
-fn core_mul_comm() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn core_mul_comm() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(app %core.nat.mul (tuple (cons ?a (cons ?b nil))))";
     let outpat = "(app %core.nat.mul (tuple (cons ?b (cons ?a nil))))";
     Rewrite::new("core-mul-comm", pat, outpat)
@@ -49,7 +49,7 @@ pub struct NormalizeAnalysis;
 
 #[allow(dead_code)]
 impl NormalizeAnalysis {
-    pub fn make(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, _enode: &MimSlotted) -> AnalysisData {
+    pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {
         AnalysisData::default()
     }
     pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {

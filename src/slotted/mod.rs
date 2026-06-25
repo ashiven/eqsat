@@ -1,6 +1,6 @@
 use crate::ffi::FFI;
 use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
-use crate::slotted::analysis::MimSlottedAnalysis;
+use crate::slotted::analysis::MimAnalysis;
 use crate::slotted::cost::MaxAstSize;
 // AUTOGEN START: slotted-cost-rust-import
 // AUTOGEN END: slotted-cost-rust-import
@@ -35,7 +35,7 @@ thread_local! {
 }
 
 define_language! {
-    pub enum MimSlotted {
+    pub enum Mim {
         // TERMS
 
         // (let $name (scope <definition> <expr>))
@@ -179,7 +179,7 @@ pub(crate) fn pretty(sexpr: &str, _line_len: usize) -> String {
 
     let mut res = String::new();
     for (i, sexpr) in sexprs.iter().enumerate() {
-        let parsed: RecExpr<MimSlotted> = grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+        let parsed: RecExpr<Mim> = grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
         res.push_str(&parsed.to_string());
         if i < sexprs.len() - 1 {
             res.push_str("\n\n");
@@ -239,13 +239,12 @@ pub(crate) fn reaches(
         .expect("Reaches failed to strip suffix");
 
     // We also don't care about type annotations, so we just remove them.
-    let start_term_expr: RecExpr<MimSlotted> =
+    let start_term_expr: RecExpr<Mim> =
         grow(PARSE_STACK_SIZE, || RecExpr::parse(start_term).unwrap());
     let start_term_expr_unannotated = remove_type_annotations(&start_term_expr);
     let start_term = format!("{}", start_term_expr_unannotated);
 
-    let end_term_expr: RecExpr<MimSlotted> =
-        grow(PARSE_STACK_SIZE, || RecExpr::parse(end_term).unwrap());
+    let end_term_expr: RecExpr<Mim> = grow(PARSE_STACK_SIZE, || RecExpr::parse(end_term).unwrap());
     let end_term_expr_unannotated = remove_type_annotations(&end_term_expr);
     let end_term = format!("{}", end_term_expr_unannotated);
 
@@ -306,21 +305,21 @@ fn split_sexprs(sexpr: &str) -> Vec<String> {
 fn rewrite_sexprs<C, F>(
     sexprs: &[String],
     selected: &[bool],
-    rules: Vec<Rewrite<MimSlotted, MimSlottedAnalysis>>,
+    rules: Vec<Rewrite<Mim, MimAnalysis>>,
     cost_fn: F,
 ) -> Vec<RecExprFFI>
 where
-    C: CostFunction<MimSlotted>,
+    C: CostFunction<Mim>,
     F: Fn() -> C,
 {
     let mut rewritten_sexprs: Vec<RecExprFFI> = Vec::new();
 
     let mut roots: Vec<AppliedId> = vec![];
-    let mut eg = EGraph::<MimSlotted, MimSlottedAnalysis>::default();
+    let mut eg = EGraph::<Mim, MimAnalysis>::default();
     for (i, is_selected) in selected.iter().enumerate() {
         if *is_selected {
             let sexpr = &sexprs[i];
-            let annotated_rec_expr: RecExpr<MimSlotted> =
+            let annotated_rec_expr: RecExpr<Mim> =
                 grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
 
             let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
@@ -329,7 +328,7 @@ where
         }
     }
 
-    let mut runner = Runner::<MimSlotted, MimSlottedAnalysis>::default();
+    let mut runner = Runner::<Mim, MimAnalysis>::default();
     runner = runner.with_egraph(eg);
     runner.roots = roots;
     let _report = runner.run(&rules);
@@ -344,7 +343,7 @@ where
             root_idx += 1;
         } else {
             let sexpr = &sexprs[i];
-            let annotated_rec_expr: RecExpr<MimSlotted> =
+            let annotated_rec_expr: RecExpr<Mim> =
                 grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
 
             // TODO: The below is also not very robust - maybe find some better way to do this
@@ -377,13 +376,10 @@ where
     rewritten_sexprs
 }
 
-fn convert_rules(
-    sexprs: &mut Vec<String>,
-    rules: &mut Vec<Rewrite<MimSlotted, MimSlottedAnalysis>>,
-) {
+fn convert_rules(sexprs: &mut Vec<String>, rules: &mut Vec<Rewrite<Mim, MimAnalysis>>) {
     sexprs.retain(|sexpr| {
-        // let parsed: RecExpr<MimSlotted> = RecExpr::parse(sexpr).unwrap();
-        // if let MimSlotted::Rule(..) = parsed.node {
+        // let parsed: RecExpr<Mim> = RecExpr::parse(sexpr).unwrap();
+        // if let Mim::Rule(..) = parsed.node {
         //
         // We initially used the more robust check above, however I realized
         // that the operation of parsing a rec expr with type annotations can
@@ -392,22 +388,22 @@ fn convert_rules(
         //
         // (rule <name> <meta_var> <lhs> <rhs> <guard>)
         if sexpr.trim().starts_with("(rule") {
-            let parsed: RecExpr<MimSlotted> = RecExpr::parse(sexpr).unwrap();
+            let parsed: RecExpr<Mim> = RecExpr::parse(sexpr).unwrap();
 
             let mut rule_name = "";
-            if let MimSlotted::Symbol(s) = parsed.children[0].node {
+            if let Mim::Symbol(s) = parsed.children[0].node {
                 rule_name = s.into();
             }
 
             let mut meta_vars: Vec<String> = Vec::new();
-            fn lookup(rec_expr: &RecExpr<MimSlotted>, meta_vars: &mut Vec<String>) {
+            fn lookup(rec_expr: &RecExpr<Mim>, meta_vars: &mut Vec<String>) {
                 if let RecExpr {
-                    node: MimSlotted::MetaVar(..),
+                    node: Mim::MetaVar(..),
                     children,
                 } = rec_expr
                 {
                     let name_expr = children.first().expect("Expected meta var name");
-                    if let MimSlotted::Symbol(s) = name_expr.node {
+                    if let Mim::Symbol(s) = name_expr.node {
                         meta_vars.push(s.to_string());
                     } else {
                         panic!("Expected meta var name to be a symbol");
@@ -430,8 +426,7 @@ fn convert_rules(
             replace_dummy_slots(&mut counter, &mut pat);
             replace_dummy_slots(&mut counter, &mut outpat);
 
-            let rule: Rewrite<MimSlotted, MimSlottedAnalysis> =
-                Rewrite::new(rule_name, &pat, &outpat);
+            let rule: Rewrite<Mim, MimAnalysis> = Rewrite::new(rule_name, &pat, &outpat);
             rules.push(rule);
 
             false

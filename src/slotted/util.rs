@@ -1,9 +1,9 @@
-use crate::slotted::MimSlotted;
+use crate::slotted::Mim;
 use slotted_egraphs::*;
 
-pub(crate) fn get_literal(lit_expr: &RecExpr<MimSlotted>) -> u64 {
+pub(crate) fn get_literal(lit_expr: &RecExpr<Mim>) -> u64 {
     let lit_val = lit_expr.children.first().expect("Expected literal value");
-    if let MimSlotted::Symbol(s) = lit_val.node {
+    if let Mim::Symbol(s) = lit_val.node {
         match s.as_str() {
             "ff" => 0,
             "tt" => 1,
@@ -13,19 +13,19 @@ pub(crate) fn get_literal(lit_expr: &RecExpr<MimSlotted>) -> u64 {
             "i32" => 0x100000000,
             _ => panic!("Unknown literal alias"),
         }
-    } else if let MimSlotted::Num(n) = lit_val.node {
+    } else if let Mim::Num(n) = lit_val.node {
         n
     } else {
         panic!("Expected literal value to be a symbol or a number");
     }
 }
 
-pub(crate) fn cons_to_vec(cons_expr: &RecExpr<MimSlotted>) -> Vec<RecExpr<MimSlotted>> {
+pub(crate) fn cons_to_vec(cons_expr: &RecExpr<Mim>) -> Vec<RecExpr<Mim>> {
     let mut res = vec![];
 
     let mut curr_cons = cons_expr;
     while let RecExpr {
-        node: MimSlotted::Cons(..),
+        node: Mim::Cons(..),
         children,
     } = curr_cons
     {
@@ -37,11 +37,11 @@ pub(crate) fn cons_to_vec(cons_expr: &RecExpr<MimSlotted>) -> Vec<RecExpr<MimSlo
     res
 }
 
-pub(crate) fn cons_elem_at(cons_expr: &RecExpr<MimSlotted>, index: u64) -> RecExpr<MimSlotted> {
+pub(crate) fn cons_elem_at(cons_expr: &RecExpr<Mim>, index: u64) -> RecExpr<Mim> {
     let mut i = 0;
     let mut curr_cons = cons_expr;
     while let RecExpr {
-        node: MimSlotted::Cons(..),
+        node: Mim::Cons(..),
         children,
     } = curr_cons
     {
@@ -56,16 +56,16 @@ pub(crate) fn cons_elem_at(cons_expr: &RecExpr<MimSlotted>, index: u64) -> RecEx
 }
 
 pub(crate) fn cons_insert_at(
-    cons_expr: &RecExpr<MimSlotted>,
-    value: &RecExpr<MimSlotted>,
+    cons_expr: &RecExpr<Mim>,
+    value: &RecExpr<Mim>,
     index: u64,
-) -> RecExpr<MimSlotted> {
+) -> RecExpr<Mim> {
     let mut i = 0;
     let mut curr_cons = cons_expr.clone();
     let mut cursor = &mut curr_cons;
 
     while let RecExpr {
-        node: MimSlotted::Cons(..),
+        node: Mim::Cons(..),
         children,
     } = cursor
     {

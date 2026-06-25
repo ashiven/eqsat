@@ -1,8 +1,8 @@
 use crate::{typ, isa};
-use crate::slotted::{MimSlotted, analysis::{AnalysisData, MimSlottedAnalysis}};
+use crate::slotted::{Mim, analysis::{AnalysisData, MimAnalysis}};
 use slotted_egraphs::{AbstractVecSet, Rewrite, Slot};
 
-type RW = Rewrite<MimSlotted, MimSlottedAnalysis>;
+type RW = Rewrite<Mim, MimAnalysis>;
 
 // Ruleset derived from: 
 // https://github.com/memoryleak47/slotted-egraphs/blob/main/tests/rise/rewrite.rs
@@ -53,7 +53,7 @@ fn eta_expansion() -> RW {
     let pat = "?fn";
     let outpat = "(lam $x (scope (lit ff Bool) (app ?fn (var $x))))";
     Rewrite::new_if("eta-expansion", pat, outpat, |subst, eg| {
-        !isa!(subst, eg, "fn", MimSlotted::Lam(..)) && typ!(subst, eg, "fn", MimSlotted::Pi(..))
+        !isa!(subst, eg, "fn", Mim::Lam(..)) && typ!(subst, eg, "fn", Mim::Pi(..))
     })
 }
 
@@ -212,9 +212,9 @@ mod test {
 
     #[test]
     fn guided() {
-        let transpose_mm: Rewrite<MimSlotted> = rw!("transpose-mm"; "(app (app %rise.o %rise.transpose) (app %rise.map (app %rise.map ?a)))" => "(app (app %rise.o (app %rise.map (app %rise.map ?a))) %rise.transpose)");
-        let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc"; "(app (app %rise.o ?a) (app (app %rise.o ?b) ?c))" => "(app (app %rise.o (app (app %rise.o ?a) ?b)) ?c)");
-        let map_fuse: Rewrite<MimSlotted> = rw!("map-fuse"; "(app (app %rise.o (app %rise.map ?a)) (app %rise.map ?b))" => "(app %rise.map (app (app %rise.o ?a) ?b))");
+        let transpose_mm: Rewrite<Mim> = rw!("transpose-mm"; "(app (app %rise.o %rise.transpose) (app %rise.map (app %rise.map ?a)))" => "(app (app %rise.o (app %rise.map (app %rise.map ?a))) %rise.transpose)");
+        let compose_assoc: Rewrite<Mim> = rw!("compose-assoc"; "(app (app %rise.o ?a) (app (app %rise.o ?b) ?c))" => "(app (app %rise.o (app (app %rise.o ?a) ?b)) ?c)");
+        let map_fuse: Rewrite<Mim> = rw!("map-fuse"; "(app (app %rise.o (app %rise.map ?a)) (app %rise.map ?b))" => "(app %rise.map (app (app %rise.o ?a) ?b))");
 
         // (map (map f)) o (transpose o (map (map g)))
         // 1) -> (map (map f)) o ((map (map g)) o transpose)
@@ -239,14 +239,14 @@ mod test {
 
     #[test]
     fn rule_fuse() {
-        let _map_fuse: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("map-fuse";
+        let _map_fuse: Rewrite<Mim, MimAnalysis> = rw!("map-fuse";
         "(app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil)))))
          (app (app (app %rise.map ?n) (tuple (cons ?D (cons ?E nil)))) ?a))
          (app (app (app %rise.map ?n) (tuple (cons ?F (cons ?D nil)))) ?b))"
         => "(app (app (app %rise.map ?n) (tuple (cons ?F (cons ?E nil))))
             (app (app (app %rise.o (tuple (cons ?F (cons ?D (cons ?E nil))))) ?a) ?b))");
 
-        let map_fuse_gen: Rewrite<MimSlotted, MimSlottedAnalysis> = rw!("map-fuse-gen";
+        let map_fuse_gen: Rewrite<Mim, MimAnalysis> = rw!("map-fuse-gen";
         "(app (app (app %rise.o (tuple (cons (arr $1 (scope ?n ?A)) (cons (arr $2 (scope ?n ?B)) (cons (arr $3 (scope ?n ?C)) nil)))))
          (app (app (app %rise.map ?n) (tuple (cons ?B (cons ?C nil)))) ?a))
          (app (app (app %rise.map ?n) (tuple (cons ?A (cons ?B nil)))) ?b))"
@@ -300,7 +300,7 @@ mod test {
 
     #[test]
     fn rule_assoc() {
-        let compose_assoc: Rewrite<MimSlotted> = rw!("compose-assoc";
+        let compose_assoc: Rewrite<Mim> = rw!("compose-assoc";
         "(app (app (app %rise.o (tuple (cons ?A (cons ?C (cons ?D nil))))) ?a)
          (app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?C nil))))) ?b) ?c))"
         => "(app (app (app %rise.o (tuple (cons ?A (cons ?B (cons ?D nil)))))
@@ -308,7 +308,7 @@ mod test {
 
         // We need to consider the normalization where a tuple of three equivalent terms
         // gets reduced to a pack in the expected term.
-        let normalize_three_tuple: Rewrite<MimSlotted> = rw!("normalize-three-tuple";
+        let normalize_three_tuple: Rewrite<Mim> = rw!("normalize-three-tuple";
         "(tuple (cons ?a (cons ?a (cons ?a nil))))"
         => "(pack $dummy (scope (lit 3 Nat) ?a))");
 

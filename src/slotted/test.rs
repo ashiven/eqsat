@@ -3,13 +3,13 @@ use std::fs;
 
 use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::slotted::{
-    MimSlotted, convert_rules, get_rules, inject_meta_vars, replace_dummy_slots, set_rulesets,
+    Mim, convert_rules, get_rules, inject_meta_vars, replace_dummy_slots, set_rulesets,
     split_sexprs,
 };
 use crate::{eqsat_slotted, pretty_ffi};
 use slotted_egraphs::*;
 
-fn parse_sexprs(sexpr: &str) -> Vec<RecExpr<MimSlotted>> {
+fn parse_sexprs(sexpr: &str) -> Vec<RecExpr<Mim>> {
     let sexprs = split_sexprs(sexpr);
 
     let mut res = vec![];
@@ -50,7 +50,7 @@ fn get_ruleset_standard() {
 fn parse_loop_slotted() {
     let loop_slotted =
         fs::read_to_string("examples/loop.slotted").expect("Failed to read loop.slotted");
-    let _parsed: Vec<RecExpr<MimSlotted>> = parse_sexprs(&loop_slotted);
+    let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&loop_slotted);
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn eqsat_loop_slotted() {
 fn parse_import_slotted() {
     let import_slotted =
         fs::read_to_string("examples/import.slotted").expect("Failed to read import.slotted");
-    let _parsed: Vec<RecExpr<MimSlotted>> = parse_sexprs(&import_slotted);
+    let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&import_slotted);
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn eqsat_import_slotted() {
 fn parse_fun_slotted() {
     let fun_slotted =
         fs::read_to_string("examples/fun.slotted").expect("Failed to read fun.slotted");
-    let _parsed: Vec<RecExpr<MimSlotted>> = parse_sexprs(&fun_slotted);
+    let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&fun_slotted);
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn eqsat_fun_slotted() {
 fn parse_pow_slotted() {
     let pow_slotted =
         fs::read_to_string("examples/pow.slotted").expect("Failed to read pow.slotted");
-    let _parsed: Vec<RecExpr<MimSlotted>> = parse_sexprs(&pow_slotted);
+    let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&pow_slotted);
 }
 
 #[test]

@@ -1,19 +1,19 @@
-use crate::slotted::{MimSlotted, analysis::MimSlottedAnalysis};
+use crate::slotted::{Mim, analysis::MimAnalysis};
 use slotted_egraphs::Rewrite;
 
-pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
+pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     let rules = vec![let_var_same(), core_nat_add0()];
 
     rules
 }
 
-fn let_var_same() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn let_var_same() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(let $1 (scope ?def (var $1)))";
     let outpat = "?def";
     Rewrite::new("let_var_same", pat, outpat)
 }
 
-fn core_nat_add0() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
+fn core_nat_add0() -> Rewrite<Mim, MimAnalysis> {
     let pat = "(app %core.nat.add (tuple (cons (var $1) (cons (lit 0 Nat) nil))))";
     let outpat = "(var $1)";
     Rewrite::new("core_nat_add0", pat, outpat)

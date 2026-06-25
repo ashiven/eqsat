@@ -2,11 +2,11 @@ use crate::ffi::bridge::bridge::RuleSet;
 use crate::slotted::types::{TypeAnalysis, TypeData};
 // AUTOGEN START: slotted-analysis-rust-import
 // AUTOGEN END: slotted-analysis-rust-import
-use crate::slotted::{MimSlotted, RULESETS};
+use crate::slotted::{Mim, RULESETS};
 use slotted_egraphs::*;
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct MimSlottedAnalysis;
+pub struct MimAnalysis;
 
 #[derive(Clone, Eq, PartialEq, Default)]
 pub struct AnalysisData {
@@ -23,7 +23,7 @@ impl AnalysisData {
     }
 }
 
-fn combined_make(eg: &EGraph<MimSlotted, MimSlottedAnalysis>, enode: &MimSlotted) -> AnalysisData {
+fn combined_make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let mut combined_data = AnalysisData::default();
 
     // Analyses applied for all rulesets
@@ -75,10 +75,10 @@ fn combined_merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     combined_data
 }
 
-impl Analysis<MimSlotted> for MimSlottedAnalysis {
+impl Analysis<Mim> for MimAnalysis {
     type Data = AnalysisData;
 
-    fn make(eg: &EGraph<MimSlotted, Self>, enode: &MimSlotted) -> Self::Data {
+    fn make(eg: &EGraph<Mim, Self>, enode: &Mim) -> Self::Data {
         combined_make(eg, enode)
     }
 
@@ -86,5 +86,5 @@ impl Analysis<MimSlotted> for MimSlottedAnalysis {
         combined_merge(l, r)
     }
 
-    fn modify(_eg: &mut EGraph<MimSlotted, Self>, _id: Id) {}
+    fn modify(_eg: &mut EGraph<Mim, Self>, _id: Id) {}
 }

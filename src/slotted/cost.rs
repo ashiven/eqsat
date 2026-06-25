@@ -1,13 +1,13 @@
 use slotted_egraphs::*;
 
-use crate::slotted::MimSlotted;
+use crate::slotted::Mim;
 
 pub struct MaxAstSize;
 
-impl CostFunction<MimSlotted> for MaxAstSize {
+impl CostFunction<Mim> for MaxAstSize {
     type Cost = i64;
 
-    fn cost<C>(&self, enode: &MimSlotted, costs: C) -> Self::Cost
+    fn cost<C>(&self, enode: &Mim, costs: C) -> Self::Cost
     where
         C: Fn(Id) -> Self::Cost,
     {

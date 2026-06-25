@@ -1,7 +1,7 @@
 use crate::ffi::bridge::bridge::RuleSet;
-use crate::slotted::MimSlotted;
+use crate::slotted::Mim;
 use crate::slotted::RULESETS;
-use crate::slotted::analysis::MimSlottedAnalysis;
+use crate::slotted::analysis::MimAnalysis;
 use slotted_egraphs::*;
 
 pub mod normalize;
@@ -10,7 +10,7 @@ pub mod standard;
 // AUTOGEN START: slotted-ruleset-rust-mod
 // AUTOGEN END: slotted-ruleset-rust-mod
 
-pub fn get_rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {
+pub fn get_rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     let mut rules = Vec::new();
 
     #[allow(clippy::single_match)]
