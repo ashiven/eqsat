@@ -39,8 +39,8 @@ fn combined_make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
             #[allow(clippy::single_match)]
             #[allow(clippy::match_single_binding)]
             match *ruleset {
-                // AUTOGEN START: slotted-analysis-rust-make
-                // AUTOGEN END: slotted-analysis-rust-make
+                // AUTOGEN START: egg-analysis-rust-make
+                // AUTOGEN END: egg-analysis-rust-make
                 _ => (),
             };
         }
@@ -62,8 +62,8 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
             #[allow(clippy::single_match)]
             #[allow(clippy::match_single_binding)]
             match *ruleset {
-                // AUTOGEN START: slotted-analysis-rust-merge
-                // AUTOGEN END: slotted-analysis-rust-merge
+                // AUTOGEN START: egg-analysis-rust-merge
+                // AUTOGEN END: egg-analysis-rust-merge
                 _ => (),
             };
         }

@@ -155,7 +155,7 @@ def replace_analysis_rust_make(implementation: str, ruleset_name: str):
     generated = f"""
                 RuleSet::{ruleset_name.capitalize()} => {{
                     let data = {ruleset_name.capitalize()}Analysis::make(eg, enode);
-                    combined_data.combine(data)
+                    combined_data.combine(data);
                 }}
 """
 
@@ -180,8 +180,8 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
 
     generated = f"""
                 RuleSet::{ruleset_name.capitalize()} => {{
-                    let data = {ruleset_name.capitalize()}Analysis::merge(l.clone(), r.clone());
-                    combined_data.combine(data)
+                    let {"data" if implementation == "slotted" else "merge"} = {ruleset_name.capitalize()}Analysis::merge(l{".clone()" if implementation == "slotted" else ""}, r.clone());
+                    {"combined_data.combine(data);" if implementation == "slotted" else "combined_merge = combined_merge | merge;"}
                 }}
 """
 
