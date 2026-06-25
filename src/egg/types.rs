@@ -107,7 +107,7 @@ pub type TypeData = TypeExpr;
 
 pub struct TypeAnalysis;
 impl TypeAnalysis {
-    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
         make_type(eg, enode)
     }
     pub fn merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {

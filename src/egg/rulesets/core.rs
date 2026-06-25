@@ -417,6 +417,20 @@ pub struct CoreConst {
     type_: Mim,
 }
 
+pub struct CoreAnalysis;
+
+impl CoreAnalysis {
+    pub fn make(eg: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, id: Id) -> AnalysisData {
+        core_make(eg, enode, id)
+    }
+    pub fn merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
+        core_merge(l, r)
+    }
+    pub fn modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
+        core_modify(egraph, id)
+    }
+}
+
 pub fn core_merge(a: &mut AnalysisData, b: AnalysisData) -> DidMerge {
     if a.core_data.is_none() && b.core_data.is_some() {
         a.core_data = b.core_data;
@@ -436,9 +450,10 @@ pub fn core_make(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) ->
 }
 
 pub fn core_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
-    if let Some(CoreData { val: c, type_: t }) = egraph[id].data.core_data.clone() {
-        let const_id = egraph.add(c);
-        let type_id = egraph.add(t);
+    if let Some(d) = &egraph[id].data.core_data {
+        let d = d.clone();
+        let const_id = egraph.add(d.val);
+        let type_id = egraph.add(d.type_);
         let lit_id = egraph.add(Lit([const_id, type_id]));
         egraph.union(id, lit_id);
     }
@@ -633,7 +648,7 @@ fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreDa
 /*
 #[cfg(test)]
 mod test {
-    use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+    use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
     use crate::egg::equality_saturate;
 
     const LINE_LEN: usize = 80;

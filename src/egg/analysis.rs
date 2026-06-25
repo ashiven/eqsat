@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::egg::Mim;
 use crate::egg::RULESETS;
-use crate::egg::rulesets::core::{CoreData, core_make, core_merge, core_modify};
+use crate::egg::rulesets::core::{CoreAnalysis, CoreData, core_make, core_merge, core_modify};
 use crate::ffi::bridge::bridge::RuleSet;
 // AUTOGEN START: egg-analysis-rust-import
 // AUTOGEN END: egg-analysis-rust-import
@@ -26,11 +26,11 @@ impl AnalysisData {
     }
 }
 
-fn combined_make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+fn combined_make(eg: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, id: Id) -> AnalysisData {
     let mut combined_data = AnalysisData::default();
 
     // Analyses applied for all rulesets
-    let type_data = TypeAnalysis::make(eg, enode);
+    let type_data = TypeAnalysis::make(eg, enode, id);
     combined_data.combine(type_data);
 
     // Ruleset-specific analyses
@@ -39,6 +39,10 @@ fn combined_make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
             #[allow(clippy::single_match)]
             #[allow(clippy::match_single_binding)]
             match *ruleset {
+                RuleSet::Core => {
+                    let data = CoreAnalysis::make(eg, enode, id);
+                    combined_data.combine(data);
+                }
                 // AUTOGEN START: egg-analysis-rust-make
                 // AUTOGEN END: egg-analysis-rust-make
                 _ => (),
@@ -65,6 +69,11 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
             #[allow(clippy::single_match)]
             #[allow(clippy::match_single_binding)]
             match *ruleset {
+                RuleSet::Core => {
+                    let merge = CoreAnalysis::merge(l, r.clone());
+                    *combined_merge =
+                        DidMerge(combined_merge.0 | merge.0, combined_merge.1 | merge.1);
+                }
                 // AUTOGEN START: egg-analysis-rust-merge
                 // AUTOGEN END: egg-analysis-rust-merge
                 _ => (),
@@ -79,16 +88,15 @@ impl Analysis<Mim> for MimAnalysis {
     type Data = AnalysisData;
 
     fn merge(&mut self, a: &mut Self::Data, b: Self::Data) -> DidMerge {
-        // core_merge(a, b)
         combined_merge(a, b)
     }
 
-    fn make(egraph: &mut EGraph<Mim, Self>, enode: &Mim, _id: Id) -> Self::Data {
-        // core_make(egraph, enode, _id)
-        combined_make(egraph, enode)
+    fn make(egraph: &mut EGraph<Mim, Self>, enode: &Mim, id: Id) -> Self::Data {
+        combined_make(egraph, enode, id)
     }
 
-    fn modify(_egraph: &mut EGraph<Mim, Self>, _id: Id) {
-        // core_modify(egraph, id)
+    fn modify(egraph: &mut EGraph<Mim, Self>, id: Id) {
+        // TODO: Need combined_modify implementation as above
+        CoreAnalysis::modify(egraph, id)
     }
 }

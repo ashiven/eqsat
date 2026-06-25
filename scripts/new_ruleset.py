@@ -154,7 +154,7 @@ def replace_analysis_rust_make(implementation: str, ruleset_name: str):
 
     generated = f"""
                 RuleSet::{ruleset_name.capitalize()} => {{
-                    let data = {ruleset_name.capitalize()}Analysis::make(eg, enode);
+                    let data = {ruleset_name.capitalize()}Analysis::make(eg, enode{", id" if implementation == "egg" else ""});
                     combined_data.combine(data);
                 }}
 """
@@ -311,7 +311,7 @@ pub type {ruleset_name.capitalize()}Data = ();
 pub struct {ruleset_name.capitalize()}Analysis;
 
 impl {ruleset_name.capitalize()}Analysis {{
-    pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
+    pub fn make(_eg: &mut EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
         AnalysisData::default()
     }}
     pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {{
