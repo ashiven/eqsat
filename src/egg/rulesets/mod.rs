@@ -18,8 +18,8 @@ pub fn get_rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
             match *ruleset {
                 RuleSet::Core => rules.extend(core::rules()),
                 RuleSet::Math => rules.extend(math::rules()),
-                // AUTOGEN START: slotted-ruleset-rust-match
-                // AUTOGEN END: slotted-ruleset-rust-match
+                // AUTOGEN START: egg-ruleset-rust-match
+                // AUTOGEN END: egg-ruleset-rust-match
                 _ => (),
             }
         }
