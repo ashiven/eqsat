@@ -281,7 +281,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 
     generated_egg = f"""
 use crate::egg::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
-use egg::{{EGraph, Rewrite}};
+use egg::{{EGraph, Rewrite, Pattern}};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
@@ -318,7 +318,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 def main():
     parser = ArgumentParser()
     parser.add_argument("implementation", choices=["egg", "slotted"])
-    parser.add_argument("ruleset_name")
+    parser.add_argument("ruleset_name", type=str.lower)
 
     args = parser.parse_args()
 
