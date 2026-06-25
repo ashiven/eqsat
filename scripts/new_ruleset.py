@@ -249,10 +249,10 @@ def create_new_ruleset_file(implementation: str, ruleset_name: str):
     )
 
     generated_slotted = f"""
-use crate::slotted::{{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis}};
+use crate::slotted::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
 use slotted_egraphs::{{EGraph, Rewrite}};
 
-pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {{
+pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
         my_rule(),
     ];
@@ -260,7 +260,7 @@ pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {{
     rules
 }}
 
-fn my_rule() -> Rewrite<MimSlotted, MimSlottedAnalysis> {{
+fn my_rule() -> Rewrite<Mim, MimAnalysis> {{
     let pat = "(tuple (cons ?a (cons ?a (cons ?a nil))))";
     let outpat = "(pack $dummy (scope (lit 3 Nat) ?a))";
     Rewrite::new("my-rule", pat, outpat)
@@ -270,7 +270,7 @@ pub type {ruleset_name.capitalize()}Data = ();
 pub struct {ruleset_name.capitalize()}Analysis;
 
 impl {ruleset_name.capitalize()}Analysis {{
-    pub fn make(_eg: &EGraph<MimSlotted, MimSlottedAnalysis>, _enode: &MimSlotted) -> AnalysisData {{
+    pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
         AnalysisData::default()
     }}
     pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {{
@@ -279,23 +279,35 @@ impl {ruleset_name.capitalize()}Analysis {{
 }}
 """.lstrip()
 
-    generated_egg = """
-use crate::egg::{Mim, analysis::MimAnalysis};
-use egg::Rewrite;
+    generated_egg = f"""
+use crate::egg::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
+use egg::{{EGraph, Rewrite}};
 
-pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
+pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
         my_rule(),
     ];
 
     rules
-}
+}}
 
-fn my_rule() -> Rewrite<Mim, MimAnalysis> {
+fn my_rule() -> Rewrite<Mim, MimAnalysis> {{
     let pat: Pattern<Mim> = "(app %core.nat.add (tuple (lit 0 Nat) ?e))".parse().unwrap();
     let outpat: Pattern<Mim> = "?e".parse().unwrap();
     Rewrite::new("my-rule", pat, outpat).unwrap()
-}
+}}
+
+pub type {ruleset_name.capitalize()}Data = ();
+pub struct {ruleset_name.capitalize()}Analysis;
+
+impl {ruleset_name.capitalize()}Analysis {{
+    pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
+        AnalysisData::default()
+    }}
+    pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {{
+        AnalysisData::default()
+    }}
+}}
 """.lstrip()
 
     file_path.write_text(
