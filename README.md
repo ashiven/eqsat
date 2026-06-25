@@ -178,10 +178,10 @@ To automatically generate all of the boilerplate code shown below, use the follo
 python ./scripts/new_ruleset.py egg myrules
 ```
 
-**1. Define a set of rules in `src/mim_egg/rulesets/myrules.rs`**
+**1. Define a set of rules in `src/egg/rulesets/myrules.rs`**
 
 ```rust
-use crate::mim_egg::{Mim, analysis::MimAnalysis};
+use crate::egg::{Mim, analysis::MimAnalysis};
 use egg::{Rewrite, Pattern};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
@@ -215,12 +215,12 @@ pub mod bridge {
 // ...
 ```
 
-**3. Ensure that your ruleset is registered in `src/mim_egg/rulesets/mod.rs`**
+**3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`**
 
 ```rust
 use crate::RuleSet;
-use crate::mim_egg::Mim;
-use crate::mim_egg::analysis::MimAnalysis;
+use crate::egg::Mim;
+use crate::egg::analysis::MimAnalysis;
 use egg::Rewrite;
 
 pub mod core;
@@ -284,7 +284,7 @@ There are two separate implementations in [egg](https://github.com/egraphs-good/
  *  Rewrites an sexpr in `egg` format
  *
  *  sexpr:     a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_egg/rulesets)
+ *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/egg/rulesets)
  *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize and AstDepth)
  */
 rust::Vec<RecExprFFI> eqsat_egg(std::string sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);

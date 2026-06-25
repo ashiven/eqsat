@@ -1,7 +1,7 @@
-use crate::mim_egg::Mim;
-use crate::mim_egg::analysis::MimAnalysis;
-use crate::mim_slotted::MimSlotted;
-use crate::mim_slotted::analysis::MimSlottedAnalysis;
+use crate::egg::Mim;
+use crate::egg::analysis::MimAnalysis;
+use crate::slotted::MimSlotted;
+use crate::slotted::analysis::MimSlottedAnalysis;
 use crate::{
     eqsat_egg, eqsat_slotted, node_ffi_str, pretty_egg, pretty_slotted, reaches_egg,
     reaches_slotted, type_str,

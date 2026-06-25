@@ -102,7 +102,7 @@ axm %eqsat.MaxAstSize: %eqsat.Config;
 /// ### %%eqsat.rulesets
 ///
 /// Configures the equality saturation engine to use the specified rulesets
-/// that are implemented in github.com/ashiven/eqsat/src/[mim_egg|mim_slotted]/rulesets
+/// that are implemented in github.com/ashiven/eqsat/src/[egg|slotted]/rulesets
 ///
 axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Config;
 ///

@@ -9,7 +9,7 @@ lam f(x: Nat): Nat = %core.nat.add (x, 1);
 // TODO: binding_expected gets normalized with the constant folding normalizer
 // to reduce mul (2,2) to 4, which the start term would also need to do to reach the expected term.
 // For this I would need to implement constant folding as an analysis for the %eqsat.normalize
-// ruleset which models the compiler normalizations... (see mim_egg/rulesets/core)
+// ruleset which models the compiler normalizations... (see egg/rulesets/core)
 //
 // fun extern binding(arg: «4; Nat»): «4; Nat» =
 //     let mapper = %rise.map @(%core.nat.mul (2, 2)) f;
