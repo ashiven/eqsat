@@ -304,8 +304,8 @@ impl {ruleset_name.capitalize()}Analysis {{
     pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
         AnalysisData::default()
     }}
-    pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {{
-        AnalysisData::default()
+    pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {{
+        DidMerge(false, false)
     }}
 }}
 """.lstrip()
