@@ -131,11 +131,9 @@ def replace_cost_rust_impl(implementation: str, cost_name: str):
 
     generated_slotted = f"""
 pub struct {cost_name};
-
-impl CostFunction<MimSlotted> for {cost_name} {{
+impl CostFunction<Mim> for {cost_name} {{
     type Cost = u64;
-
-    fn cost<C>(&self, enode: &MimSlotted, costs: C) -> u64
+    fn cost<C>(&self, enode: &Mim, costs: C) -> u64
     where
         C: Fn(Id) -> u64,
     {{
@@ -148,8 +146,18 @@ impl CostFunction<MimSlotted> for {cost_name} {{
 }}
 """
 
-    # TODO: Implement
-    generated_egg = """
+    generated_egg = f"""
+#[derive(Debug)]
+pub struct {cost_name};
+impl CostFunction<Mim> for {cost_name} {{
+    type Cost = usize;
+    fn cost<C>(&mut self, enode: &Mim, mut costs: C) -> Self::Cost
+    where
+        C: FnMut(Id) -> Self::Cost,
+    {{
+        enode.fold(1, |sum, id| sum.saturating_add(costs(id)))
+    }}
+}}
 """
 
     generated = generated_egg if implementation == "egg" else generated_slotted
