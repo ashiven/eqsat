@@ -110,7 +110,7 @@ def replace_ruleset_rust_ffi(implementation: str, ruleset_name: str):
         {ruleset_name.capitalize()},
 """
 
-    file_path = Path(__file__).parent.parent / "src/ffi.rs"
+    file_path = Path(__file__).parent.parent / "src/ffi/bridge.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
