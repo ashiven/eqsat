@@ -1,3 +1,4 @@
+#![allow(clippy::needless_update)]
 use crate::slotted::Mim;
 use crate::slotted::analysis::{AnalysisData, MimAnalysis};
 use crate::slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
@@ -243,16 +244,38 @@ pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisD
         // Mim::Merge(..) = make_merge_type(eg, enode),
 
         // Num terminals and structural nodes should not get a type at all
-        Mim::Num(..) => AnalysisData { type_: None },
-        Mim::MetaVar(..) => AnalysisData { type_: None },
-        Mim::Scope(..) => AnalysisData { type_: None },
-        Mim::Root(..) => AnalysisData { type_: None },
-        Mim::Cons(..) => AnalysisData { type_: None },
-        Mim::Nil(..) => AnalysisData { type_: None },
-        Mim::TypeWrap(..) => AnalysisData { type_: None },
+        Mim::Num(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::MetaVar(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Scope(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Root(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Cons(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Nil(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::TypeWrap(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
 
         _ => AnalysisData {
             type_: Some(TypeExpr::hole()),
+            ..Default::default()
         },
     }
 }
@@ -404,14 +427,20 @@ pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     match (l.type_, r.type_) {
         (Some(l_type), None) => AnalysisData {
             type_: Some(l_type),
+            ..Default::default()
         },
         (None, Some(r_type)) => AnalysisData {
             type_: Some(r_type),
+            ..Default::default()
         },
         (Some(l_type), Some(r_type)) => AnalysisData {
             type_: Some(unify(&l_type, &r_type)),
+            ..Default::default()
         },
-        _ => AnalysisData { type_: None },
+        _ => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
     }
 }
 
@@ -445,7 +474,10 @@ fn make_let_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     let expr_id = var_scope_childs.get(1).expect("Expected let expr id");
     let expr_type = eg.analysis_data(expr_id.id).type_.clone();
 
-    AnalysisData { type_: expr_type }
+    AnalysisData {
+        type_: expr_type,
+        ..Default::default()
+    }
 }
 
 #[allow(dead_code)]
@@ -529,6 +561,7 @@ fn make_lam_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
@@ -544,6 +577,7 @@ fn make_con_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
@@ -566,6 +600,7 @@ fn make_fun_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     AnalysisData {
         type_: Some(TypeExpr::pi(dom, codom, None)),
+        ..Default::default()
     }
 }
 
@@ -582,10 +617,12 @@ fn make_app_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
             let codomain = scope.children.get(1).expect("Expected pi codom");
             AnalysisData {
                 type_: Some(codomain.clone()),
+                ..Default::default()
             }
         }
         _ => AnalysisData {
             type_: Some(TypeExpr::hole()),
+            ..Default::default()
         },
     }
 }
@@ -596,6 +633,7 @@ fn make_app_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 fn make_var_type(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {
     AnalysisData {
         type_: Some(TypeExpr::hole()),
+        ..Default::default()
     }
 }
 
@@ -604,7 +642,10 @@ fn make_lit_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     let type_id = eg.find_applied_id(type_);
     let type_ = eg.get_syn_expr(&type_id);
-    AnalysisData { type_: Some(type_) }
+    AnalysisData {
+        type_: Some(type_),
+        ..Default::default()
+    }
 }
 
 fn make_pack_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
@@ -623,6 +664,7 @@ fn make_pack_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
             body_type.unwrap_or(TypeExpr::hole()),
             None,
         )),
+        ..Default::default()
     }
 }
 
@@ -641,6 +683,7 @@ fn make_tuple_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
 
     AnalysisData {
         type_: Some(TypeExpr::sigma(elem_types, None)),
+        ..Default::default()
     }
 }
 
@@ -675,6 +718,7 @@ fn make_extract_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData
 
     AnalysisData {
         type_: Some(extract_type),
+        ..Default::default()
     }
 }
 
@@ -711,6 +755,7 @@ fn make_insert_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData 
 
     AnalysisData {
         type_: Some(insert_type),
+        ..Default::default()
     }
 }
 
