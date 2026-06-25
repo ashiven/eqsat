@@ -3,10 +3,6 @@ use crate::slotted::analysis::{AnalysisData, MimAnalysis};
 use crate::slotted::util::{cons_elem_at, cons_insert_at, cons_to_vec, get_literal};
 use slotted_egraphs::*;
 
-/***********************************************************/
-/* Conversion from type-annotated RecExpr to TypedRecExpr  */
-/***********************************************************/
-
 pub type TypeExpr = RecExpr<Mim>;
 
 #[derive(Debug, Clone)]
@@ -96,10 +92,6 @@ pub(crate) fn add_expr_typed(
 
     eclass_applied_id
 }
-
-/***********************************************************/
-/*  Analysis maintaining type information on eclasses      */
-/***********************************************************/
 
 pub type TypeData = TypeExpr;
 

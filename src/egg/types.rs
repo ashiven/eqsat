@@ -3,10 +3,6 @@ use crate::egg::analysis::{AnalysisData, MimAnalysis};
 use crate::egg::util::get_literal;
 use egg::*;
 
-/***********************************************************/
-/* Conversion from type-annotated RecExpr to TypedRecExpr  */
-/***********************************************************/
-
 pub type TypeExpr = RecExpr<Mim>;
 
 #[derive(Debug, Clone)]
@@ -106,10 +102,6 @@ pub(crate) fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedR
 
     eclass_id
 }
-
-/***********************************************************/
-/*  Analysis maintaining type information on eclasses      */
-/***********************************************************/
 
 pub type TypeData = TypeExpr;
 
