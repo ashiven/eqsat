@@ -13,7 +13,7 @@ pub struct MimAnalysis;
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct AnalysisData {
     pub type_: Option<TypeData>,
-    pub core_data: Option<CoreData>,
+    pub core: Option<CoreData>,
     // AUTOGEN START: egg-analysis-rust-data
     // AUTOGEN END: egg-analysis-rust-data
 }
@@ -21,6 +21,7 @@ pub struct AnalysisData {
 impl AnalysisData {
     fn combine(&mut self, other: AnalysisData) {
         self.type_ = self.type_.take().or(other.type_);
+        self.core = self.core.take().or(other.core);
         // AUTOGEN START: egg-analysis-rust-combine
         // AUTOGEN END: egg-analysis-rust-combine
     }
@@ -37,7 +38,6 @@ fn combined_make(eg: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, id: Id) -> Anal
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
-            #[allow(clippy::match_single_binding)]
             match *ruleset {
                 RuleSet::Core => {
                     let data = CoreAnalysis::make(eg, enode, id);
@@ -67,7 +67,6 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
 
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
-            #[allow(clippy::match_single_binding)]
             match *ruleset {
                 RuleSet::Core => {
                     let merge = CoreAnalysis::merge(l, r.clone());

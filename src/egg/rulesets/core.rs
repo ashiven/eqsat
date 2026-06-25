@@ -48,15 +48,6 @@ pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     rules
 }
 
-macro_rules! find_node {
-    ($egraph:expr, $id:expr, $pat:pat => $val:expr) => {
-        $egraph[*$id]
-            .nodes
-            .iter()
-            .find_map(|node| if let $pat = node { Some($val) } else { None })
-    };
-}
-
 /* core.nat */
 
 fn nat_add0() -> Rewrite<Mim, MimAnalysis> {
@@ -377,6 +368,15 @@ fn div_urem1() -> Rewrite<Mim, MimAnalysis> {
 
 /* helpers */
 
+macro_rules! find_node {
+    ($egraph:expr, $id:expr, $pat:pat => $val:expr) => {
+        $egraph[*$id]
+            .nodes
+            .iter()
+            .find_map(|node| if let $pat = node { Some($val) } else { None })
+    };
+}
+
 fn idx_size(type_: &Mim) -> u64 {
     if let Symbol(s) = type_ {
         match s.as_str() {
@@ -409,10 +409,10 @@ fn nat_lit(n: u64) -> Option<CoreData> {
 
 /* constant folding */
 
-pub type CoreData = CoreConst;
+pub type CoreData = Const;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CoreConst {
+pub struct Const {
     val: Mim,
     type_: Mim,
 }
@@ -432,28 +432,26 @@ impl CoreAnalysis {
 }
 
 pub fn core_merge(a: &mut AnalysisData, b: AnalysisData) -> DidMerge {
-    if a.core_data.is_none() && b.core_data.is_some() {
-        a.core_data = b.core_data;
+    if a.core.is_none() && b.core.is_some() {
+        a.core = b.core;
         DidMerge(true, false)
     } else {
         DidMerge(false, false)
     }
 }
 
-#[allow(clippy::needless_update)]
 pub fn core_make(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
     AnalysisData {
-        type_: None,
-        core_data: fold_core(egraph, enode),
+        core: fold_core(egraph, enode),
         ..Default::default()
     }
 }
 
 pub fn core_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
-    if let Some(d) = &egraph[id].data.core_data {
-        let d = d.clone();
-        let const_id = egraph.add(d.val);
-        let type_id = egraph.add(d.type_);
+    if let Some(c) = &egraph[id].data.core {
+        let c = c.clone();
+        let const_id = egraph.add(c.val);
+        let type_id = egraph.add(c.type_);
         let lit_id = egraph.add(Lit([const_id, type_id]));
         egraph.union(id, lit_id);
     }
@@ -461,7 +459,7 @@ pub fn core_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
 
 // Can be used to create conditional rewrite rules like (foo ?a) => (bar ?a) if is_const(var("?a"))
 fn _is_const(v: egg::Var) -> impl Fn(&mut EGraph<Mim, MimAnalysis>, Id, &Subst) -> bool {
-    move |eg, _, subst| eg[subst[v]].data.core_data.is_some()
+    move |eg, _, subst| eg[subst[v]].data.core.is_some()
 }
 
 pub fn fold_core(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
@@ -490,7 +488,7 @@ pub fn fold_core(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<C
 }
 
 fn fold_nat(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     if let App([callee, arg]) = enode
         && let Some(s) = find_node!(egraph, callee, Symbol(s) => s)
@@ -511,7 +509,7 @@ fn fold_nat(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreDa
 }
 
 fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     if let App([callee, arg]) = enode
         && let Some([op, _size]) = find_node!(egraph, callee, App([name, mode]) => [name, mode])
@@ -548,7 +546,7 @@ fn fold_icmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreD
 }
 
 fn fold_ncmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     if let App([callee, arg]) = enode
         && let Some(s) = find_node!(egraph, callee, Symbol(s) => s)
@@ -572,7 +570,7 @@ fn fold_ncmp(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreD
 }
 
 fn fold_shr(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     if let App([callee, arg]) = enode
         && let Some(s) = find_node!(egraph, callee, Symbol(s) => s)
@@ -594,7 +592,7 @@ fn fold_shr(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreDa
 }
 
 fn fold_wrap(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     // (app (app %core.wrap.(add,sub,mul,shl) [mode: Nat]) <<2; Idx s>>)
     if let App([callee, arg]) = enode
@@ -620,7 +618,7 @@ fn fold_wrap(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreD
 }
 
 fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreData> {
-    let c = |id: &Id| egraph[*id].data.core_data.clone();
+    let c = |id: &Id| egraph[*id].data.core.clone();
 
     // (app %core.div.(udiv,sdiv,urem,srem) [%mem.M 0, <<2; Idx s>>])
     if let App([callee, arg]) = enode
@@ -645,11 +643,10 @@ fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreDa
     None
 }
 
-/*
 #[cfg(test)]
 mod test {
-    use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
     use crate::egg::equality_saturate;
+    use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 
     const LINE_LEN: usize = 80;
 
@@ -752,4 +749,3 @@ mod test {
         assert_eq!(res, "(lit tt Bool)");
     }
 }
-*/
