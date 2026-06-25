@@ -61,10 +61,10 @@ def replace_cost_rust_import(implementation: str, cost_name: str):
     )
 
     generated = f"""
-use crate::mim_{implementation}::cost::{cost_name};
+use crate::{implementation}::cost::{cost_name};
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/mod.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -87,7 +87,7 @@ def replace_cost_rust_match(implementation: str, cost_name: str):
         CostFn::{cost_name} => rewrite_sexprs(&sexprs, &selected, rules, || {cost_name}),
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/mod.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -154,7 +154,7 @@ impl CostFunction<MimSlotted> for {cost_name} {{
 
     generated = generated_egg if implementation == "egg" else generated_slotted
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/cost.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/cost.rs"
 
     content = file_path.read_text()
     content = pattern.sub(

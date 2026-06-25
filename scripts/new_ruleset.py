@@ -64,9 +64,7 @@ def replace_ruleset_rust_mod(implementation: str, ruleset_name: str):
 pub mod {ruleset_name};
 """
 
-    file_path = (
-        Path(__file__).parent.parent / f"src/mim_{implementation}/rulesets/mod.rs"
-    )
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/rulesets/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -89,9 +87,7 @@ def replace_ruleset_rust_match(implementation: str, ruleset_name: str):
                 RuleSet::{ruleset_name.capitalize()} => rules.extend({ruleset_name}::rules()),
 """
 
-    file_path = (
-        Path(__file__).parent.parent / f"src/mim_{implementation}/rulesets/mod.rs"
-    )
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/rulesets/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -134,10 +130,10 @@ def replace_analysis_rust_import(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-use crate::mim_{implementation}::rulesets::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
+use crate::{implementation}::rulesets::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -163,7 +159,7 @@ def replace_analysis_rust_make(implementation: str, ruleset_name: str):
                 }}
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -189,7 +185,7 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
                 }}
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -212,7 +208,7 @@ def replace_analysis_rust_data(implementation: str, ruleset_name: str):
     pub {ruleset_name}: Option<{ruleset_name.capitalize()}Data>,
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -235,7 +231,7 @@ def replace_analysis_rust_combine(implementation: str, ruleset_name: str):
         self.{ruleset_name} = self.{ruleset_name}.take().or(other.{ruleset_name});
 """
 
-    file_path = Path(__file__).parent.parent / f"src/mim_{implementation}/analysis.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -249,11 +245,11 @@ def replace_analysis_rust_combine(implementation: str, ruleset_name: str):
 def create_new_ruleset_file(implementation: str, ruleset_name: str):
     file_path = (
         Path(__file__).parent.parent
-        / f"src/mim_{implementation}/rulesets/{ruleset_name}.rs"
+        / f"src/{implementation}/rulesets/{ruleset_name}.rs"
     )
 
     generated_slotted = f"""
-use crate::mim_slotted::{{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis}};
+use crate::slotted::{{MimSlotted, analysis::AnalysisData, analysis::MimSlottedAnalysis}};
 use slotted_egraphs::{{EGraph, Rewrite}};
 
 pub fn rules() -> Vec<Rewrite<MimSlotted, MimSlottedAnalysis>> {{
@@ -284,7 +280,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 """.lstrip()
 
     generated_egg = """
-use crate::mim_egg::{Mim, analysis::MimAnalysis};
+use crate::egg::{Mim, analysis::MimAnalysis};
 use egg::Rewrite;
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {

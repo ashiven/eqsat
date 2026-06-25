@@ -1,0 +1,16 @@
+use crate::egg::Mim;
+use crate::egg::analysis::MimAnalysis;
+use egg::Rewrite;
+
+pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
+    let rules = vec![];
+
+    rules
+}
+
+// fn add0() -> Rewrite<Mim, ()> {
+//     let pat: Pattern<Mim> = "(app %core.nat.add (tuple (lit 0) ?e))".parse().unwrap();
+//     let outpat: Pattern<Mim> = "?e".parse().unwrap();
+//
+//     Rewrite::new("add0", pat, outpat).unwrap()
+// }
