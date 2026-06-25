@@ -58,6 +58,9 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
+        #[allow(unused_variables)]
+        let combined_merge = &mut combined_merge;
+
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             #[allow(clippy::match_single_binding)]

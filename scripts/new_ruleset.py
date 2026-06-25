@@ -178,12 +178,22 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
         DOTALL | MULTILINE,
     )
 
-    generated = f"""
+    generated_slotted = f"""
                 RuleSet::{ruleset_name.capitalize()} => {{
-                    let {"data" if implementation == "slotted" else "merge"} = {ruleset_name.capitalize()}Analysis::merge(l{".clone()" if implementation == "slotted" else ""}, r.clone());
-                    {"combined_data.combine(data);" if implementation == "slotted" else "combined_merge = combined_merge | merge;"}
+                    let data = {ruleset_name.capitalize()}Analysis::merge(l.clone(), r.clone());
+                    combined_data.combine(data);
                 }}
 """
+
+    generated_egg = f"""
+                RuleSet::{ruleset_name.capitalize()} => {{
+                    let merge = {ruleset_name.capitalize()}Analysis::merge(l, r.clone());
+                    *combined_merge =
+                        DidMerge(combined_merge.0 | merge.0, combined_merge.1 | merge.1);
+                }}
+"""
+
+    generated = generated_slotted if implementation == "slotted" else generated_egg
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
 
@@ -281,7 +291,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 
     generated_egg = f"""
 use crate::egg::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
-use egg::{{EGraph, Rewrite, Pattern}};
+use egg::{{EGraph, Rewrite, Pattern, DidMerge}};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
