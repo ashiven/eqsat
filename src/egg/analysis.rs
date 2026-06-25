@@ -2,7 +2,7 @@
 use crate::egg::Mim;
 use crate::egg::RULESETS;
 use crate::egg::rulesets::core::{CoreData, core_make, core_merge, core_modify};
-use crate::ffi::bridge::RuleSet;
+use crate::ffi::bridge::bridge::RuleSet;
 // AUTOGEN START: egg-analysis-rust-import
 // AUTOGEN END: egg-analysis-rust-import
 use crate::egg::types::{TypeAnalysis, TypeData};

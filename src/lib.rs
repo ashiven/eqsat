@@ -1,6 +1,6 @@
-use ffi::bridge::{CostFn, NodeFFI, RecExprFFI, RuleSet};
+use ffi::bridge::bridge::{CostFn, NodeFFI, RecExprFFI, RuleSet};
 
-use crate::ffi::bridge::OptionSelected;
+use crate::ffi::bridge::bridge::OptionSelected;
 
 mod egg;
 pub mod ffi;
@@ -53,7 +53,7 @@ pub fn pretty_slotted(sexpr: &str, line_len: usize) -> String {
 }
 
 pub fn pretty_ffi(sexprs: Vec<RecExprFFI>, line_len: usize) -> String {
-    ffi::pretty_ffi(sexprs, line_len)
+    ffi::print::pretty_ffi(sexprs, line_len)
 }
 
 pub fn node_ffi_str(mut node: NodeFFI) -> String {
@@ -63,5 +63,5 @@ pub fn node_ffi_str(mut node: NodeFFI) -> String {
 }
 
 pub fn type_str(type_: RecExprFFI, line_len: usize) -> String {
-    ffi::pretty_ffi(vec![type_], line_len)
+    ffi::print::pretty_ffi(vec![type_], line_len)
 }

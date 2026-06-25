@@ -22,7 +22,7 @@ fn core_nat_add0() -> Rewrite<MimSlotted, MimSlottedAnalysis> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ffi::bridge::RuleSet;
+    use crate::ffi::bridge::bridge::RuleSet;
     use crate::slotted::set_rulesets;
     use crate::slotted::util::assert_reaches;
 

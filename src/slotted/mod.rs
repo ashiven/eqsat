@@ -1,5 +1,5 @@
 use crate::ffi::FFI;
-use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 use crate::slotted::analysis::MimSlottedAnalysis;
 use crate::slotted::cost::MaxAstSize;
 // AUTOGEN START: slotted-cost-rust-import

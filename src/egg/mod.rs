@@ -1,6 +1,6 @@
 use crate::expect;
 use crate::ffi::FFI;
-use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 // AUTOGEN START: egg-cost-rust-import
 // AUTOGEN END: egg-cost-rust-import
 use crate::egg::analysis::MimAnalysis;

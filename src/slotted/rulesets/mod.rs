@@ -1,4 +1,4 @@
-use crate::ffi::bridge::RuleSet;
+use crate::ffi::bridge::bridge::RuleSet;
 use crate::slotted::MimSlotted;
 use crate::slotted::RULESETS;
 use crate::slotted::analysis::MimSlottedAnalysis;

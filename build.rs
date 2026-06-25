@@ -1,7 +1,7 @@
 use std::env;
 
 fn main() {
-    cxx_build::bridge("src/ffi.rs").compile("eqsat-rs");
+    cxx_build::bridge("src/ffi/bridge.rs").compile("eqsat-rs");
     println!("cargo:rerun-if-changed=src/ffi.rs");
 
     if env::var("TARGET").is_ok_and(|s| s.contains("windows-msvc"))

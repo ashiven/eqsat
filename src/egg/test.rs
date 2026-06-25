@@ -2,7 +2,7 @@ use regex::Regex;
 use std::fs;
 
 use crate::egg::{Mim, convert_rules, get_rules, set_rulesets, split_sexprs};
-use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
+use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::{eqsat_egg, pretty_ffi};
 use egg::*;
 

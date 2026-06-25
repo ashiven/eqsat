@@ -1,4 +1,4 @@
-use crate::ffi::bridge::RuleSet;
+use crate::ffi::bridge::bridge::RuleSet;
 use crate::slotted::types::{TypeAnalysis, TypeData};
 // AUTOGEN START: slotted-analysis-rust-import
 // AUTOGEN END: slotted-analysis-rust-import
