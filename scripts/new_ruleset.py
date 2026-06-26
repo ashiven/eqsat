@@ -291,7 +291,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 
     generated_egg = f"""
 use crate::egg::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
-use egg::{{EGraph, Rewrite, Pattern, DidMerge}};
+use egg::{{EGraph, Rewrite, Pattern, DidMerge, Id}};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
