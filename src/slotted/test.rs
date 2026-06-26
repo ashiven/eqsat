@@ -2,7 +2,9 @@ use regex::Regex;
 use std::fs;
 
 use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
-use crate::slotted::{Mim, get_rules, set_rulesets, split_sexprs};
+use crate::slotted::Mim;
+use crate::slotted::rulesets::{get_rules, set_rulesets};
+use crate::slotted::util::split_sexprs;
 use crate::{eqsat_slotted, pretty_ffi};
 use slotted_egraphs::*;
 

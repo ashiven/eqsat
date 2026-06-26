@@ -2,7 +2,8 @@ use crate::ffi::bridge::RuleSet;
 use crate::slotted::types::{TypeAnalysis, TypeData};
 // AUTOGEN START: slotted-analysis-rust-import
 // AUTOGEN END: slotted-analysis-rust-import
-use crate::slotted::{Mim, RULESETS};
+use crate::slotted::Mim;
+use crate::slotted::rulesets::RULESETS;
 use slotted_egraphs::*;
 
 #[derive(Default, Clone, Debug, PartialEq)]

@@ -35,7 +35,7 @@ pub fn eqsat_slotted(
     rulesets: Vec<RuleSet>,
     cost_fn: CostFn,
 ) -> Vec<RecExprFFI> {
-    slotted::equality_saturate(sexpr, selected, rulesets, cost_fn)
+    slotted::rewrite::equality_saturate(sexpr, selected, rulesets, cost_fn)
 }
 
 pub fn reaches_slotted(
@@ -49,11 +49,11 @@ pub fn reaches_slotted(
 }
 
 pub fn pretty_slotted(sexpr: &str, line_len: usize) -> String {
-    slotted::pretty(sexpr, line_len)
+    slotted::print::pretty(sexpr, line_len)
 }
 
 pub fn pretty_ffi(sexprs: Vec<RecExprFFI>, line_len: usize) -> String {
-    ffi::print::pretty_ffi(sexprs, line_len)
+    ffi::print::pretty(sexprs, line_len)
 }
 
 pub fn node_ffi_str(mut node: NodeFFI) -> String {
@@ -63,5 +63,5 @@ pub fn node_ffi_str(mut node: NodeFFI) -> String {
 }
 
 pub fn type_str(type_: RecExprFFI, line_len: usize) -> String {
-    ffi::print::pretty_ffi(vec![type_], line_len)
+    ffi::print::pretty(vec![type_], line_len)
 }

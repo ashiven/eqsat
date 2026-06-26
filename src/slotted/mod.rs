@@ -1,18 +1,9 @@
-use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
-use crate::slotted::cost::MaxAstSize;
-use crate::slotted::rewrite::{filter_selected, rewrite_sexprs};
-use crate::slotted::rules::convert_rules;
-use crate::slotted::util::split_sexprs;
-// AUTOGEN START: slotted-cost-rust-import
-// AUTOGEN END: slotted-cost-rust-import
-use crate::slotted::rulesets::get_rules;
 use slotted_egraphs::*;
-use stacker::grow;
-use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
 pub mod equiv;
+pub mod print;
 pub mod rewrite;
 pub mod rules;
 pub mod rulesets;
@@ -25,13 +16,6 @@ mod test;
 // Parsing rec exprs with type annotations can become very stack intensive
 // so we preemptively increase the stack size to avoid stack overflows.
 const PARSE_STACK_SIZE: usize = 8 * 1024 * 1024;
-
-// We keep track of the selected rulesets in a global variable because they
-// need to be accessed repeatedly in the analysis and it was too tedious to
-// pass them on by parameters or otherwise.
-thread_local! {
-    pub static RULESETS: RefCell<Vec<RuleSet>> = const { RefCell::new(vec![]) };
-}
 
 define_language! {
     pub enum Mim {
@@ -145,54 +129,4 @@ define_language! {
         Num(u64),
         Symbol(Symbol),
     }
-}
-
-pub fn equality_saturate(
-    sexpr: &str,
-    selected: OptionSelected,
-    rulesets: Vec<RuleSet>,
-    cost_fn: CostFn,
-) -> Vec<RecExprFFI> {
-    set_rulesets(rulesets);
-
-    let mut sexprs = split_sexprs(sexpr);
-    let mut rules = get_rules();
-
-    convert_rules(&mut sexprs, &mut rules);
-
-    // This gives us a bool-mask over our sexprs, marking sexprs that should be
-    // rewritten with 'true' and those that shouldn't with 'false'.
-    let selected = filter_selected(&sexprs, selected);
-
-    match cost_fn {
-        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
-        CostFn::MaxAstSize => rewrite_sexprs(&sexprs, &selected, rules, || MaxAstSize),
-        // AUTOGEN START: slotted-cost-rust-match
-        // AUTOGEN END: slotted-cost-rust-match
-        _ => panic!("Unknown cost function provided."),
-    }
-}
-
-pub fn pretty(sexpr: &str, _line_len: usize) -> String {
-    let sexprs = split_sexprs(sexpr);
-
-    let mut res = String::new();
-    for (i, sexpr) in sexprs.iter().enumerate() {
-        let parsed: RecExpr<Mim> = grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
-        res.push_str(&parsed.to_string());
-        if i < sexprs.len() - 1 {
-            res.push_str("\n\n");
-        } else {
-            res.push('\n');
-        }
-    }
-
-    res
-}
-
-fn set_rulesets(rulesets: Vec<RuleSet>) {
-    RULESETS.with(|rulesets_global| {
-        let mut rulesets_global = rulesets_global.borrow_mut();
-        *rulesets_global = rulesets;
-    });
 }

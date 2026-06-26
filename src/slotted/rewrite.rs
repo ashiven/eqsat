@@ -1,5 +1,11 @@
+use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+use crate::slotted::cost::MaxAstSize;
+use crate::slotted::rules::convert_rules;
+use crate::slotted::util::split_sexprs;
+// AUTOGEN START: slotted-cost-rust-import
+// AUTOGEN END: slotted-cost-rust-import
 use crate::ffi::FFI;
-use crate::ffi::bridge::{OptionSelected, RecExprFFI};
+use crate::slotted::rulesets::{get_rules, set_rulesets};
 use crate::slotted::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
 };
@@ -7,6 +13,32 @@ use crate::slotted::{Mim, PARSE_STACK_SIZE, analysis::MimAnalysis};
 use regex::Regex;
 use slotted_egraphs::*;
 use stacker::grow;
+
+pub fn equality_saturate(
+    sexpr: &str,
+    selected: OptionSelected,
+    rulesets: Vec<RuleSet>,
+    cost_fn: CostFn,
+) -> Vec<RecExprFFI> {
+    set_rulesets(rulesets);
+
+    let mut sexprs = split_sexprs(sexpr);
+    let mut rules = get_rules();
+
+    convert_rules(&mut sexprs, &mut rules);
+
+    // This gives us a bool-mask over our sexprs, marking sexprs that should be
+    // rewritten with 'true' and those that shouldn't with 'false'.
+    let selected = filter_selected(&sexprs, selected);
+
+    match cost_fn {
+        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::MaxAstSize => rewrite_sexprs(&sexprs, &selected, rules, || MaxAstSize),
+        // AUTOGEN START: slotted-cost-rust-match
+        // AUTOGEN END: slotted-cost-rust-match
+        _ => panic!("Unknown cost function provided."),
+    }
+}
 
 pub fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
     let selected = unsafe { selected.option.as_mut() };

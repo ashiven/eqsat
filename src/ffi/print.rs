@@ -1,7 +1,7 @@
 use crate::ffi::bridge::{MimKind, NodeFFI, RecExprFFI};
 use std::fmt;
 
-pub fn pretty_ffi(sexprs: Vec<RecExprFFI>, line_len: usize) -> String {
+pub fn pretty(sexprs: Vec<RecExprFFI>, line_len: usize) -> String {
     let mut res = String::new();
 
     for (i, sexpr) in sexprs.iter().enumerate() {

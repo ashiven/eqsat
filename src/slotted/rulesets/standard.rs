@@ -24,7 +24,7 @@ mod test {
     use super::*;
     use crate::ffi::bridge::RuleSet;
     use crate::slotted::equiv::assert_reaches;
-    use crate::slotted::set_rulesets;
+    use crate::slotted::rulesets::set_rulesets;
 
     #[test]
     fn let_var_same() {

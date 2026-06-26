@@ -1,9 +1,9 @@
 use crate::ffi::bridge::RuleSet;
 use crate::slotted::rules::convert_rules;
-use crate::slotted::rulesets::get_rules;
+use crate::slotted::rulesets::{get_rules, set_rulesets};
 use crate::slotted::types::remove_type_annotations;
 use crate::slotted::util::split_sexprs;
-use crate::slotted::{Mim, PARSE_STACK_SIZE, set_rulesets};
+use crate::slotted::{Mim, PARSE_STACK_SIZE};
 use slotted_egraphs::*;
 use stacker::grow;
 

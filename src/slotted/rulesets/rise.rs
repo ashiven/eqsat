@@ -174,7 +174,7 @@ mod test {
     use slotted_egraphs::rw;
 
     use super::*;
-    use crate::{ffi::bridge::RuleSet, slotted::{rulesets::get_rules, set_rulesets, equiv::assert_reaches}};
+    use crate::{ffi::bridge::RuleSet, slotted::{rulesets::{get_rules, set_rulesets}, equiv::assert_reaches}};
 
     #[test]
     #[ignore = "works but is slow"]
