@@ -64,7 +64,7 @@ def replace_cost_rust_import(implementation: str, cost_name: str):
 use crate::{implementation}::cost::{cost_name};
 """
 
-    file_path = Path(__file__).parent.parent / f"src/{implementation}/mod.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/rewrite.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
@@ -87,7 +87,7 @@ def replace_cost_rust_match(implementation: str, cost_name: str):
         CostFn::{cost_name} => rewrite_sexprs(&sexprs, &selected, rules, || {cost_name}),
 """
 
-    file_path = Path(__file__).parent.parent / f"src/{implementation}/mod.rs"
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/rewrite.rs"
 
     content = file_path.read_text()
     content = pattern.sub(

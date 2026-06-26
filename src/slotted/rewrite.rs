@@ -1,14 +1,14 @@
-use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
-use crate::slotted::cost::MaxAstSize;
-use crate::slotted::rules::convert_rules;
-use crate::slotted::util::split_sexprs;
 // AUTOGEN START: slotted-cost-rust-import
 // AUTOGEN END: slotted-cost-rust-import
 use crate::ffi::FFI;
+use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+use crate::slotted::cost::MaxAstSize;
+use crate::slotted::rules::convert_rules;
 use crate::slotted::rulesets::{get_rules, set_rulesets};
 use crate::slotted::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
 };
+use crate::slotted::util::split_sexprs;
 use crate::slotted::{Mim, PARSE_STACK_SIZE, analysis::MimAnalysis};
 use regex::Regex;
 use slotted_egraphs::*;

@@ -1,5 +1,3 @@
-// AUTOGEN START: egg-cost-rust-import
-// AUTOGEN END: egg-cost-rust-import
 use egg::*;
 
 pub mod analysis;

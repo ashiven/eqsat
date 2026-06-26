@@ -1,3 +1,5 @@
+// AUTOGEN START: egg-cost-rust-import
+// AUTOGEN END: egg-cost-rust-import
 use crate::egg::rules::convert_rules;
 use crate::egg::rulesets::{get_rules, set_rulesets};
 use crate::egg::types::{
