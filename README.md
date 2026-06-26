@@ -180,7 +180,7 @@ a set of rules directly in **egg** or **slotted-egraphs**.
 To automatically generate all of the boilerplate code shown below, use the following script:
 
 ```bash
-python ./scripts/new_ruleset.py egg myrules
+python ./scripts/new_ruleset.py egg MyRules
 ```
 
 **1. Define a set of rules in `src/egg/rulesets/myrules.rs`**
@@ -274,7 +274,7 @@ for (auto ruleset : ruleset_config->args())
 
 ## Provided Methods
 
-There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) 
+There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs)
 that expose the following methods on the C++ FFI:
 
 ### Rewriting

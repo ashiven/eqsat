@@ -12,7 +12,7 @@ def replace_ruleset_mim(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-axm %eqsat.{ruleset_name}: %eqsat.Ruleset;
+axm %eqsat.{ruleset_name.lower()}: %eqsat.Ruleset;
 """
 
     file_path = Path(__file__).parent.parent / "eqsat.mim"
@@ -35,8 +35,8 @@ def replace_ruleset_cpp(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-                    else if (Axm::isa<eqsat::{ruleset_name}>(ruleset))
-                        rulesets.push_back(RuleSet::{ruleset_name.capitalize()});
+                    else if (Axm::isa<eqsat::{ruleset_name.lower()}>(ruleset))
+                        rulesets.push_back(RuleSet::{ruleset_name});
 """
 
     file_path = (
@@ -61,7 +61,7 @@ def replace_ruleset_rust_mod(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-pub mod {ruleset_name};
+pub mod {ruleset_name.lower()};
 """
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/rulesets/mod.rs"
@@ -84,7 +84,7 @@ def replace_ruleset_rust_match(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-                RuleSet::{ruleset_name.capitalize()} => rules.extend({ruleset_name}::rules()),
+                RuleSet::{ruleset_name} => rules.extend({ruleset_name.lower()}::rules()),
 """
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/rulesets/mod.rs"
@@ -107,7 +107,7 @@ def replace_ruleset_rust_ffi(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-        {ruleset_name.capitalize()},
+        {ruleset_name},
 """
 
     file_path = Path(__file__).parent.parent / "src/ffi/mod.rs"
@@ -130,7 +130,7 @@ def replace_analysis_rust_import(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-use crate::{implementation}::rulesets::{ruleset_name}::{{{ruleset_name.capitalize()}Analysis, {ruleset_name.capitalize()}Data}};
+use crate::{implementation}::rulesets::{ruleset_name.lower()}::{{{ruleset_name}Analysis, {ruleset_name}Data}};
 """
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
@@ -153,8 +153,8 @@ def replace_analysis_rust_make(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-                RuleSet::{ruleset_name.capitalize()} => {{
-                    let data = {ruleset_name.capitalize()}Analysis::make(eg, enode{", id" if implementation == "egg" else ""});
+                RuleSet::{ruleset_name} => {{
+                    let data = {ruleset_name}Analysis::make(eg, enode{", id" if implementation == "egg" else ""});
                     combined_data.combine(data);
                 }}
 """
@@ -179,15 +179,15 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
     )
 
     generated_slotted = f"""
-                RuleSet::{ruleset_name.capitalize()} => {{
-                    let data = {ruleset_name.capitalize()}Analysis::merge(l.clone(), r.clone());
+                RuleSet::{ruleset_name} => {{
+                    let data = {ruleset_name}Analysis::merge(l.clone(), r.clone());
                     combined_data.combine(data);
                 }}
 """
 
     generated_egg = f"""
-                RuleSet::{ruleset_name.capitalize()} => {{
-                    let merge = {ruleset_name.capitalize()}Analysis::merge(l, r.clone());
+                RuleSet::{ruleset_name} => {{
+                    let merge = {ruleset_name}Analysis::merge(l, r.clone());
                     *combined_merge =
                         DidMerge(combined_merge.0 | merge.0, combined_merge.1 | merge.1);
                 }}
@@ -215,7 +215,7 @@ def replace_analysis_rust_data(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-    pub {ruleset_name}: Option<{ruleset_name.capitalize()}Data>,
+    pub {ruleset_name.lower()}: Option<{ruleset_name}Data>,
 """
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
@@ -238,7 +238,7 @@ def replace_analysis_rust_combine(implementation: str, ruleset_name: str):
     )
 
     generated = f"""
-        self.{ruleset_name} = self.{ruleset_name}.take().or(other.{ruleset_name});
+        self.{ruleset_name.lower()} = self.{ruleset_name.lower()}.take().or(other.{ruleset_name.lower()});
 """
 
     file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
@@ -255,7 +255,7 @@ def replace_analysis_rust_combine(implementation: str, ruleset_name: str):
 def create_new_ruleset_file(implementation: str, ruleset_name: str):
     file_path = (
         Path(__file__).parent.parent
-        / f"src/{implementation}/rulesets/{ruleset_name}.rs"
+        / f"src/{implementation}/rulesets/{ruleset_name.lower()}.rs"
     )
 
     generated_slotted = f"""
@@ -276,10 +276,10 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {{
     Rewrite::new("my-rule", pat, outpat)
 }}
 
-pub type {ruleset_name.capitalize()}Data = ();
-pub struct {ruleset_name.capitalize()}Analysis;
+pub type {ruleset_name}Data = ();
+pub struct {ruleset_name}Analysis;
 
-impl {ruleset_name.capitalize()}Analysis {{
+impl {ruleset_name}Analysis {{
     pub fn make(_eg: &EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
         AnalysisData::default()
     }}
@@ -307,10 +307,10 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {{
     Rewrite::new("my-rule", pat, outpat).unwrap()
 }}
 
-pub type {ruleset_name.capitalize()}Data = ();
-pub struct {ruleset_name.capitalize()}Analysis;
+pub type {ruleset_name}Data = ();
+pub struct {ruleset_name}Analysis;
 
-impl {ruleset_name.capitalize()}Analysis {{
+impl {ruleset_name}Analysis {{
     pub fn make(_eg: &mut EGraph<Mim, MimAnalysis>, _enode: &Mim, _id: Id) -> AnalysisData {{
         AnalysisData::default()
     }}
@@ -328,7 +328,7 @@ impl {ruleset_name.capitalize()}Analysis {{
 def main():
     parser = ArgumentParser()
     parser.add_argument("implementation", choices=["egg", "slotted"])
-    parser.add_argument("ruleset_name", type=str.lower)
+    parser.add_argument("ruleset_name")
 
     args = parser.parse_args()
 
