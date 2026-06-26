@@ -15,8 +15,7 @@
 
 </div>
 
-**Equality Saturation** is a compiler optimization technique that utilizes [E-Graphs](https://en.wikipedia.org/wiki/E-graph#Equality_saturation) to simultaneously represent a set of equivalent program terms according to a set of rewrite-rules and find their most optimal versions, thereby attempting to solve the [Phase-Ordering Problem](https://www2.imm.dtu.dk/pubdb/edoc/imm5406.pdf).
-This repository contains **Equality Saturation** implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) as a plugin for the higher-order intermediate representation [MimIR](https://github.com/mimir/mimir).
+**Equality Saturation** is a compiler optimization technique that is primarily used to solve the [Phase-Ordering Problem](https://www2.imm.dtu.dk/pubdb/edoc/imm5406.pdf) for compiler optimization passes. It utilizes [E-Graphs](https://en.wikipedia.org/wiki/E-graph#Equality_saturation) to simultaneously represent a set of equivalent program terms according to a set of rewrite-rules and find the most optimal one according to a cost heuristic. This repository contains **Equality Saturation** implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) as a plugin for the functional higher-order intermediate representation [MimIR](https://github.com/mimir/mimir).
 
 ## Table of Contents
 
@@ -32,7 +31,13 @@ This repository contains **Equality Saturation** implementations in [egg](https:
 ## Usage
 
 You may use this plugin through the **MimIR** C++ API or its textual representation **Mim**.
-Consider the following lightweight examples to get you started.
+Consider the following lightweight examples to get started. The examples both perform the same
+optimization:
+
+- Define a rewrite-rule `?n + 0 => ?n`
+- Define a term `fun(x: Nat): Nat = return (x + 0);`
+- Perform equality saturation in `slotted-egraphs`
+- Extract an optimal term by smallest `AstSize`
 
 ### Option 1: C++ API
 
@@ -170,7 +175,7 @@ cmake --build build -j$(nproc)
 
 You may want to define a set of rewrite-rules that are more complex than the syntactic rewrite-rules
 that can be defined in **MimIR**. In this case, you should follow the implementation guide below on adding
-a set of rules directly in **egg** or **slotted-egraphs**. (The example defines a ruleset for **egg**)
+a set of rules directly in **egg** or **slotted-egraphs**.
 
 To automatically generate all of the boilerplate code shown below, use the following script:
 
@@ -198,7 +203,7 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {
 }
 ```
 
-**2. Add your ruleset to the RuleSet enum in `src/ffi.rs`**
+**2. Add your ruleset to the RuleSet enum in `src/ffi/bridge.rs`**
 
 ```rust
 // ...
@@ -219,12 +224,10 @@ pub mod bridge {
 
 ```rust
 use crate::RuleSet;
-use crate::egg::Mim;
-use crate::egg::analysis::MimAnalysis;
+use crate::egg::{Mim, analysis:MimAnalysis};
 use egg::Rewrite;
 
 pub mod core;
-// Add the module:
 pub mod myrules;
 
 pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
@@ -232,7 +235,6 @@ pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
     for ruleset in rulesets {
         match ruleset {
             RuleSet::Core => rules.extend(core::rules()),
-            // Add the ruleset:
             RuleSet::MyRules => rules.extend(myrules::rules()),
             _ => (),
         }
@@ -265,9 +267,6 @@ axm %eqsat.standard: %eqsat.Ruleset;
 for (auto ruleset : ruleset_config->args())
     if (Axm::isa<eqsat::core>(ruleset))
         rulesets.push_back(RuleSet::Core);
-    else if (Axm::isa<eqsat::math>(ruleset))
-        rulesets.push_back(RuleSet::Math);
-    // Add the ruleset:
     else if (Axm::isa<eqsat::myrules>(ruleset))
         rulesets.push_back(RuleSet::MyRules);
 // ...
@@ -275,7 +274,8 @@ for (auto ruleset : ruleset_config->args())
 
 ## Provided Methods
 
-There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) that expose the following methods:
+There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) 
+that expose the following methods on the C++ FFI:
 
 ### Rewriting
 
@@ -284,10 +284,11 @@ There are two separate implementations in [egg](https://github.com/egraphs-good/
  *  Rewrites an sexpr in `egg` format
  *
  *  sexpr:     a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
+ *  selected:  optionally, a list of identifiers for terms that should be rewritten
  *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/egg/rulesets)
  *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize and AstDepth)
  */
-rust::Vec<RecExprFFI> eqsat_egg(std::string sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
+rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
 
 ```cpp
@@ -295,10 +296,39 @@ rust::Vec<RecExprFFI> eqsat_egg(std::string sexpr, rust::Vec<RuleSet> rulesets, 
  *  Rewrites an sexpr in `slotted-egraphs` format
  *
  *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  selected:  optionally, a list of identifiers for terms that should be rewritten
  *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
  *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize)
  */
-rust::Vec<RecExprFFI> eqsat_slotted(std::string sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
+rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
+```
+
+### Proving equivalence
+
+```cpp
+/**
+ *  Uses `slotted-egraphs` to prove whether two terms are equivalent
+ *
+ *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  start_name: an identifier for the starting term
+ *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  max_steps:  the maximum number of iterations in which the start term should reach the end term
+ */
+bool reaches_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
+```
+
+```cpp
+/**
+ *  Uses `egg` to prove whether two terms are equivalent
+ *
+ *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  rulesets:   provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  start_name: an identifier for the starting term
+ *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  max_steps:  the maximum number of iterations in which the start term should reach the end term
+ */
+bool reaches_slotted(rust::Str sexpr, rust::Vec<::RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
 ```
 
 ### Pretty-printing
@@ -310,7 +340,7 @@ rust::Vec<RecExprFFI> eqsat_slotted(std::string sexpr, rust::Vec<RuleSet> rulese
  *  sexpr:     a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
  *  line_len:  the maximal line length after which the sexpr continues on a new line
  */
-rust::String pretty_egg(std::string sexpr, size_t line_len);
+rust::String pretty_egg(rust::Str sexpr, std::size_t line_len);
 ```
 
 ```cpp
@@ -320,7 +350,7 @@ rust::String pretty_egg(std::string sexpr, size_t line_len);
  *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
  *  line_len:  the maximal line length after which the sexpr continues on a new line
  */
-rust::String pretty_slotted(std::string sexpr, size_t line_len);
+rust::String pretty_slotted(rust::Str sexpr, std::size_t line_len);
 ```
 
 ```cpp
@@ -330,7 +360,7 @@ rust::String pretty_slotted(std::string sexpr, size_t line_len);
  *  sexprs:    a vector of symbolic expressions in RecExprFFI format (the result of equality saturation)
  *  line_len:  the maximal line length after which the sexpr continues on a new line
  */
-rust::String pretty_ffi(rust::Vec<RecExprFFI> sexprs, size_t line_len);
+rust::String pretty_ffi(rust::Vec<RecExprFFI> sexprs, std::size_t line_len);
 ```
 
 ## Contributing
