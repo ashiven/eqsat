@@ -110,7 +110,7 @@ def replace_cost_rust_ffi(implementation: str, cost_name: str):
         {cost_name},
 """
 
-    file_path = Path(__file__).parent.parent / "src/ffi/bridge.rs"
+    file_path = Path(__file__).parent.parent / "src/ffi/mod.rs"
 
     content = file_path.read_text()
     content = pattern.sub(
