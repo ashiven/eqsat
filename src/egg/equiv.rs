@@ -1,6 +1,6 @@
 use crate::egg::rules::convert_rules;
 use crate::egg::rulesets::get_rules;
-use crate::egg::set_rulesets;
+use crate::egg::rulesets::set_rulesets;
 use crate::egg::types::remove_type_annotations;
 use crate::egg::util::split_sexprs;
 use crate::ffi::bridge::RuleSet;

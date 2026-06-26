@@ -1,6 +1,8 @@
 use std::fs;
 
-use crate::egg::{Mim, get_rules, set_rulesets, split_sexprs};
+use crate::egg::Mim;
+use crate::egg::rulesets::{get_rules, set_rulesets};
+use crate::egg::util::split_sexprs;
 use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::{eqsat_egg, pretty_ffi};
 use egg::*;

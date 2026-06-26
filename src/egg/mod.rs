@@ -1,16 +1,11 @@
-use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 // AUTOGEN START: egg-cost-rust-import
 // AUTOGEN END: egg-cost-rust-import
-use crate::egg::rewrite::{filter_selected, rewrite_sexprs};
-use crate::egg::rules::convert_rules;
-use crate::egg::rulesets::get_rules;
-use crate::egg::util::split_sexprs;
 use egg::*;
-use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
 pub mod equiv;
+pub mod print;
 pub mod rewrite;
 pub mod rules;
 pub mod rulesets;
@@ -19,10 +14,6 @@ pub mod util;
 
 #[cfg(test)]
 mod test;
-
-thread_local! {
-    pub static RULESETS: RefCell<Vec<RuleSet>> = const { RefCell::new(vec![]) };
-}
 
 define_language! {
     pub enum Mim {
@@ -104,56 +95,4 @@ define_language! {
 
         Num(u64), Symbol(String),
     }
-}
-
-pub fn equality_saturate(
-    sexpr: &str,
-    selected: OptionSelected,
-    rulesets: Vec<RuleSet>,
-    cost_fn: CostFn,
-) -> Vec<RecExprFFI> {
-    set_rulesets(rulesets);
-
-    let mut sexprs = split_sexprs(sexpr);
-    let mut rules = get_rules();
-
-    convert_rules(&mut sexprs, &mut rules);
-
-    // This gives us a bool-mask over our sexprs, marking sexprs that should be
-    // rewritten with 'true' and those that shouldn't with 'false'.
-    let selected = filter_selected(&sexprs, selected);
-
-    match cost_fn {
-        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
-        CostFn::AstDepth => rewrite_sexprs(&sexprs, &selected, rules, || AstDepth),
-        // AUTOGEN START: egg-cost-rust-match
-        // AUTOGEN END: egg-cost-rust-match
-        _ => panic!("Unknown cost function provided."),
-    }
-}
-
-pub fn set_rulesets(rulesets: Vec<RuleSet>) {
-    RULESETS.with(|rulesets_global| {
-        let mut rulesets_global = rulesets_global.borrow_mut();
-        *rulesets_global = rulesets;
-    });
-}
-
-pub fn pretty(sexpr: &str, line_len: usize) -> String {
-    let normalized = sexpr.replace("\r\n", "\n");
-    let mut sexprs: Vec<&str> = normalized.split("\n\n").collect();
-    sexprs.retain(|s| !s.trim().is_empty());
-    let mut res = String::new();
-
-    for (i, sexpr) in sexprs.iter().enumerate() {
-        let parsed: RecExpr<Mim> = sexpr.parse().unwrap();
-        res.push_str(parsed.pretty(line_len).as_str());
-        if i < sexprs.len() - 1 {
-            res.push_str("\n\n");
-        } else {
-            res.push('\n');
-        }
-    }
-
-    res
 }

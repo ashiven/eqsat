@@ -12,7 +12,7 @@ pub fn eqsat_egg(
     rulesets: Vec<RuleSet>,
     cost_fn: CostFn,
 ) -> Vec<RecExprFFI> {
-    egg::equality_saturate(sexpr, selected, rulesets, cost_fn)
+    egg::rewrite::equality_saturate(sexpr, selected, rulesets, cost_fn)
 }
 
 pub fn reaches_egg(
@@ -26,7 +26,7 @@ pub fn reaches_egg(
 }
 
 pub fn pretty_egg(sexpr: &str, line_len: usize) -> String {
-    egg::pretty(sexpr, line_len)
+    egg::print::pretty(sexpr, line_len)
 }
 
 pub fn eqsat_slotted(

@@ -1,11 +1,40 @@
+use crate::egg::rules::convert_rules;
+use crate::egg::rulesets::{get_rules, set_rulesets};
 use crate::egg::types::{
     TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
 };
+use crate::egg::util::split_sexprs;
 use crate::egg::{Mim, analysis::MimAnalysis};
 use crate::ffi::FFI;
-use crate::ffi::bridge::{OptionSelected, RecExprFFI};
+use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 use egg::*;
 use regex::Regex;
+
+pub fn equality_saturate(
+    sexpr: &str,
+    selected: OptionSelected,
+    rulesets: Vec<RuleSet>,
+    cost_fn: CostFn,
+) -> Vec<RecExprFFI> {
+    set_rulesets(rulesets);
+
+    let mut sexprs = split_sexprs(sexpr);
+    let mut rules = get_rules();
+
+    convert_rules(&mut sexprs, &mut rules);
+
+    // This gives us a bool-mask over our sexprs, marking sexprs that should be
+    // rewritten with 'true' and those that shouldn't with 'false'.
+    let selected = filter_selected(&sexprs, selected);
+
+    match cost_fn {
+        CostFn::AstSize => rewrite_sexprs(&sexprs, &selected, rules, || AstSize),
+        CostFn::AstDepth => rewrite_sexprs(&sexprs, &selected, rules, || AstDepth),
+        // AUTOGEN START: egg-cost-rust-match
+        // AUTOGEN END: egg-cost-rust-match
+        _ => panic!("Unknown cost function provided."),
+    }
+}
 
 pub fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
     let selected = unsafe { selected.option.as_mut() };

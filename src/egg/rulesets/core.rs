@@ -645,7 +645,7 @@ fn fold_div(egraph: &mut EGraph<Mim, MimAnalysis>, enode: &Mim) -> Option<CoreDa
 
 #[cfg(test)]
 mod test {
-    use crate::egg::equality_saturate;
+    use crate::egg::rewrite::equality_saturate;
     use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 
     const LINE_LEN: usize = 80;
