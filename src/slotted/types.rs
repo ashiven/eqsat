@@ -6,103 +6,6 @@ use slotted_egraphs::*;
 
 pub type TypeExpr = RecExpr<Mim>;
 
-#[derive(Debug, Clone)]
-pub struct TypedRecExpr {
-    pub node: Mim,
-    pub children: Vec<TypedRecExpr>,
-    pub type_: Option<TypeExpr>,
-}
-
-pub fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
-    if let Mim::TypeWrap(..) = rec_expr.node {
-        let expr = &rec_expr.children[1];
-        let stripped = remove_type_annotations(expr);
-        return stripped;
-    }
-
-    RecExpr::<Mim> {
-        node: rec_expr.node.clone(),
-        children: rec_expr
-            .children
-            .iter()
-            .map(remove_type_annotations)
-            .collect(),
-    }
-}
-
-pub fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
-    if let Mim::TypeWrap(..) = rec_expr.node {
-        let type_expr = rec_expr.children[0].clone();
-        let expr = &rec_expr.children[1];
-        let mut stripped = extract_type_annotations(expr);
-        stripped.type_ = Some(type_expr);
-
-        // Instead of the actual type, we give var nodes a hole type
-        // to be inferred later on by the mim compiler. This is because
-        // all vars are represented with the same singleton var eclass
-        // and we can't store different vars' types on this single eclass.
-        if let Mim::Var(_slot) = expr.node {
-            stripped.type_ = Some(TypeExpr::hole());
-        }
-
-        return stripped;
-    }
-
-    let mut res = TypedRecExpr {
-        node: rec_expr.node.clone(),
-        children: rec_expr
-            .children
-            .iter()
-            .map(extract_type_annotations)
-            .collect(),
-        type_: None,
-    };
-
-    // Since it was too difficult to correctly type-annotate let
-    // nodes in the sexpr backend, we just infer the type of the let
-    // node via the type annotation of the expression it binds into
-    if let Mim::Let(..) = rec_expr.node {
-        let let_scope = &res.children[0];
-        let let_expr = &let_scope.children[1];
-        res.type_ = let_expr.type_.clone();
-    }
-
-    res
-}
-
-pub fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> AppliedId {
-    let mut node = rec_expr.node;
-    let mut child_ids = node.applied_id_occurrences_mut();
-
-    for (i, child) in rec_expr.children.into_iter().enumerate() {
-        *(child_ids[i]) = add_expr_typed(eg, child);
-    }
-
-    let eclass_applied_id = eg.add(node);
-
-    let eclass_id = eclass_applied_id.id;
-    let analysis_data = eg.analysis_data_mut(eclass_id);
-    analysis_data.type_ = rec_expr.type_.clone();
-
-    if let Some(type_) = rec_expr.type_ {
-        eg.add_expr(type_);
-    }
-
-    eclass_applied_id
-}
-
-pub type TypeData = TypeExpr;
-
-pub struct TypeAnalysis;
-impl TypeAnalysis {
-    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-        make_type(eg, enode)
-    }
-    pub fn merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
-        merge_type(l, r)
-    }
-}
-
 trait TypeConstructors {
     fn hole() -> Self;
     fn nil() -> Self;
@@ -211,67 +114,119 @@ impl TypeConstructors for TypeExpr {
     }
 }
 
-pub fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    match enode {
-        // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
-        Mim::Let(..) => make_let_type(eg, enode),
-        // typeof[(lam $x (scope <filter> <body>))]         = Pi(Hole(*), typeof(<body>))
-        Mim::Lam(..) => make_lam_type(eg, enode),
-        // typeof[(con $x (scope <filter> <body>))]         = Pi(Hole(*), Bot(*))
-        Mim::Con(..) => make_con_type(eg, enode),
-        // typeof[(fun $x (scope <filter> <body>))]         = Pi(Sigma(Hole(*), Pi(typeof<body>, Bot(*))), Bot(*))
-        Mim::Fun(..) => make_fun_type(eg, enode),
-        // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
-        Mim::App(..) => make_app_type(eg, enode),
-        // typeof[(var $x)]                                 = Hole(*)
-        Mim::Var(..) => make_var_type(eg, enode),
-        // typeof[(lit <val> <type>)]                       = <type>
-        Mim::Lit(..) => make_lit_type(eg, enode),
-        // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
-        Mim::Pack(..) => make_pack_type(eg, enode),
-        // typeof[(tuple <elem-cons>)]                      = Sigma(<elem-type-cons>)
-        Mim::Tuple(..) => make_tuple_type(eg, enode),
-        // typeof[(extract <tuple> <index>)]                = typeof(<extracted-elem>)
-        Mim::Extract(..) => make_extract_type(eg, enode),
-        // typeof[(insert <tuple> <index> <value>)]         = typeof(<inserted-tuple>)
-        Mim::Insert(..) => make_insert_type(eg, enode),
+#[derive(Debug, Clone)]
+pub struct TypedRecExpr {
+    pub node: Mim,
+    pub children: Vec<TypedRecExpr>,
+    pub type_: Option<TypeExpr>,
+}
 
-        // TODO:
-        // Mim::Inj(..) = make_inj_type(eg, enode),
-        // Mim::Merge(..) = make_merge_type(eg, enode),
+pub fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
+    if let Mim::TypeWrap(..) = rec_expr.node {
+        let expr = &rec_expr.children[1];
+        let stripped = remove_type_annotations(expr);
+        return stripped;
+    }
 
-        // Num terminals and structural nodes should not get a type at all
-        Mim::Num(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::MetaVar(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::Scope(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::Root(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::Cons(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::Nil(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::TypeWrap(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
+    RecExpr::<Mim> {
+        node: rec_expr.node.clone(),
+        children: rec_expr
+            .children
+            .iter()
+            .map(remove_type_annotations)
+            .collect(),
+    }
+}
 
+pub fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
+    if let Mim::TypeWrap(..) = rec_expr.node {
+        let type_expr = rec_expr.children[0].clone();
+        let expr = &rec_expr.children[1];
+        let mut stripped = extract_type_annotations(expr);
+        stripped.type_ = Some(type_expr);
+
+        // Instead of the actual type, we give var nodes a hole type
+        // to be inferred later on by the mim compiler. This is because
+        // all vars are represented with the same singleton var eclass
+        // and we can't store different vars' types on this single eclass.
+        if let Mim::Var(_slot) = expr.node {
+            stripped.type_ = Some(TypeExpr::hole());
+        }
+
+        return stripped;
+    }
+
+    let mut res = TypedRecExpr {
+        node: rec_expr.node.clone(),
+        children: rec_expr
+            .children
+            .iter()
+            .map(extract_type_annotations)
+            .collect(),
+        type_: None,
+    };
+
+    // Since it was too difficult to correctly type-annotate let
+    // nodes in the sexpr backend, we just infer the type of the let
+    // node via the type annotation of the expression it binds into
+    if let Mim::Let(..) = rec_expr.node {
+        let let_scope = &res.children[0];
+        let let_expr = &let_scope.children[1];
+        res.type_ = let_expr.type_.clone();
+    }
+
+    res
+}
+
+pub fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> AppliedId {
+    let mut node = rec_expr.node;
+    let mut child_ids = node.applied_id_occurrences_mut();
+
+    for (i, child) in rec_expr.children.into_iter().enumerate() {
+        *(child_ids[i]) = add_expr_typed(eg, child);
+    }
+
+    let eclass_applied_id = eg.add(node);
+
+    let eclass_id = eclass_applied_id.id;
+    let analysis_data = eg.analysis_data_mut(eclass_id);
+    analysis_data.type_ = rec_expr.type_.clone();
+
+    if let Some(type_) = rec_expr.type_ {
+        eg.add_expr(type_);
+    }
+
+    eclass_applied_id
+}
+
+pub type TypeData = TypeExpr;
+
+pub struct TypeAnalysis;
+impl TypeAnalysis {
+    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+        make_type(eg, enode)
+    }
+    pub fn merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
+        merge_type(l, r)
+    }
+}
+
+fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
+    match (l.type_, r.type_) {
+        (Some(l_type), None) => AnalysisData {
+            type_: Some(l_type),
+            ..Default::default()
+        },
+        (None, Some(r_type)) => AnalysisData {
+            type_: Some(r_type),
+            ..Default::default()
+        },
+        (Some(l_type), Some(r_type)) => AnalysisData {
+            type_: Some(unify(&l_type, &r_type)),
+            ..Default::default()
+        },
         _ => AnalysisData {
-            type_: Some(TypeExpr::hole()),
+            type_: None,
             ..Default::default()
         },
     }
@@ -420,22 +375,67 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     }
 }
 
-pub fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
-    match (l.type_, r.type_) {
-        (Some(l_type), None) => AnalysisData {
-            type_: Some(l_type),
-            ..Default::default()
-        },
-        (None, Some(r_type)) => AnalysisData {
-            type_: Some(r_type),
-            ..Default::default()
-        },
-        (Some(l_type), Some(r_type)) => AnalysisData {
-            type_: Some(unify(&l_type, &r_type)),
-            ..Default::default()
-        },
-        _ => AnalysisData {
+fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+    match enode {
+        // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
+        Mim::Let(..) => make_let_type(eg, enode),
+        // typeof[(lam $x (scope <filter> <body>))]         = Pi(Hole(*), typeof(<body>))
+        Mim::Lam(..) => make_lam_type(eg, enode),
+        // typeof[(con $x (scope <filter> <body>))]         = Pi(Hole(*), Bot(*))
+        Mim::Con(..) => make_con_type(eg, enode),
+        // typeof[(fun $x (scope <filter> <body>))]         = Pi(Sigma(Hole(*), Pi(typeof<body>, Bot(*))), Bot(*))
+        Mim::Fun(..) => make_fun_type(eg, enode),
+        // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
+        Mim::App(..) => make_app_type(eg, enode),
+        // typeof[(var $x)]                                 = Hole(*)
+        Mim::Var(..) => make_var_type(eg, enode),
+        // typeof[(lit <val> <type>)]                       = <type>
+        Mim::Lit(..) => make_lit_type(eg, enode),
+        // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
+        Mim::Pack(..) => make_pack_type(eg, enode),
+        // typeof[(tuple <elem-cons>)]                      = Sigma(<elem-type-cons>)
+        Mim::Tuple(..) => make_tuple_type(eg, enode),
+        // typeof[(extract <tuple> <index>)]                = typeof(<extracted-elem>)
+        Mim::Extract(..) => make_extract_type(eg, enode),
+        // typeof[(insert <tuple> <index> <value>)]         = typeof(<inserted-tuple>)
+        Mim::Insert(..) => make_insert_type(eg, enode),
+
+        // TODO:
+        // Mim::Inj(..) = make_inj_type(eg, enode),
+        // Mim::Merge(..) = make_merge_type(eg, enode),
+
+        // Num terminals and structural nodes should not get a type at all
+        Mim::Num(..) => AnalysisData {
             type_: None,
+            ..Default::default()
+        },
+        Mim::MetaVar(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Scope(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Root(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Cons(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Nil(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::TypeWrap(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+
+        _ => AnalysisData {
+            type_: Some(TypeExpr::hole()),
             ..Default::default()
         },
     }

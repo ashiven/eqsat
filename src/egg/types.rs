@@ -337,7 +337,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     }
 }
 
-pub fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     match enode {
         // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
         Mim::Let(..) => make_let_type(eg, enode),
