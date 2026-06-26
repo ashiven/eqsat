@@ -311,7 +311,7 @@ pub type {ruleset_name.capitalize()}Data = ();
 pub struct {ruleset_name.capitalize()}Analysis;
 
 impl {ruleset_name.capitalize()}Analysis {{
-    pub fn make(_eg: &mut EGraph<Mim, MimAnalysis>, _enode: &Mim) -> AnalysisData {{
+    pub fn make(_eg: &mut EGraph<Mim, MimAnalysis>, _enode: &Mim, _id: Id) -> AnalysisData {{
         AnalysisData::default()
     }}
     pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {{
