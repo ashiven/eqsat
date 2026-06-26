@@ -1,4 +1,4 @@
-use crate::ffi::bridge::bridge::{MimKind, NodeFFI, RecExprFFI};
+use crate::ffi::bridge::{MimKind, NodeFFI, RecExprFFI};
 use crate::ffi::{FFI, FFIInner};
 use crate::slotted::Mim;
 use crate::slotted::analysis::MimAnalysis;
@@ -6,9 +6,9 @@ use slotted_egraphs::{EGraph, RecExpr};
 use std::collections::HashMap;
 
 impl FFI for RecExpr<Mim> {
-    type EG = EGraph<Mim, MimAnalysis>;
+    type EGraph = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EGraph>) -> RecExprFFI {
         fn to_ffi_internal(
             rec_expr: &RecExpr<Mim>,
             nodes: &mut Vec<NodeFFI>,
@@ -40,9 +40,9 @@ impl FFI for RecExpr<Mim> {
 }
 
 impl FFIInner for Mim {
-    type EG = EGraph<Mim, MimAnalysis>;
+    type EGraph = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi_with_childs(&self, children: &[usize], egraph: Option<&Self::EG>) -> NodeFFI {
+    fn to_ffi_with_childs(&self, children: &[usize], egraph: Option<&Self::EGraph>) -> NodeFFI {
         fn new_node_ffi(
             kind: MimKind,
             children: &[usize],

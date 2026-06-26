@@ -1,6 +1,6 @@
-use ffi::bridge::bridge::{CostFn, NodeFFI, RecExprFFI, RuleSet};
+use ffi::bridge::{CostFn, NodeFFI, RecExprFFI, RuleSet};
 
-use crate::ffi::bridge::bridge::OptionSelected;
+use crate::ffi::bridge::OptionSelected;
 
 mod egg;
 pub mod ffi;
@@ -22,7 +22,7 @@ pub fn reaches_egg(
     end_name: &str,
     max_steps: usize,
 ) -> bool {
-    egg::reaches(sexpr, rulesets, start_name, end_name, max_steps)
+    egg::equiv::reaches(sexpr, rulesets, start_name, end_name, max_steps)
 }
 
 pub fn pretty_egg(sexpr: &str, line_len: usize) -> String {

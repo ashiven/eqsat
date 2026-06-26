@@ -1,20 +1,18 @@
-use crate::expect;
-use crate::ffi::FFI;
-use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
+use crate::ffi::bridge::{CostFn, OptionSelected, RecExprFFI, RuleSet};
 // AUTOGEN START: egg-cost-rust-import
 // AUTOGEN END: egg-cost-rust-import
-use crate::egg::analysis::MimAnalysis;
+use crate::egg::rewrite::{filter_selected, rewrite_sexprs};
+use crate::egg::rules::convert_rules;
 use crate::egg::rulesets::get_rules;
-use crate::egg::types::{
-    TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
-};
-use crate::egg::util::assert_reaches;
+use crate::egg::util::split_sexprs;
 use egg::*;
-use regex::Regex;
 use std::cell::RefCell;
 
 pub mod analysis;
 pub mod cost;
+pub mod equiv;
+pub mod rewrite;
+pub mod rules;
 pub mod rulesets;
 pub mod types;
 pub mod util;
@@ -108,7 +106,7 @@ define_language! {
     }
 }
 
-pub(crate) fn equality_saturate(
+pub fn equality_saturate(
     sexpr: &str,
     selected: OptionSelected,
     rulesets: Vec<RuleSet>,
@@ -134,7 +132,14 @@ pub(crate) fn equality_saturate(
     }
 }
 
-pub(crate) fn pretty(sexpr: &str, line_len: usize) -> String {
+pub fn set_rulesets(rulesets: Vec<RuleSet>) {
+    RULESETS.with(|rulesets_global| {
+        let mut rulesets_global = rulesets_global.borrow_mut();
+        *rulesets_global = rulesets;
+    });
+}
+
+pub fn pretty(sexpr: &str, line_len: usize) -> String {
     let normalized = sexpr.replace("\r\n", "\n");
     let mut sexprs: Vec<&str> = normalized.split("\n\n").collect();
     sexprs.retain(|s| !s.trim().is_empty());
@@ -151,244 +156,4 @@ pub(crate) fn pretty(sexpr: &str, line_len: usize) -> String {
     }
 
     res
-}
-
-pub(crate) fn reaches(
-    sexpr: &str,
-    rulesets: Vec<RuleSet>,
-    start_name: &str,
-    end_name: &str,
-    max_steps: usize,
-) -> bool {
-    set_rulesets(rulesets);
-
-    let mut sexprs = split_sexprs(sexpr);
-    let mut rules = get_rules();
-
-    convert_rules(&mut sexprs, &mut rules);
-
-    let start_term = sexprs
-        .iter()
-        .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {}\n", start_name).as_str())
-                || sexpr.starts_with(format!("(root intern {}\n", start_name).as_str())
-        })
-        .expect("Reaches failed to find start term");
-
-    let end_term = sexprs
-        .iter()
-        .find(|sexpr| {
-            sexpr.starts_with(format!("(root extern {}\n", end_name).as_str())
-                || sexpr.starts_with(format!("(root intern {}\n", end_name).as_str())
-        })
-        .expect("Reaches failed to find end term");
-
-    // We want to assert only for the terms inside of the root nodes
-    let start_term = start_term
-        .strip_prefix(&format!("(root extern {}\n", start_name))
-        .or(start_term.strip_prefix(&format!("(root intern {}\n", start_name)))
-        .expect("Reaches failed to strip prefix")
-        .strip_suffix(")")
-        .expect("Reaches failed to strip suffix");
-
-    let end_term = end_term
-        .strip_prefix(&format!("(root extern {}\n", end_name))
-        .or(end_term.strip_prefix(&format!("(root intern {}\n", end_name)))
-        .expect("Reaches failed to strip prefix")
-        .strip_suffix(")")
-        .expect("Reaches failed to strip suffix");
-
-    // We also don't care about type annotations, so we just remove them.
-    let start_term_expr = start_term.parse().unwrap();
-    let start_term_expr_unannotated = remove_type_annotations(&start_term_expr);
-    let start_term = format!("{}", start_term_expr_unannotated);
-
-    let end_term_expr = end_term.parse().unwrap();
-    let end_term_expr_unannotated = remove_type_annotations(&end_term_expr);
-    let end_term = format!("{}", end_term_expr_unannotated);
-
-    assert_reaches(&start_term, &end_term, &rules, max_steps)
-}
-
-fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
-    let selected = unsafe { selected.option.as_mut() };
-    let mut selected_mask: Vec<bool> = vec![true; sexprs.len()];
-
-    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
-
-    if let Some(names) = selected {
-        for (i, sexpr) in sexprs.iter().enumerate() {
-            let mut is_selected = false;
-
-            if axm_regex.is_match(sexpr) {
-                is_selected = true;
-            }
-
-            for name in names.iter() {
-                if sexpr.starts_with(&format!("(root extern {}", name))
-                    || sexpr.starts_with(&format!("(root intern {}", name))
-                {
-                    is_selected = true;
-                    break;
-                }
-            }
-
-            selected_mask[i] = is_selected;
-        }
-    }
-
-    selected_mask
-}
-
-fn set_rulesets(rulesets: Vec<RuleSet>) {
-    RULESETS.with(|rulesets_global| {
-        let mut rulesets_global = rulesets_global.borrow_mut();
-        *rulesets_global = rulesets;
-    });
-}
-
-fn split_sexprs(sexpr: &str) -> Vec<String> {
-    let normalized = sexpr.replace("\r\n", "\n");
-
-    normalized
-        .split("\n\n")
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect()
-}
-
-fn rewrite_sexprs<C, F>(
-    sexprs: &[String],
-    selected: &[bool],
-    rules: Vec<Rewrite<Mim, MimAnalysis>>,
-    cost_fn: F,
-) -> Vec<RecExprFFI>
-where
-    C: CostFunction<Mim>,
-    F: Fn() -> C,
-{
-    let mut rewritten_sexprs: Vec<RecExprFFI> = Vec::new();
-
-    let mut roots: Vec<Id> = vec![];
-    let mut eg = EGraph::<Mim, MimAnalysis>::default();
-    for (i, is_selected) in selected.iter().enumerate() {
-        if *is_selected {
-            let sexpr = &sexprs[i];
-            let annotated_rec_expr: RecExpr<Mim> = sexpr.parse().unwrap();
-
-            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
-            let root_id = add_expr_typed(&mut eg, typed_rec_expr);
-            roots.push(root_id);
-        }
-    }
-
-    let mut runner = Runner::<Mim, MimAnalysis>::default();
-    runner = runner.with_egraph(eg);
-    runner.roots = roots;
-    let runner = runner.run(&rules);
-
-    let extractor = Extractor::new(&runner.egraph, cost_fn());
-    let mut root_idx = 0;
-    for (i, is_selected) in selected.iter().enumerate() {
-        if *is_selected {
-            let (_best_cost, best_expr) = extractor.find_best(runner.roots[root_idx]);
-            let best_expr_ffi = best_expr.to_ffi(Some(&runner.egraph));
-            rewritten_sexprs.push(best_expr_ffi);
-            root_idx += 1;
-        } else {
-            let sexpr = &sexprs[i];
-            let annotated_rec_expr: RecExpr<Mim> = sexpr.parse().unwrap();
-
-            // TODO: The below is also not very robust - maybe find some better way to do this
-
-            // We first extract the types from the annotated rec expr to then be able
-            // to extract the pi-type of the root-level lambda and manually set this
-            // as the type of the unannotated_rec_expr_ffi. The reason we do this instead
-            // of just adding the typed expr to the egraph and then hoping that rec_expr.to_ffi(eg)
-            // will lookup and set the type of the rec expr for us, is that the lookup somehow fails.
-            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
-            let lam_type = {
-                let lam = typed_rec_expr
-                    .children
-                    .get(2)
-                    .expect("Expected root-level lambda");
-                lam.type_.clone()
-            };
-
-            let unannotated_rec_expr = remove_type_annotations(&annotated_rec_expr);
-            let mut unannotated_rec_expr_ffi = unannotated_rec_expr.to_ffi(Some(&runner.egraph));
-
-            let lam_idx = unannotated_rec_expr_ffi.nodes.len() - 2;
-            unannotated_rec_expr_ffi.nodes[lam_idx].type_ =
-                lam_type.unwrap().to_ffi(Some(&runner.egraph));
-
-            rewritten_sexprs.push(unannotated_rec_expr_ffi);
-        }
-    }
-
-    rewritten_sexprs
-}
-
-fn convert_rules(sexprs: &mut Vec<String>, rules: &mut Vec<Rewrite<Mim, MimAnalysis>>) {
-    // Converts rewrite rules in sexpr form into rewrite rules usable in egg and then
-    // filters them out so we only have proper sexprs remaining to equality saturate in the next loop
-    sexprs.retain(|sexpr| {
-        if sexpr.trim().starts_with("(rule") {
-            let rule: RecExpr<Mim> = sexpr.parse().unwrap();
-
-            let [name, meta_var, lhs, rhs, _guard] = expect!(rule[rule.root()], Mim::Rule([name, meta_var, lhs, rhs, guard]) => [name,meta_var,lhs, rhs, guard] );
-
-
-            let rule_name = if let Mim::Symbol(s) = &rule[name] {
-                s
-            } else {
-                panic!("Failed to parse rule name.")
-            };
-
-            let mut meta_vars: Vec<String> = Vec::new();
-            let nth_node = |id: Id| rule[id].clone();
-
-            let meta_var_rexpr = rule[meta_var].build_recexpr(nth_node);
-            for node in meta_var_rexpr.iter() {
-                if let Mim::MetaVar(ids) = node
-                    && let [var_name, ..] = &**ids
-                {
-                    if let Mim::Symbol(s) =
-                        &meta_var_rexpr[*var_name]
-                    {
-                        meta_vars.push(s.clone());
-                    } else {
-                        panic!("Failed to parse meta variable name.")
-                    };
-                }
-            }
-
-            let mut lhs_rexpr = rule[lhs].build_recexpr(nth_node);
-            for (_id, node) in lhs_rexpr.items_mut() {
-                if let Mim::Symbol(s) = node
-                    && meta_vars.contains(s)
-                {
-                    s.insert(0, '?')
-                }
-            }
-
-            let mut rhs_rexpr = rule[rhs].build_recexpr(nth_node);
-            for (_id, node) in rhs_rexpr.items_mut() {
-                if let Mim::Symbol(s) = node
-                    && meta_vars.contains(s)
-                {
-                    s.insert(0, '?')
-                }
-            }
-
-            let pat: Pattern<Mim> = lhs_rexpr.pretty(80).parse().unwrap();
-            let outpat: Pattern<Mim> = rhs_rexpr.pretty(80).parse().unwrap();
-            let rule: Rewrite<Mim, MimAnalysis> = Rewrite::new(rule_name, pat, outpat).unwrap();
-            rules.push(rule);
-            false
-        } else {
-            true
-        }
-    });
 }

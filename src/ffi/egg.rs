@@ -1,13 +1,13 @@
 use crate::egg::Mim;
 use crate::egg::analysis::MimAnalysis;
-use crate::ffi::bridge::bridge::{MimKind, NodeFFI, RecExprFFI};
+use crate::ffi::bridge::{MimKind, NodeFFI, RecExprFFI};
 use crate::ffi::{FFI, FFIInner};
 use egg::{EGraph, Id, RecExpr};
 
 impl FFI for RecExpr<Mim> {
-    type EG = EGraph<Mim, MimAnalysis>;
+    type EGraph = EGraph<Mim, MimAnalysis>;
 
-    fn to_ffi(&self, egraph: Option<&Self::EG>) -> RecExprFFI {
+    fn to_ffi(&self, egraph: Option<&Self::EGraph>) -> RecExprFFI {
         let nodes = if let Some(egraph) = egraph
             && let Some(ids) = egraph.lookup_expr_ids(self)
         {
@@ -31,7 +31,7 @@ impl FFI for RecExpr<Mim> {
 }
 
 impl FFIInner for Mim {
-    type EG = EGraph<Mim, MimAnalysis>;
+    type EGraph = EGraph<Mim, MimAnalysis>;
 
     fn to_ffi(&self, type_: Option<RecExprFFI>) -> NodeFFI {
         fn new_node_ffi(

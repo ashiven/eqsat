@@ -1,8 +1,7 @@
-use regex::Regex;
 use std::fs;
 
-use crate::egg::{Mim, convert_rules, get_rules, set_rulesets, split_sexprs};
-use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RuleSet};
+use crate::egg::{Mim, get_rules, set_rulesets, split_sexprs};
+use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::{eqsat_egg, pretty_ffi};
 use egg::*;
 
@@ -89,44 +88,4 @@ fn parse_pow_egg() {
 #[ignore = "rec check in sexpr emitter currently bugged"]
 fn eqsat_pow_egg() {
     eqsat_equals("examples/pow.egg", "examples/pow_rw.egg");
-}
-
-#[test]
-fn convert_custom_rule() {
-    let rule = "
-    (rule foo
-        (metavar foo
-            (metavar a_22735)
-            (metavar b_22734))
-        (app
-            %core.nat.add
-            (tuple
-                (app
-                    %core.nat.sub
-                    (tuple
-                        b_22734
-                        a_22735))
-                a_22735))
-        b_22734
-        (lit tt Bool))";
-
-    let mut sexprs = vec![rule.to_string()];
-    let mut rules = Vec::new();
-    convert_rules(&mut sexprs, &mut rules);
-
-    assert_eq!(rules.len(), 1);
-    assert_eq!(
-        format!("{:#?}", rules[0]),
-        "Rewrite {\n    name: \"foo\",\n    searcher: (app \"%core.nat.add\" (tuple (app \"%core.nat.sub\" (tuple ?b_22734 ?a_22735)) ?a_22735)),\n    applier: ?b_22734,\n}"
-    );
-}
-
-#[test]
-fn select_axiom() {
-    let axm = "(@ (pi* _38960 (sigma dummy Nat Nat (type (lit 0 Univ))) (pi dummy (arr dummy (extract _38960 (lit 0 (idx (lit 3 Nat)))) (arr dummy (extract _38960 
-    (lit 1 (idx (lit 3 Nat)))) (extract _38960 (lit 2 (idx (lit 3 Nat)))))) (arr dummy (extract _38960 (lit 1 (idx (lit 3 Nat)))) (arr dummy (extract _38960 (lit 0 (idx (lit 3 Nat)))) 
-    (extract _38960 (lit 2 (idx (lit 3 Nat)))))))) (axm %rise.transpose))";
-
-    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
-    assert!(axm_regex.is_match(axm));
 }

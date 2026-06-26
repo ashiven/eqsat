@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use eqsat_rs::{
     eqsat_egg, eqsat_slotted,
-    ffi::bridge::bridge::{CostFn, OptionSelected, RuleSet},
+    ffi::bridge::{CostFn, OptionSelected, RuleSet},
     pretty_ffi,
 };
 use std::fs;

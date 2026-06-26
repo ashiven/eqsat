@@ -5,116 +5,6 @@ use egg::*;
 
 pub type TypeExpr = RecExpr<Mim>;
 
-#[derive(Debug, Clone)]
-pub struct TypedRecExpr {
-    pub node: Mim,
-    pub children: Vec<TypedRecExpr>,
-    pub type_: Option<TypeExpr>,
-}
-
-pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
-    let mut out = RecExpr::<Mim>::default();
-    let mut remap = vec![Id::from(0); rec_expr.len()];
-
-    for (i, node) in rec_expr.iter().enumerate() {
-        match node {
-            Mim::TypeWrap([_, inner]) => {
-                remap[i] = remap[usize::from(*inner)];
-            }
-            _ => {
-                let mut new_node = node.clone();
-
-                new_node.update_children(|id| remap[usize::from(id)]);
-
-                let new_id = out.add(new_node);
-                remap[i] = new_id;
-            }
-        }
-    }
-
-    out
-}
-
-pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
-    let root = rec_expr.root();
-    extract_types(rec_expr, root)
-}
-
-fn extract_types(rec_expr: &RecExpr<Mim>, id: Id) -> TypedRecExpr {
-    let node = &rec_expr[id];
-
-    match node {
-        Mim::TypeWrap([type_id, expr]) => {
-            let mut type_ = RecExpr::<Mim>::default();
-            build_type_expr(rec_expr, type_id, &mut type_);
-
-            let mut stripped = extract_types(rec_expr, *expr);
-            stripped.type_ = Some(type_);
-
-            stripped
-        }
-
-        _ => {
-            let children = node
-                .children()
-                .iter()
-                .map(|id| extract_types(rec_expr, *id))
-                .collect();
-
-            let mut res = TypedRecExpr {
-                node: node.clone(),
-                children,
-                type_: None,
-            };
-
-            if matches!(node, Mim::Let(..)) {
-                let expr = &res.children[2];
-                res.type_ = expr.type_.clone();
-            }
-
-            res
-        }
-    }
-}
-
-fn build_type_expr(rec_expr: &RecExpr<Mim>, id: &Id, type_expr: &mut RecExpr<Mim>) -> Id {
-    let mut node = rec_expr[*id].clone();
-    node.update_children(|c| build_type_expr(rec_expr, &c, type_expr));
-    type_expr.add(node)
-}
-
-pub(crate) fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> Id {
-    let mut node = rec_expr.node;
-    let child_ids = node.children_mut();
-
-    for (i, child) in rec_expr.children.into_iter().enumerate() {
-        child_ids[i] = add_expr_typed(eg, child);
-    }
-
-    let eclass_id = eg.add(node);
-
-    let analysis_data = &mut eg[eclass_id].data;
-    analysis_data.type_ = rec_expr.type_.clone();
-
-    if let Some(type_) = rec_expr.type_ {
-        eg.add_expr(&type_);
-    }
-
-    eclass_id
-}
-
-pub type TypeData = TypeExpr;
-
-pub struct TypeAnalysis;
-impl TypeAnalysis {
-    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
-        make_type(eg, enode)
-    }
-    pub fn merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
-        merge_type(l, r)
-    }
-}
-
 trait TypeConstructors {
     fn hole() -> Self;
     fn type_(level: u64) -> Self;
@@ -171,53 +61,136 @@ impl TypeConstructors for TypeExpr {
     }
 }
 
-pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
-    match enode {
-        // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
-        Mim::Let(..) => make_let_type(eg, enode),
-        // typeof[(lam $x (scope <filter> <body>))]         = Pi(Hole(*), typeof(<body>))
-        Mim::Lam(..) => make_lam_type(eg, enode),
-        // typeof[(con $x (scope <filter> <body>))]         = Pi(Hole(*), Bot(*))
-        Mim::Con(..) => make_con_type(eg, enode),
-        // typeof[(fun $x (scope <filter> <body>))]         = Pi(Sigma(Hole(*), Pi(typeof<body>, Bot(*))), Bot(*))
-        Mim::Fun(..) => make_fun_type(eg, enode),
-        // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
-        Mim::App(..) => make_app_type(eg, enode),
-        // typeof[(var $x)]                                 = Hole(*)
-        Mim::Var(..) => make_var_type(eg, enode),
-        // typeof[(lit <val> <type>)]                       = <type>
-        Mim::Lit(..) => make_lit_type(eg, enode),
-        // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
-        Mim::Pack(..) => make_pack_type(eg, enode),
-        // typeof[(tuple <elem-cons>)]                      = Sigma(<elem-type-cons>)
-        Mim::Tuple(..) => make_tuple_type(eg, enode),
-        // typeof[(extract <tuple> <index>)]                = typeof(<extracted-elem>)
-        Mim::Extract(..) => make_extract_type(eg, enode),
-        // typeof[(insert <tuple> <index> <value>)]         = typeof(<inserted-tuple>)
-        Mim::Insert(..) => make_insert_type(eg, enode),
+#[derive(Debug, Clone)]
+pub struct TypedRecExpr {
+    pub node: Mim,
+    pub children: Vec<TypedRecExpr>,
+    pub type_: Option<TypeExpr>,
+}
 
-        // TODO:
-        // Mim::Inj(..) = make_inj_type(eg, enode),
-        // Mim::Merge(..) = make_merge_type(eg, enode),
+pub fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
+    let mut out = RecExpr::<Mim>::default();
+    let mut remap = vec![Id::from(0); rec_expr.len()];
 
-        // Num terminals and structural nodes should not get a type at all
-        Mim::Num(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::Root(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
-        Mim::TypeWrap(..) => AnalysisData {
-            type_: None,
-            ..Default::default()
-        },
+    for (i, node) in rec_expr.iter().enumerate() {
+        match node {
+            Mim::TypeWrap([_, inner]) => {
+                remap[i] = remap[usize::from(*inner)];
+            }
+            _ => {
+                let mut new_node = node.clone();
 
-        _ => AnalysisData {
-            type_: Some(TypeExpr::hole()),
-            ..Default::default()
-        },
+                new_node.update_children(|id| remap[usize::from(id)]);
+
+                let new_id = out.add(new_node);
+                remap[i] = new_id;
+            }
+        }
+    }
+
+    out
+}
+
+pub fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
+    let root = rec_expr.root();
+    extract_types(rec_expr, root)
+}
+
+fn extract_types(rec_expr: &RecExpr<Mim>, id: Id) -> TypedRecExpr {
+    let node = &rec_expr[id];
+
+    match node {
+        Mim::TypeWrap([type_id, expr]) => {
+            let mut type_ = RecExpr::<Mim>::default();
+            build_type_expr(rec_expr, type_id, &mut type_);
+
+            let mut stripped = extract_types(rec_expr, *expr);
+            stripped.type_ = Some(type_);
+
+            stripped
+        }
+
+        _ => {
+            let children = node
+                .children()
+                .iter()
+                .map(|id| extract_types(rec_expr, *id))
+                .collect();
+
+            let mut res = TypedRecExpr {
+                node: node.clone(),
+                children,
+                type_: None,
+            };
+
+            if matches!(node, Mim::Let(..)) {
+                let expr = &res.children[2];
+                res.type_ = expr.type_.clone();
+            }
+
+            res
+        }
+    }
+}
+
+fn build_type_expr(rec_expr: &RecExpr<Mim>, id: &Id, type_expr: &mut RecExpr<Mim>) -> Id {
+    let mut node = rec_expr[*id].clone();
+    node.update_children(|c| build_type_expr(rec_expr, &c, type_expr));
+    type_expr.add(node)
+}
+
+pub fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> Id {
+    let mut node = rec_expr.node;
+    let child_ids = node.children_mut();
+
+    for (i, child) in rec_expr.children.into_iter().enumerate() {
+        child_ids[i] = add_expr_typed(eg, child);
+    }
+
+    let eclass_id = eg.add(node);
+
+    let analysis_data = &mut eg[eclass_id].data;
+    analysis_data.type_ = rec_expr.type_.clone();
+
+    if let Some(type_) = rec_expr.type_ {
+        eg.add_expr(&type_);
+    }
+
+    eclass_id
+}
+
+pub type TypeData = TypeExpr;
+
+pub struct TypeAnalysis;
+impl TypeAnalysis {
+    pub fn make(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim, _id: Id) -> AnalysisData {
+        make_type(eg, enode)
+    }
+    pub fn merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
+        merge_type(l, r)
+    }
+}
+
+fn merge_type(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
+    match (&l.type_, r.type_) {
+        (Some(_), None) => DidMerge(false, true),
+        (None, Some(r_type)) => {
+            l.type_ = Some(r_type);
+            DidMerge(true, false)
+        }
+        (Some(l_type), Some(r_type)) => {
+            let unified = unify(l_type, &r_type);
+
+            let l_changed = *l_type != unified;
+            let r_changed = r_type != unified;
+
+            if l_changed {
+                l.type_ = Some(unified);
+            }
+
+            DidMerge(l_changed, r_changed)
+        }
+        _ => DidMerge(false, false),
     }
 }
 
@@ -364,26 +337,53 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     }
 }
 
-pub(crate) fn merge_type(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
-    match (&l.type_, r.type_) {
-        (Some(_), None) => DidMerge(false, true),
-        (None, Some(r_type)) => {
-            l.type_ = Some(r_type);
-            DidMerge(true, false)
-        }
-        (Some(l_type), Some(r_type)) => {
-            let unified = unify(l_type, &r_type);
+pub fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+    match enode {
+        // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
+        Mim::Let(..) => make_let_type(eg, enode),
+        // typeof[(lam $x (scope <filter> <body>))]         = Pi(Hole(*), typeof(<body>))
+        Mim::Lam(..) => make_lam_type(eg, enode),
+        // typeof[(con $x (scope <filter> <body>))]         = Pi(Hole(*), Bot(*))
+        Mim::Con(..) => make_con_type(eg, enode),
+        // typeof[(fun $x (scope <filter> <body>))]         = Pi(Sigma(Hole(*), Pi(typeof<body>, Bot(*))), Bot(*))
+        Mim::Fun(..) => make_fun_type(eg, enode),
+        // typeof[(app <callee> <arg>)]                     = typeof(<callee-codomain>)
+        Mim::App(..) => make_app_type(eg, enode),
+        // typeof[(var $x)]                                 = Hole(*)
+        Mim::Var(..) => make_var_type(eg, enode),
+        // typeof[(lit <val> <type>)]                       = <type>
+        Mim::Lit(..) => make_lit_type(eg, enode),
+        // typeof[(pack <arity> <body>)]                    = Arr(<arity>, typeof(<body>))
+        Mim::Pack(..) => make_pack_type(eg, enode),
+        // typeof[(tuple <elem-cons>)]                      = Sigma(<elem-type-cons>)
+        Mim::Tuple(..) => make_tuple_type(eg, enode),
+        // typeof[(extract <tuple> <index>)]                = typeof(<extracted-elem>)
+        Mim::Extract(..) => make_extract_type(eg, enode),
+        // typeof[(insert <tuple> <index> <value>)]         = typeof(<inserted-tuple>)
+        Mim::Insert(..) => make_insert_type(eg, enode),
 
-            let l_changed = *l_type != unified;
-            let r_changed = r_type != unified;
+        // TODO:
+        // Mim::Inj(..) = make_inj_type(eg, enode),
+        // Mim::Merge(..) = make_merge_type(eg, enode),
 
-            if l_changed {
-                l.type_ = Some(unified);
-            }
+        // Num terminals and structural nodes should not get a type at all
+        Mim::Num(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::Root(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
+        Mim::TypeWrap(..) => AnalysisData {
+            type_: None,
+            ..Default::default()
+        },
 
-            DidMerge(l_changed, r_changed)
-        }
-        _ => DidMerge(false, false),
+        _ => AnalysisData {
+            type_: Some(TypeExpr::hole()),
+            ..Default::default()
+        },
     }
 }
 

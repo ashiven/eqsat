@@ -1,7 +1,7 @@
 use regex::Regex;
 use std::fs;
 
-use crate::ffi::bridge::bridge::{CostFn, OptionSelected, RuleSet};
+use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
 use crate::slotted::{
     Mim, convert_rules, get_rules, inject_meta_vars, replace_dummy_slots, set_rulesets,
     split_sexprs,
