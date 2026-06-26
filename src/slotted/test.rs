@@ -2,10 +2,7 @@ use regex::Regex;
 use std::fs;
 
 use crate::ffi::bridge::{CostFn, OptionSelected, RuleSet};
-use crate::slotted::{
-    Mim, convert_rules, get_rules, inject_meta_vars, replace_dummy_slots, set_rulesets,
-    split_sexprs,
-};
+use crate::slotted::{Mim, get_rules, set_rulesets, split_sexprs};
 use crate::{eqsat_slotted, pretty_ffi};
 use slotted_egraphs::*;
 
@@ -94,95 +91,4 @@ fn parse_pow_slotted() {
 #[ignore = "rec check in sexpr emitter currently bugged"]
 fn eqsat_pow_slotted() {
     eqsat_equals("examples/pow.slotted", "examples/pow_rw.slotted");
-}
-
-#[test]
-fn convert_custom_rule() {
-    let rule = "
-    (rule 
-        foo
-        (cons
-            (metavar
-                a_22735
-                Nat)
-        (cons
-            (metavar
-                slot_b_22734
-                Nat)
-        nil))
-        (app
-            %core.nat.add
-            (tuple
-                (cons
-                    (app
-                        %core.nat.sub
-                        (tuple
-                            (cons
-                                slot_b_22734
-                            (cons
-                                a_22735
-                            nil))))
-                (cons
-                    a_22735
-                nil))))
-        slot_b_22734
-        (lit tt Bool))";
-
-    let mut sexprs = vec![rule.to_string()];
-    let mut rules = Vec::new();
-    convert_rules(&mut sexprs, &mut rules);
-
-    assert_eq!(rules.len(), 1);
-}
-
-#[test]
-fn select_axiom() {
-    let axm = "(@ (pi* $_38960 (scope (sigma $dummy (scope (cons Nat (cons Nat (cons (type (lit 0 Univ)) nil))) nil)) (pi $dummy (scope (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) 
-    (lit 1 (idx (lit 3 Nat)))) (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) 
-    (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))))))) (axm %rise.transpose))";
-
-    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
-    assert!(axm_regex.is_match(axm));
-}
-
-#[test]
-fn rule_replace_dummy_slots() {
-    let mut before =
-        "(app (app (app %rise.o (pack $dummy (scope (lit 3 Nat) (arr $dummy (scope ?n Nat)))))
-         (app (app (app %rise.map ?n) (pack $dummy (scope (lit 2 Nat) Nat))) ?a))
-         (app (app (app %rise.map ?n) (pack $dummy (scope (lit 2 Nat) Nat))) ?b))"
-            .to_string();
-
-    let after =
-        "(app (app (app %rise.o (pack $dummy1 (scope (lit 3 Nat) (arr $dummy2 (scope ?n Nat)))))
-         (app (app (app %rise.map ?n) (pack $dummy3 (scope (lit 2 Nat) Nat))) ?a))
-         (app (app (app %rise.map ?n) (pack $dummy4 (scope (lit 2 Nat) Nat))) ?b))"
-            .to_string();
-
-    let mut counter = 1;
-    replace_dummy_slots(&mut counter, &mut before);
-
-    assert_eq!(before, after);
-}
-
-#[test]
-fn rule_inject_meta_vars() {
-    let meta_vars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-    let mut before = "(app d (app a (app c b)))".to_string();
-    let after = "(app d (app ?a (app ?c ?b)))".to_string();
-
-    inject_meta_vars(&meta_vars, &mut before);
-
-    assert_eq!(before, after);
-}
-
-#[test]
-fn rule_inject_meta_vars_substr() {
-    let meta_vars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-    let mut before = "(app d (app abc (app c b)))".to_string();
-    let after = "(app d (app abc (app ?c ?b)))".to_string();
-
-    inject_meta_vars(&meta_vars, &mut before);
-
-    assert_eq!(before, after);
 }

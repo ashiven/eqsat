@@ -45,7 +45,7 @@ pub fn reaches_slotted(
     end_name: &str,
     max_steps: usize,
 ) -> bool {
-    slotted::reaches(sexpr, rulesets, start_name, end_name, max_steps)
+    slotted::equiv::reaches(sexpr, rulesets, start_name, end_name, max_steps)
 }
 
 pub fn pretty_slotted(sexpr: &str, line_len: usize) -> String {

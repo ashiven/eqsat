@@ -23,8 +23,8 @@ fn core_nat_add0() -> Rewrite<Mim, MimAnalysis> {
 mod test {
     use super::*;
     use crate::ffi::bridge::RuleSet;
+    use crate::slotted::equiv::assert_reaches;
     use crate::slotted::set_rulesets;
-    use crate::slotted::util::assert_reaches;
 
     #[test]
     fn let_var_same() {

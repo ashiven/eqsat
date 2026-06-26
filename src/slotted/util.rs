@@ -1,7 +1,18 @@
 use crate::slotted::Mim;
 use slotted_egraphs::*;
 
-pub(crate) fn get_literal(lit_expr: &RecExpr<Mim>) -> u64 {
+pub fn split_sexprs(sexpr: &str) -> Vec<String> {
+    let normalized = sexpr.replace("\r\n", "\n");
+
+    normalized
+        .split("\n\n")
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
+pub fn get_literal(lit_expr: &RecExpr<Mim>) -> u64 {
     let lit_val = lit_expr.children.first().expect("Expected literal value");
     if let Mim::Symbol(s) = lit_val.node {
         match s.as_str() {
@@ -20,7 +31,7 @@ pub(crate) fn get_literal(lit_expr: &RecExpr<Mim>) -> u64 {
     }
 }
 
-pub(crate) fn cons_to_vec(cons_expr: &RecExpr<Mim>) -> Vec<RecExpr<Mim>> {
+pub fn cons_to_vec(cons_expr: &RecExpr<Mim>) -> Vec<RecExpr<Mim>> {
     let mut res = vec![];
 
     let mut curr_cons = cons_expr;
@@ -37,7 +48,7 @@ pub(crate) fn cons_to_vec(cons_expr: &RecExpr<Mim>) -> Vec<RecExpr<Mim>> {
     res
 }
 
-pub(crate) fn cons_elem_at(cons_expr: &RecExpr<Mim>, index: u64) -> RecExpr<Mim> {
+pub fn cons_elem_at(cons_expr: &RecExpr<Mim>, index: u64) -> RecExpr<Mim> {
     let mut i = 0;
     let mut curr_cons = cons_expr;
     while let RecExpr {
@@ -55,11 +66,7 @@ pub(crate) fn cons_elem_at(cons_expr: &RecExpr<Mim>, index: u64) -> RecExpr<Mim>
     panic!("Cons index out of bounds");
 }
 
-pub(crate) fn cons_insert_at(
-    cons_expr: &RecExpr<Mim>,
-    value: &RecExpr<Mim>,
-    index: u64,
-) -> RecExpr<Mim> {
+pub fn cons_insert_at(cons_expr: &RecExpr<Mim>, value: &RecExpr<Mim>, index: u64) -> RecExpr<Mim> {
     let mut i = 0;
     let mut curr_cons = cons_expr.clone();
     let mut cursor = &mut curr_cons;
@@ -101,64 +108,4 @@ macro_rules! isa {
 
         enodes.iter().any(|n| matches!(n, $node))
     }};
-}
-
-// Source: https://github.com/memoryleak47/slotted-egraphs/blob/main/tests/entry.rs
-// Had to copy-paste the code below since it didn't seem to be exposed as part of the library.
-
-#[derive(Clone, Debug)]
-enum ReachError {
-    Reached,
-    Failed,
-}
-
-#[allow(clippy::type_complexity)]
-fn reach_hook<'a, L, N, IterData>(
-    start: &'a RecExpr<L>,
-    goal: &'a RecExpr<L>,
-    steps: usize,
-) -> Box<dyn FnMut(&mut Runner<L, N, IterData, ReachError>) -> Result<(), ReachError>>
-where
-    L: Language + 'static,
-    N: Analysis<L>,
-    IterData: IterationData<L, N>,
-{
-    let start = start.clone();
-    let goal = goal.clone();
-    Box::new(move |runner: &mut Runner<L, N, IterData, ReachError>| {
-        if let Some(i2) = lookup_rec_expr(&goal, &runner.egraph) {
-            let i1 = lookup_rec_expr(&start, &runner.egraph).unwrap();
-
-            if runner.egraph.eq(&i1, &i2) {
-                return Err(ReachError::Reached);
-            }
-        }
-        if runner.iterations.len() >= steps - 1 {
-            return Err(ReachError::Failed);
-        }
-        Ok(())
-    })
-}
-
-pub(crate) fn assert_reaches<L, N>(
-    start: &str,
-    goal: &str,
-    rewrites: &[Rewrite<L, N>],
-    steps: usize,
-) -> bool
-where
-    L: Language + 'static,
-    N: Analysis<L> + Default + 'static,
-{
-    let start: RecExpr<L> = RecExpr::parse(start).unwrap();
-    let goal: RecExpr<L> = RecExpr::parse(goal).unwrap();
-
-    let mut runner: Runner<L, N, (), ReachError> = Runner::default()
-        .with_expr(&start)
-        .with_iter_limit(60)
-        .with_iter_limit(steps)
-        .with_hook(reach_hook(&start, &goal, steps));
-    let report = runner.run(rewrites);
-
-    matches!(report.stop_reason, StopReason::Other(ReachError::Reached))
 }

@@ -1,0 +1,131 @@
+use crate::ffi::FFI;
+use crate::ffi::bridge::{OptionSelected, RecExprFFI};
+use crate::slotted::types::{
+    TypedRecExpr, add_expr_typed, extract_type_annotations, remove_type_annotations,
+};
+use crate::slotted::{Mim, PARSE_STACK_SIZE, analysis::MimAnalysis};
+use regex::Regex;
+use slotted_egraphs::*;
+use stacker::grow;
+
+pub fn filter_selected(sexprs: &[String], selected: OptionSelected) -> Vec<bool> {
+    let selected = unsafe { selected.option.as_mut() };
+    let mut selected_mask: Vec<bool> = vec![true; sexprs.len()];
+
+    let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
+
+    // If no selection has been made, we simply assume that all terms should
+    // be saturated, otherwise we filter out only the selection.
+    if let Some(names) = selected {
+        for (i, sexpr) in sexprs.iter().enumerate() {
+            let mut is_selected = false;
+
+            // Axioms are always added to the egraph, no matter the selection
+            if axm_regex.is_match(sexpr) {
+                is_selected = true;
+            }
+
+            for name in names.iter() {
+                if sexpr.starts_with(&format!("(root extern {}", name))
+                    || sexpr.starts_with(&format!("(root intern {}", name))
+                {
+                    is_selected = true;
+                    break;
+                }
+            }
+
+            selected_mask[i] = is_selected;
+        }
+    }
+
+    selected_mask
+}
+
+pub fn rewrite_sexprs<C, F>(
+    sexprs: &[String],
+    selected: &[bool],
+    rules: Vec<Rewrite<Mim, MimAnalysis>>,
+    cost_fn: F,
+) -> Vec<RecExprFFI>
+where
+    C: CostFunction<Mim>,
+    F: Fn() -> C,
+{
+    let mut rewritten_sexprs: Vec<RecExprFFI> = Vec::new();
+
+    let mut roots: Vec<AppliedId> = vec![];
+    let mut eg = EGraph::<Mim, MimAnalysis>::default();
+    for (i, is_selected) in selected.iter().enumerate() {
+        if *is_selected {
+            let sexpr = &sexprs[i];
+            let annotated_rec_expr: RecExpr<Mim> =
+                grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+
+            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
+            let root_id = add_expr_typed(&mut eg, typed_rec_expr);
+            roots.push(root_id);
+        }
+    }
+
+    let mut runner = Runner::<Mim, MimAnalysis>::default();
+    runner = runner.with_egraph(eg);
+    runner.roots = roots;
+    let _report = runner.run(&rules);
+
+    let extractor = Extractor::new(&runner.egraph, cost_fn());
+    let mut root_idx = 0;
+    for (i, is_selected) in selected.iter().enumerate() {
+        if *is_selected {
+            let best_expr = extractor.extract(&runner.roots[root_idx], &runner.egraph);
+            let best_expr_ffi = best_expr.to_ffi(Some(&runner.egraph));
+            rewritten_sexprs.push(best_expr_ffi);
+            root_idx += 1;
+        } else {
+            let sexpr = &sexprs[i];
+            let annotated_rec_expr: RecExpr<Mim> =
+                grow(PARSE_STACK_SIZE, || RecExpr::parse(sexpr).unwrap());
+
+            // TODO: The below is also not very robust - maybe find some better way to do this
+
+            // We first extract the types from the annotated rec expr to then be able
+            // to extract the pi-type of the root-level lambda and manually set this
+            // as the type of the unannotated_rec_expr_ffi. The reason we do this instead
+            // of just adding the typed expr to the egraph and then hoping that rec_expr.to_ffi(eg)
+            // will lookup and set the type of the rec expr for us, is that the lookup somehow fails.
+            let typed_rec_expr: TypedRecExpr = extract_type_annotations(&annotated_rec_expr);
+            let lam_type = {
+                let lam = typed_rec_expr
+                    .children
+                    .get(2)
+                    .expect("Expected root-level lambda");
+                lam.type_.clone()
+            };
+
+            let unannotated_rec_expr = remove_type_annotations(&annotated_rec_expr);
+            let mut unannotated_rec_expr_ffi = unannotated_rec_expr.to_ffi(Some(&runner.egraph));
+
+            let lam_idx = unannotated_rec_expr_ffi.nodes.len() - 2;
+            unannotated_rec_expr_ffi.nodes[lam_idx].type_ =
+                lam_type.unwrap().to_ffi(Some(&runner.egraph));
+
+            rewritten_sexprs.push(unannotated_rec_expr_ffi);
+        }
+    }
+
+    rewritten_sexprs
+}
+
+#[cfg(test)]
+pub mod test {
+    use super::*;
+
+    #[test]
+    fn select_axiom() {
+        let axm = "(@ (pi* $_38960 (scope (sigma $dummy (scope (cons Nat (cons Nat (cons (type (lit 0 Univ)) nil))) nil)) (pi $dummy (scope (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) 
+        (lit 1 (idx (lit 3 Nat)))) (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))) (arr $dummy (scope (extract (var $_38960) (lit 1 (idx (lit 3 Nat)))) (arr $dummy (scope (extract (var $_38960) (lit 0 (idx (lit 3 Nat)))) 
+        (extract (var $_38960) (lit 2 (idx (lit 3 Nat)))))))))))) (axm %rise.transpose))";
+
+        let axm_regex = Regex::new(r"(?s)^\(@\s+.+\s+\(axm\s+([^)]+)\)\)$").unwrap();
+        assert!(axm_regex.is_match(axm));
+    }
+}

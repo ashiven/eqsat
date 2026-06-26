@@ -13,7 +13,7 @@ pub struct TypedRecExpr {
     pub type_: Option<TypeExpr>,
 }
 
-pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
+pub fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
     if let Mim::TypeWrap(..) = rec_expr.node {
         let expr = &rec_expr.children[1];
         let stripped = remove_type_annotations(expr);
@@ -30,7 +30,7 @@ pub(crate) fn remove_type_annotations(rec_expr: &RecExpr<Mim>) -> RecExpr<Mim> {
     }
 }
 
-pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
+pub fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr {
     if let Mim::TypeWrap(..) = rec_expr.node {
         let type_expr = rec_expr.children[0].clone();
         let expr = &rec_expr.children[1];
@@ -70,10 +70,7 @@ pub(crate) fn extract_type_annotations(rec_expr: &RecExpr<Mim>) -> TypedRecExpr 
     res
 }
 
-pub(crate) fn add_expr_typed(
-    eg: &mut EGraph<Mim, MimAnalysis>,
-    rec_expr: TypedRecExpr,
-) -> AppliedId {
+pub fn add_expr_typed(eg: &mut EGraph<Mim, MimAnalysis>, rec_expr: TypedRecExpr) -> AppliedId {
     let mut node = rec_expr.node;
     let mut child_ids = node.applied_id_occurrences_mut();
 
@@ -214,7 +211,7 @@ impl TypeConstructors for TypeExpr {
     }
 }
 
-pub(crate) fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
+pub fn make_type(eg: &EGraph<Mim, MimAnalysis>, enode: &Mim) -> AnalysisData {
     match enode {
         // typeof[(let $name (scope <definition> <expr>))]  = typeof(<expr>)
         Mim::Let(..) => make_let_type(eg, enode),
@@ -423,7 +420,7 @@ fn unify(l: &TypeExpr, r: &TypeExpr) -> TypeExpr {
     }
 }
 
-pub(crate) fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
+pub fn merge_type(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     match (l.type_, r.type_) {
         (Some(l_type), None) => AnalysisData {
             type_: Some(l_type),
