@@ -20,8 +20,8 @@
 ## Table of Contents
 
 - [Usage](#usage)
-  - [C++ API](#option-1-c-api)
-  - [Mim](#option-2-mim)
+  - [C++ API](#c-api)
+  - [Mim](#mim)
 - [Installation](#installation)
 - [Rulesets](#rulesets)
 - [Provided Methods](#provided-methods)
@@ -39,7 +39,7 @@ optimization:
 - Perform equality saturation in `slotted-egraphs`
 - Extract an optimal term by smallest `AstSize`
 
-### Option 1: C++ API
+### C++ API
 
 ```cpp
 #include <fstream>
@@ -101,7 +101,7 @@ int main(int, char**) {
 }
 ```
 
-### Option 2: Mim
+### Mim
 
 ```
 plugin core;
@@ -203,7 +203,7 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {
 }
 ```
 
-2. Add your ruleset to the RuleSet enum in `src/ffi/bridge.rs`
+2. Add your ruleset to the `RuleSet` enum in `src/ffi/bridge.rs`
 
 ```rust
 // ...
@@ -274,8 +274,10 @@ for (auto ruleset : ruleset_config->args())
 
 ## Provided Methods
 
-There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs)
-that expose the following methods on the C++ FFI:
+This library also exposes its methods in a C++ FFI, which 
+was required to integrate it into the **MimIR** plugin system. 
+The following documents the signatures generated for these methods via [CXX](https://cxx.rs)
+along with a short description of what they do.
 
 ### Rewriting
 
