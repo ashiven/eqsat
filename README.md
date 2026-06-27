@@ -284,8 +284,8 @@ along with a short description of what they do.
  *
  *  sexpr:     a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
  *  selected:  optionally, a list of identifiers for terms that should be rewritten
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/egg/rulesets)
- *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize and AstDepth)
+ *  rulesets:  a list of identifiers of rulesets that should be used for rewriting (see src/egg/rulesets)
+ *  cost_fn:   a cost function that should be used for term extraction (currently only AstSize and AstDepth)
  */
 rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
@@ -294,10 +294,10 @@ rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, OptionSelected selected, rust::
 /**
  *  Rewrites an sexpr in `slotted-egraphs` format
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
  *  selected:  optionally, a list of identifiers for terms that should be rewritten
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
- *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize)
+ *  rulesets:  a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
+ *  cost_fn:   a cost function that should be used for term extraction (currently only AstSize)
  */
 rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
@@ -308,10 +308,10 @@ rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, ru
 /**
  *  Uses `slotted-egraphs` to prove whether two terms are equivalent
  *
- *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
- *  rulesets:   provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
+ *  rulesets:   a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
  *  start_name: an identifier for the starting term
- *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  end_name:   an identifier for the end term that should be reached via equality saturation
  *  max_steps:  the maximum number of iterations in which the start term should reach the end term
  */
 bool reaches_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
@@ -321,10 +321,10 @@ bool reaches_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, rust::Str start_n
 /**
  *  Uses `egg` to prove whether two terms are equivalent
  *
- *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
- *  rulesets:   provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  sexpr:      a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
+ *  rulesets:   a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
  *  start_name: an identifier for the starting term
- *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  end_name:   an identifier for the end term that should be reached via equality saturation
  *  max_steps:  the maximum number of iterations in which the start term should reach the end term
  */
 bool reaches_slotted(rust::Str sexpr, rust::Vec<::RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
@@ -346,7 +346,7 @@ rust::String pretty_egg(rust::Str sexpr, std::size_t line_len);
 /**
  *  Pretty-prints an sexpr in `slotted-egraphs` format
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
  *  line_len:  the maximal line length after which the sexpr continues on a new line
  */
 rust::String pretty_slotted(rust::Str sexpr, std::size_t line_len);
