@@ -7,9 +7,9 @@ use eqsat_rs::{
 use std::fs;
 
 fn main() {
-    let example = fs::read_to_string("./examples/import.slotted").expect("Failed to read file.");
+    let example = fs::read_to_string("./examples/loop.egg").expect("Failed to read file.");
     let selected = OptionSelected::none();
-    let rec_exprs = eqsat_slotted(&example, selected, vec![], CostFn::AstSize);
+    let rec_exprs = eqsat_egg(&example, selected, vec![], CostFn::AstSize);
 
     print!("{}", pretty_ffi(rec_exprs, 80));
 }

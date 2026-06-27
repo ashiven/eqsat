@@ -41,40 +41,34 @@ fn get_ruleset_core() {
 }
 
 #[test]
-#[ignore = "missing files"]
 fn parse_loop_egg() {
     let loop_egg = fs::read_to_string("examples/loop.egg").expect("Failed to read loop.egg");
     let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&loop_egg);
 }
 
 #[test]
-#[ignore = "missing files"]
 fn eqsat_loop_egg() {
     eqsat_equals("examples/loop.egg", "examples/loop_rw.egg");
 }
 
 #[test]
-#[ignore = "missing files"]
 fn parse_import_egg() {
     let import_egg = fs::read_to_string("examples/import.egg").expect("Failed to read import.egg");
     let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&import_egg);
 }
 
 #[test]
-#[ignore = "missing files"]
 fn eqsat_import_egg() {
     eqsat_equals("examples/import.egg", "examples/import_rw.egg");
 }
 
 #[test]
-#[ignore = "missing files"]
 fn parse_fun_egg() {
     let fun_egg = fs::read_to_string("examples/fun.egg").expect("Failed to read fun.egg");
     let _parsed: Vec<RecExpr<Mim>> = parse_sexprs(&fun_egg);
 }
 
 #[test]
-#[ignore = "missing files"]
 fn eqsat_fun_egg() {
     eqsat_equals("examples/fun.egg", "examples/fun_rw.egg");
 }

@@ -1,0 +1,71 @@
+(root extern main
+    (fun
+        _2134
+        (lit ff Bool)
+    (let
+        return_2153
+        (con
+            _2161
+            (lit ff Bool)
+        (let
+            return_2191
+            (con
+                _2196
+                (lit ff Bool)
+                (let
+                    return_2146
+                    (extract
+                        (var _2134)
+                        (lit tt Bool))
+                (let
+                    mem_2218
+                    (extract
+                        (var _2196)
+                        (lit ff Bool))
+                (let
+                    x_2187
+                    (extract
+                        (var _2161)
+                        (lit tt Bool))
+                (let
+                    y_2222
+                    (extract
+                        (var _2196)
+                        (lit tt Bool))
+                (app
+                    (var return_2146)
+                    (tuple
+                        (var mem_2218)
+                        (app
+                            (app
+                                (app
+                                    %core.wrap.add
+                                    (lit i32 Nat))
+                                (lit 0 Nat))
+                            (tuple
+                                (var x_2187)
+                                (var y_2222))))))))))
+            (let
+                mem_2183
+                (extract
+                    (var _2161)
+                    (lit ff Bool))
+            (app
+                (var return_2191)
+                (tuple
+                    (var mem_2183)
+                    (lit 24 I32)))
+            )))
+        (let
+            mem_2143
+            (extract
+                (extract
+                    (var _2134)
+                    (lit ff Bool))
+                (lit 0 (idx (lit 3 Nat))))
+        (app
+            (var return_2153)
+            (tuple
+                (var mem_2143)
+                (lit 24 I32)))
+        ))))

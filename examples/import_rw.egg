@@ -1,0 +1,115 @@
+(root intern atoi (fun _2514))
+
+(root
+  extern
+  main
+  (fun
+    _2170
+    (lit ff Bool)
+    (let
+      atoi_cont_a_2364
+      (con
+        _2365
+        (lit ff Bool)
+        (let
+          atoi_cont_b_2479
+          (con
+            _2480
+            (lit ff Bool)
+            (let
+              return_2219
+              (extract (var _2170) (lit 3 (idx (lit 4 Nat))))
+              (let
+                mem_2487
+                (extract (var _2480) (lit ff Bool))
+                (let
+                  a_2373
+                  (extract (var _2365) (lit tt Bool))
+                  (let
+                    b_2488
+                    (extract (var _2480) (lit tt Bool))
+                    (app
+                      (var return_2219)
+                      (tuple
+                        (var mem_2487)
+                        (app
+                          (app (app %core.wrap.add (lit i32 Nat)) (lit 0 Nat))
+                          (tuple (var a_2373) (var b_2488))))))))))
+          (let
+            mem_2372
+            (extract (var _2365) (lit ff Bool))
+            (let
+              n_13
+              (top Nat)
+              (let
+                Ts_2278
+                (pack
+                  dummy
+                  (var n_13)
+                  (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))))
+                (let
+                  argv_2218
+                  (extract (var _2170) (lit 2 (idx (lit 4 Nat))))
+                  (let
+                    argv_ptr_b_2411
+                    (app
+                      (app %mem.lea (tuple (var n_13) (var Ts_2278) (lit 0 Nat)))
+                      (tuple (var argv_2218) (lit 2 I32)))
+                    (let
+                      mem_2453
+                      (extract
+                        (app
+                          (app
+                            %mem.load
+                            (tuple (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))) (lit 0 Nat)))
+                          (tuple (var mem_2372) (var argv_ptr_b_2411)))
+                        (lit ff Bool))
+                      (let
+                        val_2457
+                        (extract
+                          (app
+                            (app
+                              %mem.load
+                              (tuple (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))) (lit 0 Nat)))
+                            (tuple (var mem_2372) (var argv_ptr_b_2411)))
+                          (lit tt Bool))
+                        (app (var atoi) (tuple (var mem_2453) (var val_2457) (var atoi_cont_b_2479))))))))))))
+      (let
+        mem_2216
+        (extract (var _2170) (lit 0 (idx (lit 4 Nat))))
+        (let
+          n_13
+          (top Nat)
+          (let
+            Ts_2278
+            (pack
+              dummy
+              (var n_13)
+              (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))))
+            (let
+              argv_2218
+              (extract (var _2170) (lit 2 (idx (lit 4 Nat))))
+              (let
+                argv_ptr_a_2291
+                (app
+                  (app %mem.lea (tuple (var n_13) (var Ts_2278) (lit 0 Nat)))
+                  (tuple (var argv_2218) (lit 1 I32)))
+                (let
+                  mem_2338
+                  (extract
+                    (app
+                      (app
+                        %mem.load
+                        (tuple (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))) (lit 0 Nat)))
+                      (tuple (var mem_2216) (var argv_ptr_a_2291)))
+                    (lit ff Bool))
+                  (let
+                    val_2342
+                    (extract
+                      (app
+                        (app
+                          %mem.load
+                          (tuple (app %mem.Ptr (tuple (arr dummy (top Nat) I8) (lit 0 Nat))) (lit 0 Nat)))
+                        (tuple (var mem_2216) (var argv_ptr_a_2291)))
+                      (lit tt Bool))
+                    (app (var atoi) (tuple (var mem_2338) (var val_2342) (var atoi_cont_a_2364)))))))))))))
