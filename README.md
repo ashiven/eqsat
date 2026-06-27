@@ -144,13 +144,13 @@ fun extern main(x: Nat): Nat =
 
 To install this plugin simply follow the instructions below:
 
-**1. Clone the `mimir` repository if you haven't already**
+1. Clone the `mimir` repository
 
 ```bash
 git clone --recursive https://github.com/mimir/mimir.git
 ```
 
-**2. Clone the `eqsat` repository into `mimir/extra`**
+2. Clone the `eqsat` repository
 
 ```bash
 cd mimir/extra
@@ -158,13 +158,13 @@ git clone https://github.com/ashiven/eqsat.git
 cd ..
 ```
 
-**3. Ensure that Rust and Cargo are installed**
+3. Ensure that Rust and Cargo are installed
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-**4. Build the project according to the [instructions](https://mimir.github.io/index.html#autotoc_md92)**
+4. Build the project
 
 ```bash
 cmake -S . -B build -DBUILD_TESTING=ON -DMIM_BUILD_EXAMPLES=ON
@@ -183,7 +183,7 @@ To automatically generate all of the boilerplate code shown below, use the follo
 python ./scripts/new_ruleset.py egg MyRules
 ```
 
-**1. Define a set of rules in `src/egg/rulesets/myrules.rs`**
+1. Define a set of rules in `src/egg/rulesets/myrules.rs`
 
 ```rust
 use crate::egg::{Mim, analysis::MimAnalysis};
@@ -203,7 +203,7 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {
 }
 ```
 
-**2. Add your ruleset to the RuleSet enum in `src/ffi/bridge.rs`**
+2. Add your ruleset to the RuleSet enum in `src/ffi/bridge.rs`
 
 ```rust
 // ...
@@ -220,7 +220,7 @@ pub mod bridge {
 // ...
 ```
 
-**3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`**
+3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`
 
 ```rust
 use crate::RuleSet;
@@ -243,7 +243,7 @@ pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
 }
 ```
 
-**4. Add your ruleset as a new axiom to `eqsat.mim`**
+4. Add your ruleset as a new axiom to `eqsat.mim`
 
 ```
 /// ...
@@ -260,7 +260,7 @@ axm %eqsat.standard: %eqsat.Ruleset;
 /// ...
 ```
 
-**5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`**
+5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`
 
 ```cpp
 // ...
