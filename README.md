@@ -308,8 +308,8 @@ rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, ru
 /**
  *  Uses `slotted-egraphs` to prove whether two terms are equivalent
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  rulesets:   provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
  *  start_name: an identifier for the starting term
  *  end_name:   an identifier for the end term that the start term should reach via rewriting
  *  max_steps:  the maximum number of iterations in which the start term should reach the end term
