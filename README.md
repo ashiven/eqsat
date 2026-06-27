@@ -20,8 +20,8 @@
 ## Table of Contents
 
 - [Usage](#usage)
-  - [C++ API](#option-1-c-api)
-  - [Mim](#option-2-mim)
+  - [C++ API](#c-api)
+  - [Mim](#mim)
 - [Installation](#installation)
 - [Rulesets](#rulesets)
 - [Provided Methods](#provided-methods)
@@ -39,7 +39,7 @@ optimization:
 - Perform equality saturation in `slotted-egraphs`
 - Extract an optimal term by smallest `AstSize`
 
-### Option 1: C++ API
+### C++ API
 
 ```cpp
 #include <fstream>
@@ -101,38 +101,35 @@ int main(int, char**) {
 }
 ```
 
-### Option 2: Mim
+### Mim
 
 ```
 plugin core;
 plugin eqsat;
 
-// You can define your own syntactic rewrite-rules in `MimIR`.
+// You can define your own syntactic rewrite-rules here
 rule foo (x: Nat): %core.nat.add (x, 0) => x;
 
 lam extern _config() =
     %eqsat.config (
-        // Here you can specify whether the plugin should use its `egg` or `slotted-egraphs` backend.
-        // The default implementation when nothing gets specified is `slotted`.
-        // Note that the `egg` implementation is still incomplete and experimental.
+        // Specifies whether the plugin should use its egg or slotted-egraphs backend
         %eqsat.slotted,
 
-        // To define the cost function that should be used for term extraction
+        // Defines the cost function that should be used for term extraction
         %eqsat.AstSize,
 
-        // To use a set of rules directly implemented in `egg` or `slotted-egraphs`.
-        // To see the existing rulesets, have a look at `src\mim_[egg|slotted]\rulesets`.
+        // Specifies a set of rules directly implemented in egg or slotted-egraphs
         // To implement and use your own ruleset, follow the instructions under **Rulesets**.
         %eqsat.rulesets (%eqsat.normalize),
 
-        // To use the rule `foo` that we defined above
+        // To use the rule 'foo' that we defined above for equality saturation
         %eqsat.rules (foo),
         
-        // Here you may provide two terms to assert whether term A can reach term B in a number of steps.
+        // Here you may provide two terms to assert whether term A can reach term B in a number of steps
         %eqsat.reaches (term_A, term_B, 10),
 
-        // Here you may select specific terms that should be saturated.
-        // When providing an empty tuple, no terms will be saturated.
+        // Here you may select specific terms that should be rewritten
+        // When providing an empty tuple, no terms will be rewritten
         %eqsat.select (),
     );
 
@@ -144,13 +141,13 @@ fun extern main(x: Nat): Nat =
 
 To install this plugin simply follow the instructions below:
 
-**1. Clone the `mimir` repository if you haven't already**
+1. Clone the `mimir` repository
 
 ```bash
 git clone --recursive https://github.com/mimir/mimir.git
 ```
 
-**2. Clone the `eqsat` repository into `mimir/extra`**
+2. Clone the `eqsat` repository
 
 ```bash
 cd mimir/extra
@@ -158,13 +155,13 @@ git clone https://github.com/ashiven/eqsat.git
 cd ..
 ```
 
-**3. Ensure that Rust and Cargo are installed**
+3. Ensure that Rust and Cargo are installed
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-**4. Build the project according to the [instructions](https://mimir.github.io/index.html#autotoc_md92)**
+4. Build the project
 
 ```bash
 cmake -S . -B build -DBUILD_TESTING=ON -DMIM_BUILD_EXAMPLES=ON
@@ -183,7 +180,7 @@ To automatically generate all of the boilerplate code shown below, use the follo
 python ./scripts/new_ruleset.py egg MyRules
 ```
 
-**1. Define a set of rules in `src/egg/rulesets/myrules.rs`**
+1. Define a set of rules in `src/egg/rulesets/myrules.rs`
 
 ```rust
 use crate::egg::{Mim, analysis::MimAnalysis};
@@ -203,7 +200,7 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {
 }
 ```
 
-**2. Add your ruleset to the RuleSet enum in `src/ffi/bridge.rs`**
+2. Add your ruleset to the `RuleSet` enum in `src/ffi/bridge.rs`
 
 ```rust
 // ...
@@ -220,7 +217,7 @@ pub mod bridge {
 // ...
 ```
 
-**3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`**
+3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`
 
 ```rust
 use crate::RuleSet;
@@ -243,7 +240,7 @@ pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
 }
 ```
 
-**4. Add your ruleset as a new axiom to `eqsat.mim`**
+4. Add your ruleset as a new axiom to `eqsat.mim`
 
 ```
 /// ...
@@ -260,7 +257,7 @@ axm %eqsat.standard: %eqsat.Ruleset;
 /// ...
 ```
 
-**5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`**
+5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`
 
 ```cpp
 // ...
@@ -274,8 +271,10 @@ for (auto ruleset : ruleset_config->args())
 
 ## Provided Methods
 
-There are two separate implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs)
-that expose the following methods on the C++ FFI:
+This library also exposes its methods in a C++ FFI, which 
+was required to integrate it into the **MimIR** plugin system. 
+The following documents the signatures generated for these methods via [CXX](https://cxx.rs)
+along with a short description of what they do.
 
 ### Rewriting
 
@@ -285,20 +284,20 @@ that expose the following methods on the C++ FFI:
  *
  *  sexpr:     a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
  *  selected:  optionally, a list of identifiers for terms that should be rewritten
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/egg/rulesets)
- *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize and AstDepth)
+ *  rulesets:  a list of identifiers of rulesets that should be used for rewriting (see src/egg/rulesets)
+ *  cost_fn:   a cost function that should be used for term extraction (currently only AstSize and AstDepth)
  */
-rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
+rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
 
 ```cpp
 /**
  *  Rewrites an sexpr in `slotted-egraphs` format
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
  *  selected:  optionally, a list of identifiers for terms that should be rewritten
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
- *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize)
+ *  rulesets:  a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
+ *  cost_fn:   a cost function that should be used for term extraction (currently only AstSize)
  */
 rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
@@ -309,10 +308,10 @@ rust::Vec<RecExprFFI> eqsat_slotted(rust::Str sexpr, OptionSelected selected, ru
 /**
  *  Uses `slotted-egraphs` to prove whether two terms are equivalent
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
- *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
+ *  rulesets:   a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
  *  start_name: an identifier for the starting term
- *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  end_name:   an identifier for the end term that should be reached via equality saturation
  *  max_steps:  the maximum number of iterations in which the start term should reach the end term
  */
 bool reaches_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
@@ -322,10 +321,10 @@ bool reaches_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, rust::Str start_n
 /**
  *  Uses `egg` to prove whether two terms are equivalent
  *
- *  sexpr:      a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
- *  rulesets:   provides a list of identifiers to rulesets that should be used for rewriting (see src/mim_slotted/rulesets)
+ *  sexpr:      a symbolic expr in `egg` format (emitted by the `mim` compiler via `--output-sexpr`)
+ *  rulesets:   a list of identifiers of rulesets that should be used for rewriting (see src/slotted/rulesets)
  *  start_name: an identifier for the starting term
- *  end_name:   an identifier for the end term that the start term should reach via rewriting
+ *  end_name:   an identifier for the end term that should be reached via equality saturation
  *  max_steps:  the maximum number of iterations in which the start term should reach the end term
  */
 bool reaches_slotted(rust::Str sexpr, rust::Vec<::RuleSet> rulesets, rust::Str start_name, rust::Str end_name, std::size_t max_steps);
@@ -347,7 +346,7 @@ rust::String pretty_egg(rust::Str sexpr, std::size_t line_len);
 /**
  *  Pretty-prints an sexpr in `slotted-egraphs` format
  *
- *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--slotted --output-sexpr`)
+ *  sexpr:     a symbolic expr in `slotted-egraphs` format (emitted by the `mim` compiler via `--output-sexpr-slotted`)
  *  line_len:  the maximal line length after which the sexpr continues on a new line
  */
 rust::String pretty_slotted(rust::Str sexpr, std::size_t line_len);
