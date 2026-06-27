@@ -287,7 +287,7 @@ along with a short description of what they do.
  *  rulesets:  provides a list of identifiers to rulesets that should be used for rewriting (see src/egg/rulesets)
  *  cost_fn:   provides a cost function that should be used for extraction (currently only AstSize and AstDepth)
  */
-rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
+rust::Vec<RecExprFFI> eqsat_egg(rust::Str sexpr, OptionSelected selected, rust::Vec<RuleSet> rulesets, CostFn cost_fn);
 ```
 
 ```cpp
