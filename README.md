@@ -107,32 +107,29 @@ int main(int, char**) {
 plugin core;
 plugin eqsat;
 
-// You can define your own syntactic rewrite-rules in `MimIR`.
+// You can define your own syntactic rewrite-rules here
 rule foo (x: Nat): %core.nat.add (x, 0) => x;
 
 lam extern _config() =
     %eqsat.config (
-        // Here you can specify whether the plugin should use its `egg` or `slotted-egraphs` backend.
-        // The default implementation when nothing gets specified is `slotted`.
-        // Note that the `egg` implementation is still incomplete and experimental.
+        // Specifies whether the plugin should use its `egg` or `slotted-egraphs` backend
         %eqsat.slotted,
 
-        // To define the cost function that should be used for term extraction
+        // Defines the cost function that should be used for term extraction
         %eqsat.AstSize,
 
-        // To use a set of rules directly implemented in `egg` or `slotted-egraphs`.
-        // To see the existing rulesets, have a look at `src\mim_[egg|slotted]\rulesets`.
+        // Specifies a set of rules directly implemented in egg or slotted-egraphs
         // To implement and use your own ruleset, follow the instructions under **Rulesets**.
         %eqsat.rulesets (%eqsat.normalize),
 
-        // To use the rule `foo` that we defined above
+        // To use the rule 'foo' that we defined above for equality saturation
         %eqsat.rules (foo),
         
         // Here you may provide two terms to assert whether term A can reach term B in a number of steps.
         %eqsat.reaches (term_A, term_B, 10),
 
-        // Here you may select specific terms that should be saturated.
-        // When providing an empty tuple, no terms will be saturated.
+        // Here you may select specific terms that should be rewritten.
+        // When providing an empty tuple, no terms will be rewritten.
         %eqsat.select (),
     );
 
