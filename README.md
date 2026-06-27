@@ -112,7 +112,7 @@ rule foo (x: Nat): %core.nat.add (x, 0) => x;
 
 lam extern _config() =
     %eqsat.config (
-        // Specifies whether the plugin should use its `egg` or `slotted-egraphs` backend
+        // Specifies whether the plugin should use its egg or slotted-egraphs backend
         %eqsat.slotted,
 
         // Defines the cost function that should be used for term extraction
@@ -125,11 +125,11 @@ lam extern _config() =
         // To use the rule 'foo' that we defined above for equality saturation
         %eqsat.rules (foo),
         
-        // Here you may provide two terms to assert whether term A can reach term B in a number of steps.
+        // Here you may provide two terms to assert whether term A can reach term B in a number of steps
         %eqsat.reaches (term_A, term_B, 10),
 
-        // Here you may select specific terms that should be rewritten.
-        // When providing an empty tuple, no terms will be rewritten.
+        // Here you may select specific terms that should be rewritten
+        // When providing an empty tuple, no terms will be rewritten
         %eqsat.select (),
     );
 
