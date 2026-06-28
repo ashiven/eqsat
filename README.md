@@ -24,6 +24,7 @@
   - [Mim](#mim)
 - [Installation](#installation)
 - [Rulesets](#rulesets)
+- [Cost Functions](#cost-functions)
 - [Provided Methods](#provided-methods)
 - [Contributing](#contributing)
 - [License](#license)
@@ -172,19 +173,19 @@ cmake --build build -j$(nproc)
 
 You may want to define a set of rewrite-rules that are more complex than the syntactic rewrite-rules
 that can be defined in **MimIR**. In this case, you should follow the implementation guide below on adding
-a set of rules directly in **egg** or **slotted-egraphs**.
+a set of rules and a new analysis directly in **egg** or **slotted-egraphs**.
 
-To automatically generate all of the boilerplate code shown below, use the following script:
+1. Automatically generate all of the boilerplate code required to integrate your ruleset with the `eqsat` plugin
 
 ```bash
 python ./scripts/new_ruleset.py egg MyRules
 ```
 
-1. Define a set of rules in `src/egg/rulesets/myrules.rs`
+2. Define your ruleset in `src/egg/rulesets/myrules.rs`
 
 ```rust
-use crate::egg::{Mim, analysis::MimAnalysis};
-use egg::{Rewrite, Pattern};
+use crate::egg::{Mim, analysis::AnalysisData, analysis::MimAnalysis};
+use egg::{EGraph, Rewrite, Pattern, DidMerge, Id};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     let rules = vec![
@@ -198,76 +199,46 @@ fn my_rule() -> Rewrite<Mim, MimAnalysis> {
     let outpat: Pattern<Mim> = "?baz".parse().unwrap();
     Rewrite::new("my-rule", pat, outpat).unwrap()
 }
-```
 
-2. Add your ruleset to the `RuleSet` enum in `src/ffi/bridge.rs`
+pub type MyRulesData = ();
+pub struct MyRulesAnalysis;
 
-```rust
-// ...
-#[cxx::bridge]
-pub mod bridge {
-    #[derive(Debug)]
-    enum RuleSet {
-        // Egg
-        Core,
-        MyRules,
-        // Slotted
-        Standard,
+impl MyRulesAnalysis {
+    pub fn make(_eg: &mut EGraph<Mim, MimAnalysis>, _enode: &Mim, _id: Id) -> AnalysisData {
+        AnalysisData::default()
     }
-// ...
-```
-
-3. Ensure that your ruleset is registered in `src/egg/rulesets/mod.rs`
-
-```rust
-use crate::RuleSet;
-use crate::egg::{Mim, analysis:MimAnalysis};
-use egg::Rewrite;
-
-pub mod core;
-pub mod myrules;
-
-pub fn get_rules(rulesets: Vec<RuleSet>) -> Vec<Rewrite<Mim, MimAnalysis>> {
-    let mut rules = Vec::new();
-    for ruleset in rulesets {
-        match ruleset {
-            RuleSet::Core => rules.extend(core::rules()),
-            RuleSet::MyRules => rules.extend(myrules::rules()),
-            _ => (),
-        }
+    pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {
+        DidMerge(false, false)
     }
-    rules
 }
 ```
 
-4. Add your ruleset as a new axiom to `eqsat.mim`
+## Cost Functions
 
-```
-/// ...
-/// ## Rulesets
-///
-/// ### Egg
-///
-axm %eqsat.core: %eqsat.Ruleset;
-axm %eqsat.myrules: %eqsat.Ruleset;
-///
-/// ### Slotted
-///
-axm %eqsat.standard: %eqsat.Ruleset;
-/// ...
+To define your own cost function for term extraction, follow the steps below.
+
+1. Automatically generate all of the boilerplate code required by the `eqsat` plugin
+
+```bash
+python ./scripts/new_cost.py egg MyCost
 ```
 
-5. Patch the rewrite phase in `plug/phase/rewrite_egg.cpp`
+2. Define your new cost function in `src/egg/cost.rs`
 
-```cpp
-// ...
-for (auto ruleset : ruleset_config->args())
-    if (Axm::isa<eqsat::core>(ruleset))
-        rulesets.push_back(RuleSet::Core);
-    else if (Axm::isa<eqsat::myrules>(ruleset))
-        rulesets.push_back(RuleSet::MyRules);
-// ...
+```rust
+#[derive(Debug)]
+pub struct MyCost;
+impl CostFunction<Mim> for MyCost {
+    type Cost = usize;
+    fn cost<C>(&mut self, enode: &Mim, mut costs: C) -> Self::Cost
+    where
+        C: FnMut(Id) -> Self::Cost,
+    {
+        enode.fold(1, |sum, id| sum.saturating_add(costs(id)))
+    }
+}
 ```
+
 
 ## Provided Methods
 
