@@ -142,13 +142,13 @@ fun extern main(x: Nat): Nat =
 
 To install this plugin simply follow the instructions below:
 
-1. Clone the `mimir` repository
+Clone the `mimir` repository
 
 ```bash
 git clone --recursive https://github.com/mimir/mimir.git
 ```
 
-2. Clone the `eqsat` repository
+Clone the `eqsat` repository
 
 ```bash
 cd mimir/extra
@@ -156,13 +156,13 @@ git clone https://github.com/ashiven/eqsat.git
 cd ..
 ```
 
-3. Ensure that Rust and Cargo are installed
+Ensure that Rust and Cargo are installed
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-4. Build the project
+Build the project
 
 ```bash
 cmake -S . -B build -DBUILD_TESTING=ON -DMIM_BUILD_EXAMPLES=ON
@@ -175,13 +175,13 @@ You may want to define a set of rewrite-rules that are more complex than the syn
 that can be defined in **MimIR**. In this case, you should follow the implementation guide below on adding
 a set of rules and a new analysis directly in **egg** or **slotted-egraphs**.
 
-1. Automatically generate all of the boilerplate code required to integrate your ruleset with the `eqsat` plugin
+Automatically generate all of the boilerplate code required to integrate your ruleset with the `eqsat` plugin
 
 ```bash
 python ./scripts/new_ruleset.py egg MyRules
 ```
 
-2. Define your ruleset in `src/egg/rulesets/myrules.rs`
+Define your ruleset in `src/egg/rulesets/myrules.rs`
 
 ```rust
 use crate::egg::{Mim, analysis::AnalysisData, analysis::MimAnalysis};
@@ -210,6 +210,7 @@ impl MyRulesAnalysis {
     pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {
         DidMerge(false, false)
     }
+    pub fn modify(_eg: &mut EGraph<Mim, MimAnalysis>, _id: Id) {}
 }
 ```
 
@@ -217,13 +218,13 @@ impl MyRulesAnalysis {
 
 To define your own cost function for term extraction, follow the steps below.
 
-1. Automatically generate all of the boilerplate code required by the `eqsat` plugin
+Automatically generate all of the boilerplate code required by the `eqsat` plugin
 
 ```bash
 python ./scripts/new_cost.py egg MyCost
 ```
 
-2. Define your new cost function in `src/egg/cost.rs`
+Define your new cost function in `src/egg/cost.rs`
 
 ```rust
 #[derive(Debug)]
@@ -239,11 +240,10 @@ impl CostFunction<Mim> for MyCost {
 }
 ```
 
-
 ## Provided Methods
 
-This library also exposes its methods in a C++ FFI, which 
-was required to integrate it into the **MimIR** plugin system. 
+This library also exposes its methods in a C++ FFI, which
+was required to integrate it into the **MimIR** plugin system.
 The following documents the signatures generated for these methods via [CXX](https://cxx.rs)
 along with a short description of what they do.
 
