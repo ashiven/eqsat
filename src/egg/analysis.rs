@@ -8,8 +8,6 @@ use crate::ffi::bridge::RuleSet;
 use crate::egg::types::{TypeAnalysis, TypeData};
 use egg::*;
 
-#[derive(Default, Clone)]
-pub struct MimAnalysis;
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct AnalysisData {
     pub type_: Option<TypeData>,
@@ -62,7 +60,6 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
 
     // Ruleset-specific analyses
     RULESETS.with(|rulesets_global| {
-        #[allow(unused_variables)]
         let combined_merge = &mut combined_merge;
 
         for ruleset in rulesets_global.borrow().iter() {
@@ -83,6 +80,25 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
     combined_merge
 }
 
+fn combined_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
+    RULESETS.with(|rulesets_global| {
+        for ruleset in rulesets_global.borrow().iter() {
+            #[allow(clippy::single_match)]
+            match *ruleset {
+                RuleSet::Core => {
+                    CoreAnalysis::modify(egraph, id);
+                }
+                // AUTOGEN START: egg-analysis-rust-modify
+                // AUTOGEN END: egg-analysis-rust-modify
+                _ => (),
+            }
+        }
+    });
+}
+
+#[derive(Default, Clone)]
+pub struct MimAnalysis;
+
 impl Analysis<Mim> for MimAnalysis {
     type Data = AnalysisData;
 
@@ -95,7 +111,6 @@ impl Analysis<Mim> for MimAnalysis {
     }
 
     fn modify(egraph: &mut EGraph<Mim, Self>, id: Id) {
-        // TODO: Need combined_modify implementation as above
-        CoreAnalysis::modify(egraph, id)
+        combined_modify(egraph, id)
     }
 }

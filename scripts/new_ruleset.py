@@ -206,6 +206,31 @@ def replace_analysis_rust_merge(implementation: str, ruleset_name: str):
     file_path.write_text(content)
 
 
+def replace_analysis_rust_modify(implementation: str, ruleset_name: str):
+    pattern = compile(
+        rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-modify\s*$)"
+        rf"(.*?)"
+        rf"(^\s*// AUTOGEN END:\s*{implementation}-analysis-rust-modify\s*$)",
+        DOTALL | MULTILINE,
+    )
+
+    generated = f"""
+                RuleSet::{ruleset_name} => {{
+                    {ruleset_name}Analysis::modify(egraph, id);
+                }}
+"""
+
+    file_path = Path(__file__).parent.parent / f"src/{implementation}/analysis.rs"
+
+    content = file_path.read_text()
+    content = pattern.sub(
+        lambda m: m.group(1) + m.group(2).rstrip() + generated + m.group(3),
+        content,
+    )
+
+    file_path.write_text(content)
+
+
 def replace_analysis_rust_data(implementation: str, ruleset_name: str):
     pattern = compile(
         rf"(^\s*// AUTOGEN START:\s*{implementation}-analysis-rust-data\s*$)"
@@ -260,7 +285,7 @@ def create_new_ruleset_file(implementation: str, ruleset_name: str):
 
     generated_slotted = f"""
 use crate::slotted::{{Mim, analysis::AnalysisData, analysis::MimAnalysis}};
-use slotted_egraphs::{{EGraph, Rewrite}};
+use slotted_egraphs::{{EGraph, Rewrite, Id}};
 
 pub fn rules() -> Vec<Rewrite<Mim, MimAnalysis>> {{
     let rules = vec![
@@ -286,6 +311,7 @@ impl {ruleset_name}Analysis {{
     pub fn merge(_l: AnalysisData, _r: AnalysisData) -> AnalysisData {{
         AnalysisData::default()
     }}
+    pub fn modify(_eg: &mut EGraph<Mim, MimAnalysis>, _id: Id) {{}}
 }}
 """.lstrip()
 
@@ -317,6 +343,7 @@ impl {ruleset_name}Analysis {{
     pub fn merge(_l: &mut AnalysisData, _r: AnalysisData) -> DidMerge {{
         DidMerge(false, false)
     }}
+    pub fn modify(_eg: &mut EGraph<Mim, MimAnalysis>, _id: Id) {{}}
 }}
 """.lstrip()
 

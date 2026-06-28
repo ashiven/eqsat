@@ -6,9 +6,6 @@ use crate::slotted::Mim;
 use crate::slotted::rulesets::RULESETS;
 use slotted_egraphs::*;
 
-#[derive(Default, Clone, Debug, PartialEq)]
-pub struct MimAnalysis;
-
 #[derive(Clone, Eq, PartialEq, Default)]
 pub struct AnalysisData {
     pub type_: Option<TypeData>,
@@ -76,6 +73,24 @@ fn combined_merge(l: AnalysisData, r: AnalysisData) -> AnalysisData {
     combined_data
 }
 
+#[allow(unused_variables)]
+fn combined_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
+    RULESETS.with(|rulesets_global| {
+        for ruleset in rulesets_global.borrow().iter() {
+            #[allow(clippy::single_match)]
+            #[allow(clippy::match_single_binding)]
+            match *ruleset {
+                // AUTOGEN START: slotted-analysis-rust-modify
+                // AUTOGEN END: slotted-analysis-rust-modify
+                _ => (),
+            }
+        }
+    });
+}
+
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct MimAnalysis;
+
 impl Analysis<Mim> for MimAnalysis {
     type Data = AnalysisData;
 
@@ -87,5 +102,7 @@ impl Analysis<Mim> for MimAnalysis {
         combined_merge(l, r)
     }
 
-    fn modify(_eg: &mut EGraph<Mim, Self>, _id: Id) {}
+    fn modify(eg: &mut EGraph<Mim, Self>, id: Id) {
+        combined_modify(eg, id);
+    }
 }
