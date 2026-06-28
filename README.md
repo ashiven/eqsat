@@ -140,8 +140,6 @@ fun extern main(x: Nat): Nat =
 
 ## Installation
 
-To install this plugin simply follow the instructions below:
-
 Clone the `mimir` repository
 
 ```bash
