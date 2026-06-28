@@ -368,6 +368,7 @@ def main():
     replace_analysis_rust_import(args.implementation, args.ruleset_name)
     replace_analysis_rust_make(args.implementation, args.ruleset_name)
     replace_analysis_rust_merge(args.implementation, args.ruleset_name)
+    replace_analysis_rust_modify(args.implementation, args.ruleset_name)
     replace_analysis_rust_data(args.implementation, args.ruleset_name)
     replace_analysis_rust_combine(args.implementation, args.ruleset_name)
 
