@@ -2,7 +2,7 @@ use std::env;
 
 fn main() {
     cxx_build::bridge("src/ffi/mod.rs").compile("eqsat-rs");
-    println!("cargo:rerun-if-changed=src/ffi.rs");
+    println!("cargo:rerun-if-changed=src/ffi/mod.rs");
 
     if env::var("TARGET").is_ok_and(|s| s.contains("windows-msvc"))
         && env::var("CFLAGS").is_ok_and(|s| s.contains("/MDd"))
