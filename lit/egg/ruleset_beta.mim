@@ -7,7 +7,7 @@ lam extern _config() =
     %eqsat.config (
         %eqsat.egg,
         %eqsat.AstSize,
-        %eqsat.rulesets (%eqsat.math),
+        %eqsat.rulesets (%eqsat.beta),
     );
 
 con extern and_lit [return : Cn Bool] =
