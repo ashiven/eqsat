@@ -8,8 +8,8 @@ thread_local! {
     pub static RULESETS: RefCell<Vec<RuleSet>> = const { RefCell::new(vec![]) };
 }
 
+pub mod beta;
 pub mod core;
-pub mod math;
 // AUTOGEN START: egg-ruleset-rust-mod
 // AUTOGEN END: egg-ruleset-rust-mod
 
@@ -28,7 +28,7 @@ pub fn get_rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
         for ruleset in rulesets_global.borrow().iter() {
             match *ruleset {
                 RuleSet::Core => rules.extend(core::rules()),
-                RuleSet::Math => rules.extend(math::rules()),
+                RuleSet::Beta => rules.extend(beta::rules()),
                 // AUTOGEN START: egg-ruleset-rust-match
                 // AUTOGEN END: egg-ruleset-rust-match
                 _ => (),

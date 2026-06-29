@@ -91,8 +91,8 @@ ConfigValues RewriteEgg::import_config() {
                 for (auto ruleset : ruleset_config->args())
                     if (Axm::isa<eqsat::core>(ruleset))
                         rulesets.push_back(RuleSet::Core);
-                    else if (Axm::isa<eqsat::math>(ruleset))
-                        rulesets.push_back(RuleSet::Math);
+                    else if (Axm::isa<eqsat::beta>(ruleset))
+                        rulesets.push_back(RuleSet::Beta);
                     // AUTOGEN START: egg-ruleset-cpp
                     // AUTOGEN END: egg-ruleset-cpp
                     else

@@ -65,7 +65,7 @@ axm %eqsat.slotted: %eqsat.Config;
 /// ### Egg
 ///
 axm %eqsat.core: %eqsat.Ruleset;
-axm %eqsat.math: %eqsat.Ruleset;
+axm %eqsat.beta: %eqsat.Ruleset;
 /// AUTOGEN START: egg-ruleset-mim
 /// AUTOGEN END: egg-ruleset-mim
 ///

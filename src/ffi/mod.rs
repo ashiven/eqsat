@@ -15,7 +15,7 @@ pub mod bridge {
     enum RuleSet {
         // Egg
         Core,
-        Math,
+        Beta,
         // AUTOGEN START: egg-ruleset-rust-ffi
         // AUTOGEN END: egg-ruleset-rust-ffi
 
