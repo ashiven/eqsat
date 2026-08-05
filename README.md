@@ -15,7 +15,7 @@
 
 </div>
 
-**Equality Saturation** is a compiler optimization technique that is primarily used to solve the [Phase-Ordering Problem](https://www2.imm.dtu.dk/pubdb/edoc/imm5406.pdf) for compiler optimization passes. It utilizes [E-Graphs](https://en.wikipedia.org/wiki/E-graph#Equality_saturation) to simultaneously represent a set of equivalent program terms according to a set of rewrite-rules and find the most optimal one according to a cost heuristic. This repository contains **Equality Saturation** implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) as a plugin for the functional higher-order intermediate representation [MimIR](https://github.com/mimir/mimir).
+**Equality Saturation** is a compiler optimization technique that facilitates the discovery of complex optimization sequences. It utilizes [E-Graphs](https://en.wikipedia.org/wiki/E-graph#Equality_saturation) to simultaneously represent a group of equivalent program terms and discover the best term according to a cost heuristic. This repository contains **Equality Saturation** implementations in [egg](https://github.com/egraphs-good/egg) and [slotted-egraphs](https://github.com/memoryleak47/slotted-egraphs) as a plugin for the compiler intermediate representation [MimIR](https://github.com/mimir/mimir).
 
 ## Table of Contents
 
