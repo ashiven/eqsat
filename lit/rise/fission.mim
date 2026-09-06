@@ -3,19 +3,21 @@ plugin eqsat;
 import _axioms;
 import _pipeline;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        // Works but takes a very long time (30s), so we leave it commented out for now.
-        // %eqsat.rulesets (%eqsat.rise),
-    );
-
 lam f1(a: Nat)@ff = %core.nat.add (a, 1);
 lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
 lam f3(a: Nat)@ff = %core.nat.mul (a, 2);
 lam f4(a: Nat)@ff = %core.nat.add (a, 2);
-lam f5(a: Nat)@ff = %core.nat.sub (a, 2);
 
-fun extern fission(arg: «3; Nat»): «3; Nat» =
-    let mapper = %rise.map (lm(x: Nat): Nat = (f5 (f4 (f3 (f2 (f1 x))))));
-    return (mapper arg);
+fun extern fission(y: «3; «4; Nat»») =
+    return ((%rise.map (%rise.map lm(x: Nat) = f4 (f3 (f2 (f1 x))))) y);
+
+fun extern fission_expected(y: «3; «4; Nat»») =
+    return ((%rise.map (%rise.map lm(x: Nat) = f4 (f3 x))) ((%rise.map (%rise.map lm(x: Nat) = f2 (f1 x))) y));
+
+lam extern _config() =
+    %eqsat.config (
+        %eqsat.slotted,
+        %eqsat.rulesets (%eqsat.rise),
+        %eqsat.reaches (fission, fission_expected, 100),
+    );
+
