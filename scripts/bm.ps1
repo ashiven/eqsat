@@ -1,5 +1,5 @@
 $exe = "C:\Users\janni\OneDrive\Dokumente\Projects\C++\MimIR\build\install\bin\mim.exe"
-$input = Join-Path $PSScriptRoot "..\lit\rise\tile2d.mim"
+$input = Join-Path $PSScriptRoot "..\lit\rise\fission.mim"
 
 $p = Start-Process `
     -FilePath $exe `

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{typ, isa};
 use crate::slotted::{Mim, analysis::{AnalysisData, MimAnalysis}};
 use slotted_egraphs::{AbstractVecSet, Rewrite, Slot};
@@ -12,7 +14,7 @@ pub fn rules() -> Vec<RW> {
         // EVAL
         beta(),
         eta(),
-        eta_expansion(),
+        // eta_expansion(),
         let_unused(),
         let_var_same(),
         let_var_diff(),
@@ -21,14 +23,14 @@ pub fn rules() -> Vec<RW> {
         // RISE
         map_fusion(),
         map_fission(),
-        remove_transpose_pair(),
-        map_slide_before_transpose(),
-        map_split_before_transpose(),
-        slide_before_map_map_f(),
-        split_before_map_map_f(),
-        slide_before_map(),
-        separate_dot_vh_simplified(),
-        separate_dot_hv_simplified(),
+        // remove_transpose_pair(),
+        // map_slide_before_transpose(),
+        // map_split_before_transpose(),
+        // slide_before_map_map_f(),
+        // split_before_map_map_f(),
+        // slide_before_map(),
+        // separate_dot_vh_simplified(),
+        // separate_dot_hv_simplified(),
     ];
 
     rules
@@ -94,17 +96,52 @@ fn let_lam_diff() -> RW {
     })
 }
 
-// (map f) ((map g) arg) => (map λx.(f (g x))) arg
+/*
 fn map_fusion() -> RW {
     let pat = "(app (app %rise.map ?f) (app (app %rise.map ?g) ?arg))";
     let outpat = "(app (app %rise.map (lam $x (scope (lit ff Bool) (app ?f (app ?g (var $x)))))) ?arg)";
     Rewrite::new("map-fusion", pat, outpat)
+}*/
+
+// (map f) ((map g) y) => (map λx.f (g x)) y
+fn map_fusion() -> RW {
+    let pat = "(app
+                        (app (app (app %rise.map ?n) (tuple (cons ?B (cons ?C nil)))) ?f)
+                        (app
+                             (app (app (app %rise.map ?n) (tuple (cons ?A (cons ?B nil)))) ?g)
+                             ?y))";
+
+    let outpat = "(app
+                            (app
+                                (app (app %rise.map ?n) (tuple (cons ?A (cons ?C nil))))
+                                (lam $x (scope (lit tt Bool) (app ?f (app ?g (var $x))))))
+                            ?y)";
+
+    Rewrite::new("map-fusion", pat, outpat)
 }
 
-// map λx.(f (g x)) => λy.(map f) ((map λx.(g x)) y)
+/*
 fn map_fission() -> RW {
     let pat = "(app %rise.map (lam $x (scope ?filter (app ?f ?gx))))";
     let outpat = " (lam $y (scope (lit ff Bool) (app (app %rise.map ?f) (app (app %rise.map (lam $x (scope ?filter ?gx))) (var $y)))))";
+    Rewrite::new_if("map-fission", pat, outpat, |subst, _| {
+        !subst["f"].slots().contains(&Slot::named("x"))
+    })
+}*/
+
+// map λx.f (g x) => λy.(map f) ((map λx.g x) y)
+fn map_fission() -> RW {
+    let pat = "(app
+                        (app (app %rise.map ?n) (tuple (cons ?S (cons ?T nil))))
+                        (lam $x (scope ?filter (app ?f ?gx))))";
+
+    let outpat = "(lam $y (scope (lit tt Bool)
+                            (app
+                                (app (app (app %rise.map ?n) (tuple (cons ?S (cons ?T nil)))) ?f)
+                                (app
+                                    (app (app (app %rise.map ?n) (tuple (cons ?S (cons ?T nil)))) (lam $x (scope ?filter ?gx)))
+                                    (var $y)))))";
+
     Rewrite::new_if("map-fission", pat, outpat, |subst, _| {
         !subst["f"].slots().contains(&Slot::named("x"))
     })
@@ -180,13 +217,13 @@ mod test {
     #[ignore = "works but is slow"]
     fn reduction() {
         let a = "
-        (app 
+        (app
             (lam $0 (scope (lit ff Bool)
-                (app 
+                (app
                     (lam $1 (scope (lit ff Bool)
-                        (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (var $1))))))))) 
+                        (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (app (app (var $0) (var $1)) (var $1)))))))))
                     (lam $2 (scope (lit ff Bool)
-                        (app (app %rise.add (var $2)) 1)))))) 
+                        (app (app %rise.add (var $2)) 1))))))
             (lam $3 (scope (lit ff Bool)
                 (lam $4 (scope (lit ff Bool)
                     (lam $5 (scope (lit ff Bool)

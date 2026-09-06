@@ -119,8 +119,9 @@ where
 
     let mut runner: Runner<L, N, (), ReachError> = Runner::default()
         .with_expr(&start)
-        .with_iter_limit(60)
         .with_iter_limit(steps)
+        .with_node_limit(1_000_000)
+        .with_time_limit(std::time::Duration::from_hours(1))
         .with_hook(reach_hook(&start, &goal, steps));
     let report = runner.run(rewrites);
 

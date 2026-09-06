@@ -17,7 +17,8 @@ fun extern fission_expected(y: «3; «4; Nat»») =
 lam extern _config() =
     %eqsat.config (
         %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.rise),
+        %eqsat.rulesets (%eqsat.rise, %eqsat.normalize),
         %eqsat.reaches (fission, fission_expected, 100),
+        %eqsat.select (),
     );
 
