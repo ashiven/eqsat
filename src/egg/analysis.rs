@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::egg::Mim;
 use crate::egg::rulesets::RULESETS;
-use crate::egg::rulesets::core::{CoreAnalysis, CoreData, core_make, core_merge, core_modify};
+use crate::egg::rulesets::corenorm::{CoreAnalysis, CoreData, core_make, core_merge, core_modify};
 use crate::ffi::bridge::RuleSet;
 // AUTOGEN START: egg-analysis-rust-import
 // AUTOGEN END: egg-analysis-rust-import
@@ -37,7 +37,7 @@ fn combined_make(eg: &mut EGraph<Mim, MimAnalysis>, enode: &Mim, id: Id) -> Anal
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             match *ruleset {
-                RuleSet::Core => {
+                RuleSet::CoreNorm => {
                     let data = CoreAnalysis::make(eg, enode, id);
                     combined_data.combine(data);
                 }
@@ -65,7 +65,7 @@ fn combined_merge(l: &mut AnalysisData, r: AnalysisData) -> DidMerge {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             match *ruleset {
-                RuleSet::Core => {
+                RuleSet::CoreNorm => {
                     let merge = CoreAnalysis::merge(l, r.clone());
                     *combined_merge =
                         DidMerge(combined_merge.0 | merge.0, combined_merge.1 | merge.1);
@@ -85,7 +85,7 @@ fn combined_modify(egraph: &mut EGraph<Mim, MimAnalysis>, id: Id) {
         for ruleset in rulesets_global.borrow().iter() {
             #[allow(clippy::single_match)]
             match *ruleset {
-                RuleSet::Core => {
+                RuleSet::CoreNorm => {
                     CoreAnalysis::modify(egraph, id);
                 }
                 // AUTOGEN START: egg-analysis-rust-modify

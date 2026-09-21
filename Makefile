@@ -9,6 +9,7 @@ MIM_DEBUG_BIN_PATH ?= $(abspath ../../build/bin/Debug/mim.exe)
 build:
 	cmake -S ../../ -B ../../build \
 		-DBUILD_TESTING=ON \
+		-DMIM_BUILD_PYTHON=OFF \
 		-DMIM_BUILD_EXAMPLES=ON \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
 		-DCMAKE_INSTALL_PREFIX=$(CMAKE_INSTALL_PREFIX)

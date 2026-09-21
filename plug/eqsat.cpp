@@ -1,5 +1,6 @@
 #include "mim/plug/eqsat/eqsat.h"
 
+#include <mim/phase.h>
 #include <mim/plugin.h>
 
 #include "mim/plug/eqsat/phase/eqsat_phase.h"
@@ -9,11 +10,10 @@
 using namespace mim;
 using namespace mim::plug;
 
-void reg_stages(Flags2Stages& stages) {
-    Stage::hook<eqsat::eqsat_phase, eqsat::EqsatPhase>(stages);
-    Stage::hook<eqsat::rewrite_egg, eqsat::RewriteEgg>(stages);
-    Stage::hook<eqsat::rewrite_slotted, eqsat::RewriteSlotted>(stages);
+static void reg_phases(Flags2Phases& phases) {
+    Phase::hook<eqsat::eqsat_phase, eqsat::EqsatPhase>(phases);
+    Phase::hook<eqsat::rewrite_egg, eqsat::RewriteEgg>(phases);
+    Phase::hook<eqsat::rewrite_slotted, eqsat::RewriteSlotted>(phases);
 }
 
-/// Registers normalizers as well as Phase%s and Pass%es for the Axm%s of this Plugin.
-extern "C" MIM_EXPORT Plugin mim_get_plugin() { return {"eqsat", MIM_VERSION, nullptr, reg_stages}; }
+MIM_PLUGIN_ENTRY(eqsat) { plugin.register_phases = reg_phases; }

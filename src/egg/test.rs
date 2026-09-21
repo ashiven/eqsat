@@ -35,7 +35,7 @@ const LINE_LEN: usize = 80;
 
 #[test]
 fn get_ruleset_core() {
-    set_rulesets(vec![RuleSet::Core]);
+    set_rulesets(vec![RuleSet::CoreNorm]);
     let core = get_rules();
     assert_ne!(core.len(), 0);
 }

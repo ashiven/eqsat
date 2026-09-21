@@ -89,22 +89,22 @@ ConfigValues RewriteEgg::import_config() {
             if (auto ruleset_config = Axm::isa<eqsat::rulesets>(config_val)) {
                 // Rulesets
                 for (auto ruleset : ruleset_config->args())
-                    if (Axm::isa<eqsat::core>(ruleset))
-                        rulesets.push_back(RuleSet::Core);
+                    if (Axm::isa<eqsat::corenorm>(ruleset))
+                        rulesets.push_back(RuleSet::CoreNorm);
                     else if (Axm::isa<eqsat::beta>(ruleset))
                         rulesets.push_back(RuleSet::Beta);
                     // AUTOGEN START: egg-ruleset-cpp
                     // AUTOGEN END: egg-ruleset-cpp
                     else
-                        error("%eqsat.rulesets: Ruleset {} not found for %eqsat.egg", ruleset);
+                        fe::throwf("%eqsat.rulesets: Ruleset {} not found for %eqsat.egg", ruleset);
 
             } else if (auto reaches = Axm::isa<eqsat::reaches>(config_val)) {
                 // Reaches assertions
                 auto [start_term, end_term, max_steps] = reaches->args<3>();
                 if (auto start_lam = start_term->isa<Lam>(); !(start_lam && start_lam->is_closed()))
-                    error("%eqsat.reaches currently only supports variables to root-level lambdas");
+                    fe::throwf("%eqsat.reaches currently only supports variables to root-level lambdas");
                 if (auto end_lam = end_term->isa<Lam>(); !(end_lam && end_lam->is_closed()))
-                    error("%eqsat.reaches currently only supports variables to root-level lambdas");
+                    fe::throwf("%eqsat.reaches currently only supports variables to root-level lambdas");
                 reaches_args.push_back({start_term->sym().str(), end_term->sym().str(), max_steps->as<Lit>()->get()});
 
             } else if (Axm::isa<eqsat::AstSize>(config_val)) {
@@ -120,7 +120,7 @@ ConfigValues RewriteEgg::import_config() {
                 auto option = new rust::Vec<rust::String>();
                 for (auto term : select->args()) {
                     if (auto lam = term->isa<Lam>(); !(lam && lam->is_closed()))
-                        error("%eqsat.select currently only supports variables to root-level lambdas");
+                        fe::throwf("%eqsat.select currently only supports variables to root-level lambdas");
                     option->push_back(term->sym().str());
                 }
                 selected.option = option;
@@ -139,7 +139,7 @@ ConfigValues RewriteEgg::import_config() {
                 continue;
 
             } else {
-                error("Egg: Invalid config value: {}", config_val);
+                fe::throwf("Egg: Invalid config value: {}", config_val);
             }
         }
     }
@@ -150,11 +150,11 @@ ConfigValues RewriteEgg::import_config() {
 void RewriteEgg::assert_reaches(std::string sexpr, RuleSets rulesets, ReachesArgs reaches_args) {
     for (auto [start_term, end_term, max_steps] : reaches_args)
         if (!reaches_egg(sexpr, rulesets, start_term, end_term, max_steps))
-            error("%eqsat.reaches: {} could not reach {} in under {} steps.", start_term, end_term, max_steps);
+            fe::throwf("%eqsat.reaches: {} could not reach {} in under {} steps.", start_term, end_term, max_steps);
 }
 
 const Def* RewriteEgg::create_type(RecExprFFI type_) {
-    if (type_.nodes.empty()) error("Tried to create an empty type.");
+    if (type_.nodes.empty()) fe::throwf("Tried to create an empty type.");
     dbg("\nCreating Type");
     dbg(type_str(type_, 80).c_str());
 
@@ -608,7 +608,6 @@ const Def* RewriteEgg::convert_match(uint32_t id, NodeFFI node) {
 // (proxy <type> <pass> <tag> <ops>...)
 const Def* RewriteEgg::convert_proxy(uint32_t id, NodeFFI node) {
     auto type = get_def(node.children[0]);
-    auto pass = get_num(node.children[1]);
     auto tag  = get_num(node.children[2]);
 
     DefVec ops;
@@ -616,7 +615,7 @@ const Def* RewriteEgg::convert_proxy(uint32_t id, NodeFFI node) {
         auto op = get_def(op_id);
         ops.push_back(op);
     }
-    auto new_proxy = new_world().proxy(type, ops, pass, tag);
+    auto new_proxy = new_world().proxy(type, ops, tag);
     return new_proxy;
 }
 

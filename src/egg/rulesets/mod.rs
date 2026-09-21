@@ -9,7 +9,7 @@ thread_local! {
 }
 
 pub mod beta;
-pub mod core;
+pub mod corenorm;
 // AUTOGEN START: egg-ruleset-rust-mod
 // AUTOGEN END: egg-ruleset-rust-mod
 
@@ -27,7 +27,7 @@ pub fn get_rules() -> Vec<Rewrite<Mim, MimAnalysis>> {
     RULESETS.with(|rulesets_global| {
         for ruleset in rulesets_global.borrow().iter() {
             match *ruleset {
-                RuleSet::Core => rules.extend(core::rules()),
+                RuleSet::CoreNorm => rules.extend(corenorm::rules()),
                 RuleSet::Beta => rules.extend(beta::rules()),
                 // AUTOGEN START: egg-ruleset-rust-match
                 // AUTOGEN END: egg-ruleset-rust-match

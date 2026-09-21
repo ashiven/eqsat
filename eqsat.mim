@@ -41,39 +41,39 @@ plugin core;
 ///
 /// ## Types
 ///
-/// ### %%eqsat.Ruleset
+/// ### Ruleset
 ///
 /// The type of a ruleset
 ///
-axm %eqsat.Ruleset: *;
+axm Ruleset: *;
 ///
-/// ### %%eqsat.Config
+/// ### Config
 ///
 /// The type of all config values
 ///
-axm %eqsat.Config: *;
+axm Config: *;
 ///
 ///
 /// ## Implementations
 ///
-axm %eqsat.egg: %eqsat.Config;
-axm %eqsat.slotted: %eqsat.Config;
+axm egg: Config;
+axm slotted: Config;
 ///
 ///
 /// ## Rulesets
 ///
 /// ### Egg
 ///
-axm %eqsat.core: %eqsat.Ruleset;
-axm %eqsat.beta: %eqsat.Ruleset;
+axm corenorm: Ruleset;
+axm beta: Ruleset;
 /// AUTOGEN START: egg-ruleset-mim
 /// AUTOGEN END: egg-ruleset-mim
 ///
 /// ### Slotted
 ///
-axm %eqsat.standard: %eqsat.Ruleset;
-axm %eqsat.rise: %eqsat.Ruleset;
-axm %eqsat.normalize: %eqsat.Ruleset;
+axm standard: Ruleset;
+axm rise: Ruleset;
+axm normalize: Ruleset;
 /// AUTOGEN START: slotted-ruleset-mim
 /// AUTOGEN END: slotted-ruleset-mim
 ///
@@ -82,31 +82,31 @@ axm %eqsat.normalize: %eqsat.Ruleset;
 ///
 /// ### Egg/Slotted
 ///
-axm %eqsat.AstSize: %eqsat.Config;
+axm AstSize: Config;
 ///
 /// ### Egg
 ///
-axm %eqsat.AstDepth: %eqsat.Config;
+axm AstDepth: Config;
 /// AUTOGEN START: egg-cost-mim
 /// AUTOGEN END: egg-cost-mim
 ///
 /// ### Slotted
 ///
-axm %eqsat.MaxAstSize: %eqsat.Config;
+axm MaxAstSize: Config;
 /// AUTOGEN START: slotted-cost-mim
 /// AUTOGEN END: slotted-cost-mim
 ///
 ///
 /// ## Operations
 ///
-/// ### %%eqsat.rulesets
+/// ### rulesets
 ///
 /// Configures the equality saturation engine to use the specified rulesets
 /// that are implemented in github.com/ashiven/eqsat/src/[egg|slotted]/rulesets
 ///
-axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Config;
+axm rulesets: {n: Nat} → «n; Ruleset» → Config;
 ///
-/// ### %%eqsat.rules
+/// ### rules
 ///
 /// Configures the equality saturation engine to use a provided set of MimIR-defined rules
 ///
@@ -115,30 +115,30 @@ axm %eqsat.rulesets: {n: Nat} → «n; %eqsat.Ruleset» → %eqsat.Config;
 /// - Ideally we should have one axiom that accepts a tuple of any mixture of rules, regardless of their type-levels.
 /// - Tried(didn't work): axm %eqsat.rules: {n: Nat, Us: «n; Univ»} → {Ts: «i: n; Type (Us#i)»} → «i: n; Ts#i» → %eqsat.Rules;
 ///
-axm %eqsat.rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Config;
-axm %eqsat.rules_kind: {n: Nat, Ts: «n; □»} → «i: n; Ts#i» → %eqsat.Config;
+axm rules: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → Config;
+axm rules_kind: {n: Nat, Ts: «n; □»} → «i: n; Ts#i» → Config;
 ///
-/// ### %%eqsat.reaches
+/// ### reaches
 ///
 /// Asserts at runtime whether a start term is able to reach an end term in under n steps.
 ///
-axm %eqsat.reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → %eqsat.Config;
+axm reaches: {S: *, E: *} → [start_term: S, end_term: E, n: Nat] → Config;
 ///
-/// ### %%eqsat.select
+/// ### select
 ///
 /// Select a set of root-level terms for equality saturation. If this is not specified, all terms
 /// will be saturated. If you want no terms to be saturated, apply this axiom to an empty tuple.
 ///
-axm %eqsat.select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → %eqsat.Config;
+axm select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → Config;
 ///
 /// TODO:
 /// - It would be nice to have an axiom or two for debugging purposes.
 /// - For example, an axiom that prints a rule after it was fully translated into an sexpr pattern.
 /// - Or even, printing out select terms as sexprs might also be useful.
 ///
-/// ### %%eqsat.config
+/// ### config
 ///
-lam %eqsat.config {n: Nat} (config_vals: «n; %eqsat.Config»): «n; %eqsat.Config» =
+lam config {n: Nat} (config_vals: «n; Config»): «n; Config» =
     config_vals;
 ///
 ///
@@ -146,6 +146,6 @@ lam %eqsat.config {n: Nat} (config_vals: «n; %eqsat.Config»): «n; %eqsat.Conf
 ///
 /// ### Phases
 ///
-axm %eqsat.eqsat_phase: %compile.Phase;
-axm %eqsat.rewrite_egg: %compile.Phase;
-axm %eqsat.rewrite_slotted: %compile.Phase;
+axm eqsat_phase: compile.Phase;
+axm rewrite_egg: compile.Phase;
+axm rewrite_slotted: compile.Phase;

@@ -145,7 +145,6 @@ add_mim_plugin(eqsat
         plug/phase/rewrite_slotted.cpp
     PRIVATE
         eqsat-rs
-    INSTALL
 )
 
 add_dependencies(mim_eqsat eqsat-rs-header)

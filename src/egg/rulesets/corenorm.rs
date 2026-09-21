@@ -663,7 +663,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -676,7 +676,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -689,7 +689,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -702,7 +702,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -715,7 +715,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -729,7 +729,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
@@ -742,7 +742,7 @@ mod test {
         let rewrites = equality_saturate(
             sexpr,
             OptionSelected::none(),
-            vec![RuleSet::Core],
+            vec![RuleSet::CoreNorm],
             CostFn::AstSize,
         );
         let res = first(rewrites);
