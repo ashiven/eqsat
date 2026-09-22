@@ -3,14 +3,14 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-rule foo (slot_a: Nat, slot_b: Nat, slot_c: Nat) : %core.nat.add (slot_a, (%core.nat.add (slot_b, %core.nat.add (slot_c, 1)))) => slot_a;
+rule foo (slot_a: Nat, slot_b: Nat, slot_c: Nat) : core.nat.add (slot_a, (core.nat.add (slot_b, core.nat.add (slot_c, 1)))) => slot_a;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.AstSize,
-        %eqsat.rules (foo),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.AstSize,
+        eqsat.rules (foo),
     );
 
-con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =
-    return (%core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, 1)))));
+extern con mul_lit_nat (a: Nat, b: Nat, c: Nat, return : Cn Nat) =
+    return (core.nat.add (a, (core.nat.add (b, core.nat.add (c, 1)))));

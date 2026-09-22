@@ -2,42 +2,36 @@
 // RUN: %mim %s -o -
 plugin compile;
 
-let mem_opt_passes =
-    %compile.passes (
-        %compile.named_pass "%mem.ssa_pass",
-        %compile.named_pass "%mem.copy_prop_ff_pass",
-    );
 
-lam extern _compile(): %compile.Phase =
-    %compile.phases ff (
-        %compile.pass2phase %compile.scalarize_pass,
-        %compile.pass2phase (%compile.eta_red_pass ff),
-        %compile.pass2phase %compile.tail_rec_elim_pass,
-        %compile.pass2phase (%compile.named_pass "%regex.lower_regex"),
-        %compile.phases tt (
-            %compile.beta_red_phase,
-            %compile.eta_red_phase,
-        ),
-        %compile.named_phase "%eqsat.eqsat_phase",
-        %compile.eta_exp_phase,
-        %compile.sym_expr_opt,
-        %compile.pass2phase (
-            %compile.passes (
-                optimization_passes,
-                mem_opt_passes,
-            )
-        ),
-        %compile.internal_cleanup_phase,
-        %compile.pass2phase %compile.lam_spec_pass,
-        %compile.branch_normalize_phase,
-        %compile.ret_wrap_phase,
-        %compile.repl2phase (
-            %compile.repls (
-                %compile.named_repl "%mem.remem_repl",
-                %compile.named_repl "%mem.alloc2malloc_repl",
-                %compile.named_repl "%refly.remove_dbg_repl",
-                %compile.named_repl "%gpu.malloc2gpualloc_repl",
-            )
-        ),
-        %compile.named_phase "%ll.emit",
+extern lam _compile(): compile.Phase =
+    let optimize =
+        compile.phases (compile.aggr ff) (
+            compile.scalarize,
+            compile.phases tt (
+                compile.beta_red,
+                compile.eta_conv,
+            ),
+            compile.named "mem.seo",
+            compile.static_arg_opt,
+        );
+
+    compile.phases ff (
+        optimize,
+        compile.named "regex.lower_regex",
+        compile.unload "regex",
+
+        compile.named "eqsat.eqsat_phase",
+
+        compile.lam_spec, // replace with lam-lifting
+
+        optimize,
+        compile.branch_normalize,
+        compile.ret_wrap,
+        compile.named "nvptx.stream_impl_repl",
+        compile.named "mem.alloc2malloc_repl",
+        compile.named "refly.remove_dbg_repl",
+        compile.unload "refly",
+        compile.named "gpu.check_addr_spaces_repl",
+        compile.named "ll.emit",
+        compile.named "ll_nvptx.emit",
     );

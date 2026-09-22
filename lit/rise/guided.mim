@@ -1,30 +1,31 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
+import rules;
 import _pipeline;
-import _rules;
 
 // First example from "Guided Equality Saturation":
 // https://dl.acm.org/doi/10.1145/3632900
 
-lam f(x: Nat): Nat = %core.nat.add (x, 1);
-lam g(x: Nat): Nat = %core.nat.add (x, 2);
+lam f(x: Nat): Nat = core.nat.add (x, 1);
+lam g(x: Nat): Nat = core.nat.add (x, 2);
 
-fun extern fuse_transpose(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)));
+extern fun fuse_transpose(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = rise.o (rise.map (rise.map f)) (rise.o (rise.transpose @(3, 4) @Nat) (rise.map (rise.map g)));
     return (mapper arg);
 
-fun extern fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map (%rise.o f g))) (%rise.transpose @(3, 4) @Nat);
+extern fun fuse_transpose_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = rise.o (rise.map (rise.map (rise.o f g))) (rise.transpose @(3, 4) @Nat);
     return (mapper arg);
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
         // The expected term may normalize certain subterms like for example (1, 1) would be normalized to <2; 1>.
         // To account for these normalizations, we use a set of rules that will apply the same normalizations to the starting term.
-        %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_before_maps, compose_assoc_1, compose_assoc_2, map_fusion),
-        %eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5),
-        %eqsat.select (),
+        eqsat.rulesets (eqsat.normalize),
+        eqsat.rules_kind (rules.transpose_before_maps, rules.compose_assoc_1, rules.compose_assoc_2, rules.map_fusion),
+        eqsat.reaches (fuse_transpose, fuse_transpose_expected, 5),
+        eqsat.select (),
     );

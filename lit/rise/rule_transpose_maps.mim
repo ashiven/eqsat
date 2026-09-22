@@ -1,31 +1,32 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
+import rules;
 import _pipeline;
-import _rules;
 
-lam f(x: Nat): Nat = %core.nat.add (x, 1);
+lam f(x: Nat): Nat = core.nat.add (x, 1);
 
-fun extern inline(arg: «3; «4; Nat»»): «3; «4; Nat»» =
-    return ((%rise.map (%rise.map f)) arg);
+extern fun inline(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    return ((rise.map (rise.map f)) arg);
 
-fun extern inline_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
-    return ((%rise.o (%rise.transpose @(4, 3) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(3, 4) @Nat))) arg);
+extern fun inline_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    return ((rise.o (rise.transpose @(4, 3) @Nat) (rise.o (rise.map (rise.map f)) (rise.transpose @(3, 4) @Nat))) arg);
 
-fun extern binding(arg: «3; «4; Nat»»): «3; «4; Nat»» =
-    let mapper = %rise.map @3 (%rise.map @4 f);
+extern fun binding(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    let mapper = rise.map @3 (rise.map @4 f);
     return (mapper arg);
 
-fun extern binding_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
-    let mapper = %rise.o (%rise.transpose @(4, 3) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.transpose @(3, 4) @Nat));
+extern fun binding_expected(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    let mapper = rise.o (rise.transpose @(4, 3) @Nat) (rise.o (rise.map (rise.map f)) (rise.transpose @(3, 4) @Nat));
     return (mapper arg);
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_maps),
-        %eqsat.reaches (inline, inline_expected, 5),
-        %eqsat.reaches (binding, binding_expected, 5),
-        %eqsat.select (),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.normalize),
+        eqsat.rules_kind (rules.transpose_maps),
+        eqsat.reaches (inline, inline_expected, 5),
+        eqsat.reaches (binding, binding_expected, 5),
+        eqsat.select (),
     );

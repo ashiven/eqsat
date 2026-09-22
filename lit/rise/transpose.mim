@@ -1,13 +1,13 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+import rise;
 import _pipeline;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.rise),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.rise),
     );
 
-fun extern transpose(arg: «3; «4; Nat»»): «3; «4; Nat»» =
-    return (%rise.transpose (%rise.transpose arg));
+extern fun transpose(arg: «3; «4; Nat»»): «3; «4; Nat»» =
+    return (rise.transpose (rise.transpose arg));

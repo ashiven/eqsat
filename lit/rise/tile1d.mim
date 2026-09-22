@@ -1,34 +1,35 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
+import rules;
 import _pipeline;
-import _rules;
 
 // Tile1D example from "Guided Equality Saturation":
 // https://dl.acm.org/doi/10.1145/3632900
 
-lam f(x: Nat): Nat = %core.nat.add (x, 1);
+lam f(x: Nat): Nat = core.nat.add (x, 1);
 
-// '%core.nat.mul (n1,n2)' gets emitted incorrectly if we don't add some dummy '_x'
+// 'core.nat.mul (n1,n2)' gets emitted incorrectly if we don't add some dummy '_x'
 // because otherwise '(n1,n2)' would be equivalent to the var of the lam and we would
 // just end up emitting the name of the var instead of the term '(n1,n2)'.
 // This is a limitation in the sexpr emitter that still needs to be fixed.
-fun extern tile1d(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    let arg = ‹%core.nat.mul (n1, n2); 2›;
-    let mapper = %rise.map f;
+extern fun tile1d(n1: Nat, n2: Nat, _x: Nat): «core.nat.mul (n1, n2); Nat» =
+    let arg = ‹core.nat.mul (n1, n2); 2›;
+    let mapper = rise.map f;
     return (mapper arg);
 
-fun extern tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «%core.nat.mul (n1, n2); Nat» =
-    let arg = ‹%core.nat.mul (n1, n2); 2›;
-    let mapper = %rise.o (%rise.join @(n1, n2) @Nat) (%rise.o (%rise.map (%rise.map f)) (%rise.split @n1 @Nat n2));
+extern fun tile1d_expected(n1: Nat, n2: Nat, _x: Nat): «core.nat.mul (n1, n2); Nat» =
+    let arg = ‹core.nat.mul (n1, n2); 2›;
+    let mapper = rise.o (rise.join @(n1, n2) @Nat) (rise.o (rise.map (rise.map f)) (rise.split @n1 @Nat n2));
     return (mapper arg);
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_before_maps, compose_assoc_1, compose_assoc_2, map_fusion, transpose_maps, split_map),
-        %eqsat.reaches (tile1d, tile1d_expected, 5),
-        %eqsat.select (),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.normalize),
+        eqsat.rules_kind (rules.transpose_before_maps, rules.compose_assoc_1, rules.compose_assoc_2, rules.map_fusion, rules.transpose_maps, rules.split_map),
+        eqsat.reaches (tile1d, tile1d_expected, 5),
+        eqsat.select (),
     );
 

@@ -3,18 +3,18 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-rule foo (a: Nat) : (%core.nat.mul ((%core.nat.mul (a, 4)), 4)) => (%core.nat.mul (a, 16));
+rule foo (a: Nat) : (core.nat.mul ((core.nat.mul (a, 4)), 4)) => (core.nat.mul (a, 16));
 
-fun extern start_term (a: Nat): Nat =
-    return (%core.nat.mul ((%core.nat.mul (a, 4)), 4));
+extern fun start_term (a: Nat): Nat =
+    return (core.nat.mul ((core.nat.mul (a, 4)), 4));
 
-fun extern end_term (a: Nat): Nat =
-    return (%core.nat.mul (a, 16));
+extern fun end_term (a: Nat): Nat =
+    return (core.nat.mul (a, 16));
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rules (foo),
-        %eqsat.reaches (start_term, end_term, 5),
-        %eqsat.select (start_term),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rules (foo),
+        eqsat.reaches (start_term, end_term, 5),
+        eqsat.select (start_term),
     );

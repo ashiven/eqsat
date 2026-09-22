@@ -28,6 +28,8 @@ test:
 	MIM_PLUGIN_PATH=$(MIM_PLUGIN_PATH) && $(MIM_BINARY_PATH) ./lit/$(TEST) -o -
 
 test-all:
+	rm -rf ../../build/lit/tests/extra/eqsat/
+	cp -a ./lit/ ../../build/lit/tests/extra/eqsat/
 	python ../../lit/lit ../../build/lit -v --filter eqsat
 
 sexpr:

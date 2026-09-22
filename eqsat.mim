@@ -138,7 +138,7 @@ axm select: {n: Nat, Ts: «n; *»} → «i: n; Ts#i» → Config;
 ///
 /// ### config
 ///
-lam config {n: Nat} (config_vals: «n; Config»): «n; Config» =
+pub lam config {n: Nat} (config_vals: «n; Config»): «n; Config» =
     config_vals;
 ///
 ///

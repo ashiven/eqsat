@@ -3,11 +3,11 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.standard),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.standard),
     );
 
-con extern and_lit [return : Cn Bool] =
-    return (%core.bit2.and_ 0 (%core.icmp.uge (tt, ff), %core.icmp.ug (tt, ff)));
+extern con and_lit (return : Cn Bool) =
+    return (core.bit2.and_ 0 (core.icmp.uge (tt, ff), core.icmp.ug (tt, ff)));

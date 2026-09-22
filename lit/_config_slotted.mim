@@ -2,7 +2,7 @@
 // RUN: %mim %s -o -
 plugin eqsat;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
     );

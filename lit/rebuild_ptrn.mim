@@ -2,10 +2,11 @@
 // RUN: sed 's/__IMPL__/slotted/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin core;
+plugin mem;
 plugin eqsat;
 import _pipeline;
 import _config___IMPL__;
 
-lam PtrN(n: Nat, T: *): * = (PtrN (%core.nat.sub (n, 1), %mem.Ptr0 T), T)#(%core.ncmp.e (n, 0));
+lam PtrN(n: Nat, T: *): * = (PtrN (core.nat.sub (n, 1), mem.Ptr0 T), T)#(core.ncmp.e (n, 0));
 
-fun extern foo(mem: %mem.M 0, p: PtrN (4, I32)): [%mem.M 0, PtrN (3, I32)] = return (%mem.load (mem, p));
+extern fun foo(m: mem.M 0, p: PtrN (4, I32)): [mem.M 0, PtrN (3, I32)] = return (mem.load (m, p));

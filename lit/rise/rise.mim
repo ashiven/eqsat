@@ -1,0 +1,33 @@
+// UNSUPPORTED: always
+// RUN: %mim %s -o -
+plugin core;
+
+// Binary
+axm add:        {T: *} → T → T → T;
+axm mul:        {T: *} → T → T → T;
+
+// Map
+axm map:        {n: Nat} → {S: *, T: *} → [S → T] → [«n; S» → «n; T»];
+
+// Arrays
+axm transpose:  {n: Nat, m: Nat} → {T: *} → «n; «m; T»» → «m; «n; T»»;
+axm slide_len:  [n: Nat, size: Nat, step: Nat] → Nat;
+axm slide:      [size: Nat] → [step: Nat] → [{n: Nat, T: *} → «n; T» → «slide_len (n, size, step); «size; T»»];
+axm zip:        {n: Nat, S: *, T: *} → «n; S» → «n; T» → «n; [S, T]»;
+axm join:       {n: Nat, m: Nat} → {T: *} → «n; «m; T»» → «core.nat.mul (n, m); T»;
+axm split:      {n: Nat} → {T: *} → [m: Nat] → «core.nat.mul (n, m); T» → «n; «m; T»»;
+
+// Reduce
+axm reduce:     {n: Nat, T: *} → [T → T → T] → T → «n; T» → T;
+
+// Pairs
+axm fst:        {S: *, T: *} → [S, T] → S;
+axm snd:        {S: *, T: *} → [S, T] → T;
+
+// Compose
+axm o:          {A: *, B: *, C: *} → [B → C] → [A → B] → [A → C];
+
+// Some constants (TODO: real values)
+axm weights2d:  «3; «3; Nat»»;
+axm weightsH:   «3; Nat»;
+axm weightsV:   «3; Nat»;

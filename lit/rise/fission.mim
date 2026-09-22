@@ -1,24 +1,25 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
 import _pipeline;
 
-lam f1(a: Nat)@ff = %core.nat.add (a, 1);
-lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
-lam f3(a: Nat)@ff = %core.nat.mul (a, 2);
-lam f4(a: Nat)@ff = %core.nat.add (a, 2);
+lam f1(a: Nat)@ff = core.nat.add (a, 1);
+lam f2(a: Nat)@ff = core.nat.sub (a, 1);
+lam f3(a: Nat)@ff = core.nat.mul (a, 2);
+lam f4(a: Nat)@ff = core.nat.add (a, 2);
 
-fun extern fission(y: «3; «4; Nat»») =
-    return ((%rise.map (%rise.map lm(x: Nat) = f4 (f3 (f2 (f1 x))))) y);
+extern fun fission(y: «3; «4; Nat»») =
+    return ((rise.map (rise.map lm(x: Nat) = f4 (f3 (f2 (f1 x))))) y);
 
-fun extern fission_expected(y: «3; «4; Nat»») =
-    return ((%rise.map (%rise.map lm(x: Nat) = f4 (f3 x))) ((%rise.map (%rise.map lm(x: Nat) = f2 (f1 x))) y));
+extern fun fission_expected(y: «3; «4; Nat»») =
+    return ((rise.map (rise.map lm(x: Nat) = f4 (f3 x))) ((rise.map (rise.map lm(x: Nat) = f2 (f1 x))) y));
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.rise, %eqsat.normalize),
-        %eqsat.reaches (fission, fission_expected, 100),
-        %eqsat.select (),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.rise, eqsat.normalize),
+        eqsat.reaches (fission, fission_expected, 100),
+        eqsat.select (),
     );
 

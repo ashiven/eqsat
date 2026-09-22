@@ -3,15 +3,15 @@ plugin core;
 plugin eqsat;
 import _pipeline;
 
-rule foo (a: Nat, b: Nat) : (%core.nat.add (a, (%core.nat.sub (b, a)))) => b;
+rule foo (a: Nat, b: Nat) : (core.nat.add (a, (core.nat.sub (b, a)))) => b;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.egg,
-        %eqsat.AstSize,
-        %eqsat.rulesets (%eqsat.core),
-        %eqsat.rules (foo),
+extern lam _config() =
+    eqsat.config (
+        eqsat.egg,
+        eqsat.AstSize,
+        eqsat.rulesets (eqsat.corenorm),
+        eqsat.rules (foo),
     );
 
-fun extern mul_lit_nat (a: Nat, b: Nat) =
-    return (%core.nat.add (a, (%core.nat.sub (b, a))));
+extern fun mul_lit_nat (a: Nat, b: Nat) =
+    return (core.nat.add (a, (core.nat.sub (b, a))));

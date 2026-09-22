@@ -1,18 +1,19 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
 import _pipeline;
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
         // Works but takes a long time (5s), so we leave it commented out for now.
-        // %eqsat.rulesets (%eqsat.rise),
+        // eqsat.rulesets (eqsat.rise),
     );
 
-lam f1(a: Nat)@ff = %core.nat.add (a, 1);
-lam f2(a: Nat)@ff = %core.nat.sub (a, 1);
+lam f1(a: Nat)@ff = core.nat.add (a, 1);
+lam f2(a: Nat)@ff = core.nat.sub (a, 1);
 
-fun extern fusion(arg: «3; Nat»): «3; Nat» =
-    let fused = (%rise.map f2) ((%rise.map f1) arg);
+extern fun fusion(arg: «3; Nat»): «3; Nat» =
+    let fused = (rise.map f2) ((rise.map f1) arg);
     return fused;

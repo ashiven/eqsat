@@ -8,14 +8,14 @@ import _pipeline;
 // - The term-size increases
 // - The term-depth decreases
 // Therefore we would expect to end up with the rhs when extracting by term-depth.
-rule foo (a: Nat, b: Nat, c: Nat) : %core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, %core.nat.add (a, b))))) => %core.nat.add (%core.nat.add (a, %core.nat.add (b, c)), %core.nat.add(c, %core.nat.add (a, c)));
+rule foo (a: Nat, b: Nat, c: Nat) : core.nat.add (a, (core.nat.add (b, core.nat.add (c, core.nat.add (a, b))))) => core.nat.add (core.nat.add (a, core.nat.add (b, c)), core.nat.add(c, core.nat.add (a, c)));
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.egg,
-        %eqsat.AstDepth,
-        %eqsat.rules (foo),
+extern lam _config() =
+    eqsat.config (
+        eqsat.egg,
+        eqsat.AstDepth,
+        eqsat.rules (foo),
     );
 
-con extern mul_lit_nat [a: Nat, b: Nat, c: Nat, return : Cn Nat] =
-    return (%core.nat.add (a, (%core.nat.add (b, %core.nat.add (c, %core.nat.add (a, b))))));
+extern con mul_lit_nat (a: Nat, b: Nat, c: Nat, return : Cn Nat) =
+    return (core.nat.add (a, (core.nat.add (b, core.nat.add (c, core.nat.add (a, b))))));

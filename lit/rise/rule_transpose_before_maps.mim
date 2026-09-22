@@ -1,32 +1,33 @@
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
-import _axioms;
+plugin core;
+import rise;
 import _pipeline;
-import _rules;
+import rules;
 
-lam f(x: Nat): Nat = %core.nat.add (x, 1);
-lam g(x: Nat): Nat = %core.nat.add (x, 2);
+lam f(x: Nat): Nat = core.nat.add (x, 1);
+lam g(x: Nat): Nat = core.nat.add (x, 2);
 
-fun extern inline(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    return ((%rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)))) arg);
+extern fun inline(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    return ((rise.o (rise.map (rise.map f)) (rise.o (rise.transpose @(3, 4) @Nat) (rise.map (rise.map g)))) arg);
 
-fun extern inline_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    return ((%rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.map (%rise.map g)) (%rise.transpose @(3, 4) @Nat))) arg);
+extern fun inline_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    return ((rise.o (rise.map (rise.map f)) (rise.o (rise.map (rise.map g)) (rise.transpose @(3, 4) @Nat))) arg);
 
-fun extern binding(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.transpose @(3, 4) @Nat) (%rise.map (%rise.map g)));
+extern fun binding(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = rise.o (rise.map (rise.map f)) (rise.o (rise.transpose @(3, 4) @Nat) (rise.map (rise.map g)));
     return (mapper arg);
 
-fun extern binding_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
-    let mapper = %rise.o (%rise.map (%rise.map f)) (%rise.o (%rise.map (%rise.map g)) (%rise.transpose @(3, 4) @Nat));
+extern fun binding_expected(arg: «3; «4; Nat»»): «4; «3; Nat»» =
+    let mapper = rise.o (rise.map (rise.map f)) (rise.o (rise.map (rise.map g)) (rise.transpose @(3, 4) @Nat));
     return (mapper arg);
 
-lam extern _config() =
-    %eqsat.config (
-        %eqsat.slotted,
-        %eqsat.rulesets (%eqsat.normalize),
-        %eqsat.rules_kind (transpose_before_maps),
-        %eqsat.reaches (inline, inline_expected, 5),
-        %eqsat.reaches (binding, binding_expected, 5),
-        %eqsat.select (),
+extern lam _config() =
+    eqsat.config (
+        eqsat.slotted,
+        eqsat.rulesets (eqsat.normalize),
+        eqsat.rules_kind (rules.transpose_before_maps),
+        eqsat.reaches (inline, inline_expected, 5),
+        eqsat.reaches (binding, binding_expected, 5),
+        eqsat.select (),
     );

@@ -1,25 +1,26 @@
 // RUN: MIM_PLUGIN_PATH=%S/.. %mim %s -o -
 plugin core;
+plugin mem;
 plugin eqsat;
 import _pipeline;
 
-rule foo (a: Nat, b: Nat) : (%core.nat.add (a, (%core.nat.sub (b, a)))) => b;
+rule foo (a: Nat, b: Nat) : (core.nat.add (a, (core.nat.sub (b, a)))) => b;
 
-lam extern _config() =
-    %eqsat.config (
+extern lam _config() =
+    eqsat.config (
         // If you want to use the 'slotted-egraphs' implementation
         // instead of 'egg' just define the config lambda below.
-        %eqsat.slotted,
+        eqsat.slotted,
         // Use the following config value to specify the cost function
         // that will be used to extract the most optimal term after rewriting.
-        %eqsat.AstSize,
+        eqsat.AstSize,
         // If you want to use a set of rules defined in 'slotted-egraphs' as part of
         // the 'eqsat-rs' library, simply provide the name of the ruleset.
-        %eqsat.rulesets (%eqsat.standard),
+        eqsat.rulesets (eqsat.standard),
         // Here you can specify which of the rules that you defined
         // above should be used for rewriting.
-        %eqsat.rules (foo),
+        eqsat.rules (foo),
     );
 
-fun extern main(mem: %mem.M 0, argc: I32, argv: %mem.Ptr0 (%mem.Ptr0 I8)): [%mem.M 0, I32] =
-    return (mem, argc);
+extern fun main(m: mem.M 0, argc: I32, argv: mem.Ptr0 (mem.Ptr0 I8)): [mem.M 0, I32] =
+    return (m, argc);
