@@ -4,12 +4,12 @@
 
 #include <mim/phase.h>
 
-#include <mim/plug/eqsat/phase/util.h>
+#include "mim/plug/eqsat/phase/util.h"
 
-#include "mim/def.h"
-#include "mim/rewrite.h"
+#include <mim/def.h>
+#include <mim/rewrite.h>
 
-#include "rust/eqsat_rs.h"
+#include <rust/eqsat_rs.h>
 
 namespace mim::plug::eqsat {
 

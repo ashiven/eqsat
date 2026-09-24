@@ -1,8 +1,8 @@
 #pragma once
 
-#include "mim/world.h"
+#include <mim/world.h>
 
-#include "mim/plug/compile/autogen.h"
+#include <mim/plug/compile/autogen.h>
 #include "mim/plug/eqsat/autogen.h"
 
 namespace mim {

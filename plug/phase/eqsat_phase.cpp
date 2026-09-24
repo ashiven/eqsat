@@ -1,7 +1,7 @@
-#include <mim/plug/eqsat/eqsat.h>
-#include <mim/plug/eqsat/phase/eqsat_phase.h>
-#include <mim/plug/eqsat/phase/rewrite_egg.h>
-#include <mim/plug/eqsat/phase/rewrite_slotted.h>
+#include "mim/plug/eqsat/eqsat.h"
+#include "mim/plug/eqsat/phase/eqsat_phase.h"
+#include "mim/plug/eqsat/phase/rewrite_egg.h"
+#include "mim/plug/eqsat/phase/rewrite_slotted.h"
 
 namespace mim::plug::eqsat {
 

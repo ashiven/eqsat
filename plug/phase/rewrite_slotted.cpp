@@ -1,10 +1,10 @@
 #include <cstdint>
 
-#include <mim/plug/eqsat/eqsat.h>
-#include <mim/plug/eqsat/phase/rewrite_slotted.h>
+#include "mim/plug/eqsat/eqsat.h"
+#include "mim/plug/eqsat/phase/rewrite_slotted.h"
 
-#include "mim/def.h"
-#include "mim/sexpr.h"
+#include <mim/def.h>
+#include <mim/sexpr.h>
 
 #include "mim/plug/eqsat/autogen.h"
 

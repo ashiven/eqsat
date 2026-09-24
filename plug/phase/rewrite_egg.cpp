@@ -1,10 +1,10 @@
 #include <cstdint>
 
-#include <mim/plug/eqsat/eqsat.h>
-#include <mim/plug/eqsat/phase/rewrite_egg.h>
+#include "mim/plug/eqsat/eqsat.h"
+#include "mim/plug/eqsat/phase/rewrite_egg.h"
 
-#include "mim/def.h"
-#include "mim/sexpr.h"
+#include <mim/def.h>
+#include <mim/sexpr.h>
 
 namespace mim::plug::eqsat {
 
