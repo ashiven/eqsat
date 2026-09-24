@@ -21,6 +21,9 @@ pub fn reaches(
 
     convert_rules(&mut sexprs, &mut rules);
 
+    let start_name = start_name.trim_start_matches("eta_");
+    let end_name = end_name.trim_start_matches("eta_");
+
     // TODO: More robust checks would be good because this string comparison
     // can break way too easily (just takes an extra space or tab somewhere)
     let start_term = sexprs

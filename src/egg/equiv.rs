@@ -20,6 +20,9 @@ pub fn reaches(
 
     convert_rules(&mut sexprs, &mut rules);
 
+    let start_name = start_name.trim_start_matches("eta_");
+    let end_name = end_name.trim_start_matches("eta_");
+
     let start_term = sexprs
         .iter()
         .find(|sexpr| {

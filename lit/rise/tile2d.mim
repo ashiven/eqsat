@@ -119,7 +119,7 @@ extern lam _config() =
 
         // Total time without type-analysis: 00:00:36.1441995
         // Total time with type-analysis:    00:00:36.7355366
-        eqsat.reaches (tile2d, tile2d_split, 50),
+        // eqsat.reaches (tile2d, tile2d_split, 50),
 
         // Total time without type-analysis: 00:00:24.3869184
         // Total time with type-analysis:    00:00:24.8859404
