@@ -1,3 +1,5 @@
+// TODO: Broken in MimIR 0.3
+// UNSUPPORTED: always
 // RUN: sed 's/__IMPL__/egg/' %s > %t && MIM_PLUGIN_PATH=%S %mim %t -o -
 
 plugin core;

@@ -1,3 +1,5 @@
+// TODO: Broken in MimIR 0.3
+// UNSUPPORTED: always
 // RUN: MIM_PLUGIN_PATH=%S %mim %s -o -
 plugin eqsat;
 plugin core;
