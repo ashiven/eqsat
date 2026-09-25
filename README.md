@@ -31,34 +31,34 @@
 
 ## Usage
 
-You may use this plugin through the **MimIR** C++ API or its textual representation **Mim**.
-Consider the following lightweight examples to get started. The examples both perform the same
-optimization:
+You can use this plugin through the **MimIR** C++ API or its textual representation **Mim**.
+Consider the following lightweight examples to get started. The examples perform the same
+transformation:
 
-- Define a rewrite-rule `?n + 0 => ?n`
-- Define a term `fun(x: Nat): Nat = return (x + 0);`
-- Perform equality saturation in `slotted-egraphs`
-- Extract an optimal term by smallest `AstSize`
+1. Define a rewrite-rule `?n + 0 => ?n`
+2. Define a term `fun(x: Nat): Nat = return (x + 0);`
+3. Perform equality saturation in `slotted-egraphs`
+4. Extract an optimal term by smallest `AstSize`
 
 ### C++ API
 
 ```cpp
-#include <fstream>
+#include <fe/sys.h>
 #include <mim/driver.h>
 #include <mim/ast/parser.h>
-#include <mim/pass/optimize.h>
-#include <mim/util/sys.h>
+#include <mim/phase/optimize.h>
 #include <mim/plug/eqsat/eqsat.h>
 
 using namespace mim;
 using namespace mim::plug;
 
 int main(int, char**) {
+    auto driver = Driver("eqsat");
+
     try {
-        auto driver = Driver("eqsat");
         auto& w     = driver.world();
         driver.log().set(&std::cerr).set(Log::Level::Debug);
-        ast::load_plugins(w, View<std::string>{"core", "ll", "eqsat"});
+        ast::load_plugins(w, View<std::string>{"core", "ll", "eqsat", "sexpr"});
 
         // rule foo (x: Nat): %core.nat.add (x, 0) => x;
         auto foo = w.mut_rule(w.type_nat())->set("foo");
@@ -76,7 +76,7 @@ int main(int, char**) {
             eqsat::AstSize,
             eqsat_rulesets(eqsat::standard),
             eqsat_rules(foo),
-        );   
+        );
 
         // fun extern main(x: Nat): Nat = return %core.nat.add (x, 0);
         auto main   = w.mut_fun({w.type_nat()}, {w.type_nat()})->set("main");
@@ -88,8 +88,8 @@ int main(int, char**) {
         // Equality saturation and code gen are performed here
         optimize(w);
 
-        sys::system("clang eqsat.ll -o eqsat -Wno-override-module");
-        std::println("exit code: {}", sys::system("./eqsat"));
+        fe::sys::system("clang eqsat.ll -o eqsat -Wno-override-module");
+        std::println("exit code: {}", fe::sys::system("./eqsat"));
     } catch (const std::exception& e) {
         std::println(std::cerr, "{}", e.what());
         return EXIT_FAILURE;
@@ -109,33 +109,33 @@ plugin core;
 plugin eqsat;
 
 // You can define your own syntactic rewrite-rules here
-rule foo (x: Nat): %core.nat.add (x, 0) => x;
+rule foo (x: Nat): core.nat.add (x, 0) => x;
 
 lam extern _config() =
-    %eqsat.config (
+    eqsat.config (
         // Specifies whether the plugin should use its egg or slotted-egraphs backend
-        %eqsat.slotted,
+        eqsat.slotted,
 
         // Defines the cost function that should be used for term extraction
-        %eqsat.AstSize,
+        eqsat.AstSize,
 
         // Specifies a set of rules directly implemented in egg or slotted-egraphs
         // To implement and use your own ruleset, follow the instructions under **Rulesets**.
-        %eqsat.rulesets (%eqsat.normalize),
+        eqsat.rulesets (eqsat.normalize),
 
         // To use the rule 'foo' that we defined above for equality saturation
-        %eqsat.rules (foo),
+        eqsat.rules (foo),
         
         // Here you may provide two terms to assert whether term A can reach term B in a number of steps
-        %eqsat.reaches (term_A, term_B, 10),
+        eqsat.reaches (term_A, term_B, 10),
 
         // Here you may select specific terms that should be rewritten
         // When providing an empty tuple, no terms will be rewritten
-        %eqsat.select (),
+        eqsat.select (),
     );
 
 fun extern main(x: Nat): Nat =
-    return %core.nat.add (x, 0);
+    return core.nat.add (x, 0);
 ```
 
 ## Installation
@@ -146,11 +146,12 @@ Clone the `mimir` repository
 git clone --recursive https://github.com/mimir/mimir.git
 ```
 
-Clone the `eqsat` repository
+Clone the `eqsat` and `sexpr` repositories
 
 ```bash
 cd mimir/extra
 git clone https://github.com/ashiven/eqsat.git
+git clone https://github.com/ashiven/sexpr.git
 cd ..
 ```
 
@@ -169,11 +170,9 @@ cmake --build build -j$(nproc)
 
 ## Rulesets
 
-You may want to define a set of rewrite-rules that are more complex than the syntactic rewrite-rules
-that can be defined in **MimIR**. In this case, you should follow the implementation guide below on adding
-a set of rules and a new analysis directly in **egg** or **slotted-egraphs**.
+To define a set of rewrite-rules directly in **egg** or **slotted-egraphs**, follow the implementation guide below.
 
-Automatically generate all of the boilerplate code required to integrate your ruleset with the `eqsat` plugin
+Generate all of the boilerplate code required to integrate your ruleset with the `eqsat` plugin
 
 ```bash
 python ./scripts/new_ruleset.py egg MyRules
@@ -216,13 +215,13 @@ impl MyRulesAnalysis {
 
 To define your own cost function for term extraction, follow the steps below.
 
-Automatically generate all of the boilerplate code required by the `eqsat` plugin
+Generate all of the boilerplate code required by the `eqsat` plugin
 
 ```bash
 python ./scripts/new_cost.py egg MyCost
 ```
 
-Define your new cost function in `src/egg/cost.rs`
+Define your cost function in `src/egg/cost.rs`
 
 ```rust
 #[derive(Debug)]
