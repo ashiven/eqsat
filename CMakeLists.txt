@@ -153,6 +153,8 @@ target_include_directories(mim_eqsat
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
         $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/../sexpr/include
 )
 
 # ------------------------------------------------------------

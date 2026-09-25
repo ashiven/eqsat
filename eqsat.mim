@@ -37,6 +37,7 @@
 import compile;
 import option;
 plugin core;
+plugin sexpr;
 ///
 ///
 /// ## Types

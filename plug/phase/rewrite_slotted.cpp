@@ -1,12 +1,11 @@
-#include <cstdint>
-
-#include "mim/plug/eqsat/eqsat.h"
 #include "mim/plug/eqsat/phase/rewrite_slotted.h"
 
-#include <mim/def.h>
-#include <mim/sexpr.h>
+#include <cstdint>
 
-#include "mim/plug/eqsat/autogen.h"
+#include <mim/def.h>
+
+#include "mim/plug/eqsat/eqsat.h"
+#include "mim/plug/sexpr/sexpr.h"
 
 namespace mim::plug::eqsat {
 
@@ -400,7 +399,7 @@ const Def* RewriteSlotted::init_arr(uint32_t id, NodeFFI node) {
 
     auto mut_arr = new_world().mut_arr(new_world().type_infer_univ());
     auto arity   = init_lookahead(var_scope.children[0]);
-    mut_arr->set_arity(arity);
+    mut_arr->set_shape(arity);
 
     auto var_name = get_slot(id);
     auto var      = mut_arr->var();
@@ -427,7 +426,7 @@ const Def* RewriteSlotted::init_pack(uint32_t id, NodeFFI node) {
     auto mut_pack = new_world().mut_pack(mut_arr);
 
     auto arity = init_lookahead(var_scope.children[0]);
-    mut_arr->set_arity(arity);
+    mut_arr->set_shape(arity);
 
     auto var_name = get_slot(id);
     auto var      = mut_pack->var();
@@ -436,7 +435,7 @@ const Def* RewriteSlotted::init_pack(uint32_t id, NodeFFI node) {
 
     auto body = init_lookahead(var_scope.children[1]);
     mut_arr->set_body(body->type());
-    mut_pack->set(body);
+    mut_pack->set(arity, body);
 
     dbg(mut_pack);
     exit_scope(var_scope);
@@ -594,10 +593,11 @@ const Def* RewriteSlotted::convert_pack(uint32_t id, NodeFFI node) {
     auto pack = get_def(id);
 
     if (auto mut_pack = pack->isa_mut<Pack>()) {
-        auto body = get_def(var_scope.children[1]);
+        auto arity = get_def(var_scope.children[0]);
+        auto body  = get_def(var_scope.children[1]);
 
         mut_pack->unset();
-        mut_pack->set(body);
+        mut_pack->set(arity, body);
     }
 
     exit_scope(var_scope);
@@ -644,7 +644,7 @@ const Def* RewriteSlotted::convert_inj(uint32_t id, NodeFFI node) {
 
 // (merge <type> <value-cons>)
 const Def* RewriteSlotted::convert_merge(uint32_t id, NodeFFI node) {
-    auto type = get_def(node.children[0]);
+    // auto type = get_def(node.children[0]);
 
     auto value_ids = get_cons_flat(node.children[1]);
     DefVec values;
@@ -652,7 +652,9 @@ const Def* RewriteSlotted::convert_merge(uint32_t id, NodeFFI node) {
         auto value = get_def(value_id);
         values.push_back(value);
     }
-    auto new_merge = new_world().merge(type, values);
+    // NOTE: Merge no longer exists in MimIR 0.3
+    // auto new_merge = new_world().merge(type, values);
+    auto new_merge = nullptr;
     return new_merge;
 }
 
@@ -706,7 +708,9 @@ const Def* RewriteSlotted::convert_meet(uint32_t id, NodeFFI node) {
         auto type = get_def(type_id);
         types.push_back(type);
     }
-    auto new_meet = new_world().meet(types);
+    // NOTE: Meet no longer exists in MimIR 0.3
+    // auto new_meet = new_world().meet(types);
+    auto new_meet = nullptr;
     return new_meet;
 }
 
