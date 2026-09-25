@@ -18,7 +18,7 @@
 **Equality Saturation** is a compiler optimization technique that uses [E-Graphs](https://en.wikipedia.org/wiki/E-graph#Equality_saturation) to search large transformation spaces. This repository contains an **Equality Saturation** plugin for the [MimIR](https://github.com/mimir/mimir) compiler framework.
 
 > [!WARNING]
-> Mimir 0.3 introduced several breaking changes that broke parts of the plugin that previously worked.   
+> MimIR 0.3 introduced several breaking changes that broke parts of the plugin that previously worked.   
 
 ## Table of Contents
 
