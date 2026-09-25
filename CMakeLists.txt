@@ -164,12 +164,13 @@ set(VALGRIND_COMMAND_OPTIONS "--leak-check=full --error-exitcode=1 --suppression
 
 if(MIM_LIT_WITH_VALGRIND)
   set(LIT_VALGRIND_COMMANDLINE "${MEMORYCHECK_COMMAND} ${VALGRIND_COMMAND_OPTIONS} ")
+  set(LIT_SITE_CFG "${CMAKE_BINARY_DIR}/lit/lit.site.cfg.py")
+  file(READ "${LIT_SITE_CFG}" LIT_SITE_CFG_CONTENT)
+  string(REPLACE
+      "config.mim = r'${CMAKE_BINARY_DIR}/bin/mim'"
+      "config.mim = r'${LIT_VALGRIND_COMMANDLINE}${CMAKE_BINARY_DIR}/bin/mim'"
+      LIT_SITE_CFG_CONTENT
+      "${LIT_SITE_CFG_CONTENT}"
+  )
+  file(WRITE "${LIT_SITE_CFG}" "${LIT_SITE_CFG_CONTENT}")
 endif()
-
-set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_BINARY_DIR}/lit")
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/lit/lit.site.cfg.py.in
-    ${CMAKE_BINARY_DIR}/lit/lit.site.cfg.py
-    @ONLY
-)
