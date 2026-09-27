@@ -167,6 +167,8 @@ if(MIM_LIT_WITH_VALGRIND)
 endif()
 
 set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_BINARY_DIR}/lit")
+set(MIM_FP16_SUPPORTED False)
+set(MIM_CUDA_CAN_RUN_ON_DEVICE False)
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/lit/lit.site.cfg.py.in
