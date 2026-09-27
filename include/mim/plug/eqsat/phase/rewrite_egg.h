@@ -1,13 +1,13 @@
 #pragma once
 
-#include <mim/phase.h>
-
-#include "mim/plug/eqsat/phase/util.h"
+#include <ankerl/unordered_dense.h>
+#include <rust/eqsat_rs.h>
 
 #include <mim/def.h>
+#include <mim/phase.h>
 #include <mim/rewrite.h>
 
-#include <rust/eqsat_rs.h>
+#include "mim/plug/eqsat/phase/util.h"
 
 namespace mim::plug::eqsat {
 
@@ -17,7 +17,7 @@ typedef rust::Vec<RuleSet> RuleSets;
 typedef std::tuple<RuleSets, CostFn, ReachesArgs, OptionSelected> ConfigValues;
 
 typedef fe::SymMap<const Def*> Sym2Def;
-typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
+typedef ankerl::unordered_dense::map<uint32_t, const Def*> Cache;
 typedef rust::Vec<NodeFFI> Nodes;
 
 typedef struct RecExprState {
@@ -30,7 +30,7 @@ typedef struct Context {
     RecExprState* state;
 } Context;
 
-typedef absl::flat_hash_map<size_t, RecExprState> RecExprStates;
+typedef ankerl::unordered_dense::map<size_t, RecExprState> RecExprStates;
 
 /***************** REWRITER *********************/
 class RewriteEgg : public Phase, public Rewriter {

@@ -2,14 +2,14 @@
 
 #include <cstdint>
 
-#include <mim/phase.h>
-
-#include "mim/plug/eqsat/phase/util.h"
+#include <ankerl/unordered_dense.h>
+#include <rust/eqsat_rs.h>
 
 #include <mim/def.h>
+#include <mim/phase.h>
 #include <mim/rewrite.h>
 
-#include <rust/eqsat_rs.h>
+#include "mim/plug/eqsat/phase/util.h"
 
 namespace mim::plug::eqsat {
 
@@ -57,8 +57,8 @@ typedef struct Scope {
 } Scope;
 
 typedef fe::SymMap<const Def*> Sym2Def;
-typedef absl::flat_hash_map<uint32_t, const Def*> Cache;
-typedef absl::flat_hash_map<size_t, size_t> DepthVisits;
+typedef ankerl::unordered_dense::map<uint32_t, const Def*> Cache;
+typedef ankerl::unordered_dense::map<size_t, size_t> DepthVisits;
 typedef std::unordered_map<Loc, Scope, LocHash> ScopeTree;
 typedef Sym2Def RootScope;
 typedef rust::Vec<NodeFFI> Nodes;
@@ -77,7 +77,7 @@ typedef struct Context {
     RecExprState* state;
 } Context;
 
-typedef absl::flat_hash_map<size_t, RecExprState> RecExprStates;
+typedef ankerl::unordered_dense::map<size_t, RecExprState> RecExprStates;
 
 } // namespace scoped
 
