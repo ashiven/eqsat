@@ -111,6 +111,16 @@ jobs:
         with:
           version: "21.1.8"
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Force correct linker
+        shell: pwsh
+        run: |
+          $msvc = Get-ChildItem "${env:VSINSTALLDIR}VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+          $linker = Join-Path $msvc.FullName "bin\Hostx64\x64\link.exe"
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Build
         shell: cmd
         run: |

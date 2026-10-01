@@ -36,15 +36,10 @@ typedef ankerl::unordered_dense::map<size_t, RecExprState> RecExprStates;
 class RewriteEgg : public Phase, public Rewriter {
 public:
     RewriteEgg(World& world, std::string name)
-        : Phase(world, std::move(name))
-        , Rewriter(world.inherit()) {
-        register_symbols();
-    }
+        : RewriteEgg(world, world.inherit(), std::move(name)) {}
+
     RewriteEgg(World& world, flags_t annex)
-        : Phase(world, annex)
-        , Rewriter(world.inherit()) {
-        register_symbols();
-    }
+        : RewriteEgg(world, world.inherit(), annex) {}
 
     void start() override;
 
@@ -55,6 +50,22 @@ public:
     World& new_world() { return Rewriter::world(); }
 
 private:
+    RewriteEgg(World& old, std::unique_ptr<World> fresh, std::string name)
+        : Phase(old, std::move(name))
+        , Rewriter(*fresh)
+        , new_world_(std::move(fresh)) {
+        register_symbols();
+    }
+
+    RewriteEgg(World& old, std::unique_ptr<World> fresh, flags_t annex)
+        : Phase(old, annex)
+        , Rewriter(*fresh)
+        , new_world_(std::move(fresh)) {
+        register_symbols();
+    }
+
+    std::unique_ptr<World> new_world_;
+
     void register_symbols() {
         for (auto [flags, e] : old_world().annexes()) {
             auto new_annex          = new_world().annexes().attach(flags, e.sym, rewrite(e.def));
