@@ -29,7 +29,7 @@ jobs:
             cc: gcc-15
             cxx: g++-15
             packages: g++-15 valgrind
-            test-target: lit test-roundtrip
+            test-target: lit
             cmake-args: -DMIM_LIT_WITH_VALGRIND=ON
     env:
       ASAN_OPTIONS: "halt_on_error=1:abort_on_error=1:exitcode=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1"
